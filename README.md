@@ -176,6 +176,35 @@ fterm 에뮬레이터는 DECRQM에 "1004 = set"이라 답하면서(로그에 `ES
    이제 연결 실패 시 provisioning을 다시 돌린다. keeper는 같은 토큰을 다시 발행하므로
    재시도가 그대로 연결된다.
 
+### rish가 조용히 죽는 원인: BOOTCLASSPATH (Shizuku 공통 버그)
+
+**증상**: `rish -c 'id'`가 rc=0, 출력 0바이트로 즉사(0.15초). Shizuku 서버가 살아 있어도 동일.
+"Shizuku가 죽었다"로 오인하기 쉽지만 아니다.
+
+**원인**: `app_process`는 안드로이드 앱 안에서 실행될 때 시스템이 `BOOTCLASSPATH`,
+`ANDROID_ART_ROOT`, `ANDROID_I18N_ROOT`, `ANDROID_TZDATA_ROOT`, `DEX2OATBOOTCLASSPATH`를
+환경에 넣어주지만, **일반 셸(fterm 데몬, ssh, cron)에서는 이 변수들이 없다.** 변수가
+없으면 ART가 부트 클래스패스를 못 만들어 RuntimeInit 로그 한 줄만 남기고 exit(0)한다.
+에러가 stdout/stderr로 안 나오고 logcat으로만 나오므로 "조용히 죽는 것"처럼 보인다.
+
+**재현/검증**:
+```bash
+# 실패 (출력 없음, rc=0)
+ANDROID_DATA=/data ANDROID_ROOT=/system rish -c id
+
+# 성공 — Termux 앱 셸이 물려받은 BOOTCLASSPATH를 넣으면
+BCP=$(tr '\0' '\n' < /proc/<termux-shell-pid>/environ | grep '^BOOTCLASSPATH=' | cut -d= -f2-)
+export BOOTCLASSPATH="$BCP"
+export ANDROID_ART_ROOT=/apex/com.android.art
+export ANDROID_I18N_ROOT=/apex/com.android.i18n
+export ANDROID_TZDATA_ROOT=/apex/com.android.tzdata
+export DEX2OATBOOTCLASSPATH=...   # BOOTCLASSPATH와 같은 값의 DEX2OAT variant
+rish -c id                        # → uid=2000(shell)
+```
+
+**해결**: `~/bin/rish2` 래퍼가 이 변수들을 채워 실행한다. fterm 데몬 환경에서도 동작.
+Shizuku 이슈 트래커의 "rish returns nothing" 보고 다수가 이것으로 보인다.
+
 ### 데몬은 파일 교체로 갱신되지 않는다
 
 `termux/install.sh`가 데몬을 재시작하는 이유: 실행 중인 프로세스는 디스크의 새 코드를
