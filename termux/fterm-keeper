@@ -1,0 +1,180 @@
+#!/data/data/com.termux/files/usr/bin/env python3
+"""fterm keeper — 앱이 데몬을 스스로 띄우게 하는 Termux 쪽 절반.
+
+`RUN_COMMAND` 브로드캐스트는 이 기기의 Termux 0.118.3에서 조용히 무시된다(브로드캐스트는
+`result=0`으로 끝나지만 아무 명령도 실행되지 않는다). 그래서 반대 방향으로 간다: 앱이
+공유 저장소에 **요청 파일**을 쓰고, 이 keeper가 그것을 보고 데몬을 띄운 뒤 토큰을 돌려준다.
+
+  fterm-keeper start     포그라운드 감시 (nohup으로 띄운다)
+  fterm-keeper stop      중지
+  fterm-keeper status    상태
+
+앱 쪽 규약
+  /sdcard/Download/fterm-up     앱이 만든다 → 데몬 기동 + 토큰 발행
+  /sdcard/Download/fterm-token  keeper가 쓴다 → 앱이 읽는다
+  /sdcard/Download/fterm-down   앱이 만든다 → 데몬 정지
+
+이 파일은 Termux 안에서만 의미가 있다. 앱 샌드박스는 여기 있는 것들을 실행할 수 없다.
+"""
+
+import os
+import subprocess
+import sys
+import time
+
+SHARED = "/sdcard/Download"
+UP = os.path.join(SHARED, "fterm-up")
+TOKEN = os.path.join(SHARED, "fterm-token")
+DOWN = os.path.join(SHARED, "fterm-down")
+LOG = os.path.join(SHARED, "fterm-keeper.log")
+DAEMON = os.path.expanduser("~/fterm/ftermd")
+PIDFILE = os.path.expanduser("~/.fterm/keeper.pid")
+
+POLL_SECONDS = 1.0
+
+
+def log(msg):
+    try:
+        with open(LOG, "a") as f:
+            f.write("%s %s\n" % (time.strftime("%H:%M:%S"), msg))
+    except OSError:
+        pass
+
+
+def daemon_status():
+    return subprocess.run([DAEMON, "status"], capture_output=True).returncode == 0
+
+
+def start_daemon():
+    if daemon_status():
+        return True
+    try:
+        subprocess.Popen([DAEMON, "start"],
+                         stdout=open(os.path.expanduser("~/fterm/daemon.log"), "a"),
+                         stderr=subprocess.STDOUT,
+                         start_new_session=True)
+    except OSError as e:
+        log("spawn failed: %s" % e)
+        return False
+    for _ in range(50):
+        if daemon_status():
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def publish_token():
+    try:
+        out = subprocess.run([DAEMON, "token"], capture_output=True, text=True, timeout=5)
+        token = (out.stdout or "").strip()
+        if not token:
+            return False
+        tmp = TOKEN + ".tmp"
+        with open(tmp, "w") as f:
+            f.write(token)
+        os.replace(tmp, TOKEN)
+        os.chmod(TOKEN, 0o644)
+        return True
+    except Exception as e:
+        log("token failed: %s" % e)
+        return False
+
+
+def handle_up():
+    ok = start_daemon()
+    log("up: daemon=%s" % ok)
+    if ok:
+        publish_token()
+    try:
+        os.unlink(UP)
+    except OSError:
+        pass
+
+
+def handle_down():
+    log("down: stopping daemon")
+    subprocess.run([DAEMON, "stop"], capture_output=True)
+    try:
+        os.unlink(TOKEN)
+    except OSError:
+        pass
+    for p in (DOWN,):
+        try:
+            os.unlink(p)
+        except OSError:
+            pass
+
+
+def run():
+    with open(PIDFILE, "w") as f:
+        f.write(str(os.getpid()))
+    log("keeper running (pid %d)" % os.getpid())
+
+    # A heartbeat the app can show: the keeper is alive if this is recent.
+    beat = os.path.join(SHARED, "fterm-keeper-alive")
+
+    while True:
+        try:
+            if os.path.exists(UP):
+                handle_up()
+            if os.path.exists(DOWN):
+                handle_down()
+            with open(beat, "w") as f:
+                f.write(str(int(time.time())))
+        except Exception as e:
+            log("loop error: %s" % e)
+        time.sleep(POLL_SECONDS)
+
+
+def cmd_stop():
+    try:
+        with open(PIDFILE) as f:
+            pid = int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        print("not running")
+        return 1
+    try:
+        os.kill(pid, 15)
+    except OSError as e:
+        print("kill failed: %s" % e)
+        return 1
+    try:
+        os.unlink(PIDFILE)
+    except OSError:
+        pass
+    print("stopped")
+    return 0
+
+
+def cmd_status():
+    alive = False
+    pid = 0
+    try:
+        with open(PIDFILE) as f:
+            pid = int(f.read().strip() or 0)
+        os.kill(pid, 0)
+        alive = True
+    except (OSError, ValueError):
+        pass
+    print("keeper pid=%d alive=%s daemon=%s" % (pid, alive, daemon_status()))
+    return 0 if alive else 2
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__)
+        return 2
+    cmd = argv[1]
+    if cmd == "start":
+        run()
+        return 0
+    if cmd == "stop":
+        return cmd_stop()
+    if cmd == "status":
+        return cmd_status()
+    print("fterm-keeper: unknown command %s" % cmd, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

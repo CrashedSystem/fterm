@@ -1,0 +1,251 @@
+# fterm
+
+Android 단독으로 쓰는 터미널. Termux의 셸을 그대로 물려 쓰고, 화면은 Windows Terminal을
+닮게 만들었다 — 위에 탭 스트립, 아래에 키 바, 가운데 큰 다크 화면.
+
+| | |
+|---|---|
+| 앱 | `build/fterm.apk` (2.0MB, `ai.openclaw.fterm`, targetSdk 36 / minSdk 26) |
+| 데몬 | `termux/ftermd` (python3, Termux 안에서 실행) |
+| 엔진 | Termux `terminal-emulator` + `terminal-view` (Apache-2.0) 벤더링 |
+| 폰트 | mterm 스택: Iosevka(라틴) + Nerd Symbols(아이콘) + Pretendard(한글) |
+
+## 왜 데몬이 필요한가
+
+앱은 Termux의 bash를 직접 실행할 수 없다. `/data/data/com.termux/files/usr` 가 `0700` 이고
+앱의 uid가 다르기 때문이다. 그래서 PTY는 Termux 안의 `ftermd` 가 소유하고, 앱은
+`127.0.0.1:8791` 로 붙는다. 부수 효과가 오히려 장점이다: 앱을 닫아도 셸이 살아 있고,
+다시 열면 화면이 그대로 복원된다 (`REPLAY`).
+
+## 설치 (기기에서 직접)
+
+1. Termux에서 데몬 설치:
+
+```bash
+cd ~/projects/fterm
+bash termux/install.sh
+```
+
+출력 마지막 줄의 토큰을 기억한다.
+
+2. APK 설치: `build/fterm.apk` 를 탭해서 설치 (이미 `/sdcard/Download/fterm.apk` 에 복사해 둠).
+
+3. 앱 첫 실행 시 뜨는 창에 토큰을 붙여넣는다. 한 번만 하면 된다.
+
+## 조작
+
+| 동작 | 결과 |
+|---|---|
+| `+` | 새 탭 |
+| 탭 길게 | 탭 닫기 (확인 후 셸 종료) |
+| `+` 길게 | 설정 (글자 크기, 색상 구성, 서버 정보) |
+| CTRL/ALT/SHIFT | 다음 키 한 번에만 적용 (sticky) |
+| 터미널 길게 | 텍스트 선택 → 복사 |
+| Ctrl+Shift+C / V | 하드웨어 키보드에서 복사/붙여넣기 |
+| Ctrl+Shift+T / W | 새 탭 / 탭 닫기 |
+
+색상은 Campbell(Windows Terminal 기본), One Dark, Solarized Dark, Dracula 4종.
+
+## mterm에서 가져온 것
+
+| 항목 | 원본 | 이 앱에서 |
+|---|---|---|
+| 폰트 스택 | `mterm/public/js/core/appearance.js` `FONT_STACK` = Iosevka → Nerd Symbols → Pretendard | `Fonts.java` — 코드포인트별 `Typeface` 선택. Iosevka `M` 0.500em, Pretendard `한` 0.864em이므로 2칸에 맞추려면 **115.71%** 필요 (mterm 상수 115.85%, 0.14p 차) — 앱은 실측 셀에서 매번 계산한다 |
+| Miku 팔레트 | 같은 파일의 `ONE_HALF_DARK` | `Schemes.miku()` — 16개 ANSI 값을 그대로 옮김 (`SchemesTest`가 대조) |
+| Miku 그림 | `mterm/public/img/miku.png` (CC BY-NC) | `assets/img/miku-dusk.png` — `#282c34`와 **미리 multiply**한 것. mterm의 `background-blend-mode: multiply`와 같은 결과이고, 런타임 블렌드가 필요 없다 |
+
+`backgroundOpacity: 0.55`는 mterm에 **선언만 있고 소비처가 없다**(CSS·JS 어디서도 읽지 않는다). 실제 렌더는 불투명 multiply이므로 여기서도 그렇게 했다.
+
+## 앱이 데몬을 스스로 띄운다 (keeper)
+
+처음엔 Termux의 `RUN_COMMAND` 브로드캐스트로 `ftermd start`를 쏘려 했다. **이 기기에서는
+조용히 무시된다** — 브로드캐스트는 `result=0`으로 끝나고 `RunCommandService`는 호출되지
+않으며 파일도 생기지 않는다(실측: `am broadcast` 두 번, `am start-foreground-service` 한 번
+모두 실패). Termux 0.118.3 + Android 17의 동작이다.
+
+그래서 방향을 뒤집었다. 앱이 **공유 저장소에 요청 파일**을 쓰고, Termux 안의 작은 keeper
+프로세스가 그것을 폴링해 데몬을 띄우고 토큰을 돌려준다:
+
+```
+/sdcard/Download/fterm-up            앱 → keeper   "데몬 올려라"
+/sdcard/Download/fterm-token         keeper → 앱   토큰
+/sdcard/Download/fterm-down          앱 → keeper   "데몬 내려라"
+/sdcard/Download/fterm-keeper-alive  keeper 1초 heartbeat
+```
+
+검증(실기기): `pm clear` 로 토큰·설정을 지우고 데몬을 죽인 상태에서 앱을 열었더니
+데몬이 뜨고 토큰이 발행됐다.
+
+```
+앱 실행 → keeper log "up: daemon=True"
+           daemon: alive, port 8791
+           /sdcard/Download/fterm-token = 861f4ee8…
+```
+
+`termux/install.sh`가 데몬·keeper를 설치하고 keeper를 띄운다. 사용자는 이것만 한 번 하면
+이후로는 앱만 열면 된다.
+
+## Windows Terminal 느낌
+
+| WT | 이 앱 |
+|---|---|
+| 탭 스트립 + `+` + 드롭다운 캐럿 | 있음. `+` 길게 눌러도 드롭다운 |
+| 드롭다운 메뉴(새 탭·이름 변경·닫기·붙여넣기·복사·설정) | 있음, 단축키 병기 |
+| 명령 팔레트 `Ctrl+Shift+P` | 있음, 검색 가능 |
+| 활성 탭에만 닫기 버튼 | 있음 |
+| 둥근 상단 탭 plate | 있음, 활성 탭은 터미널 배경색과 동일 |
+| `Ctrl+Shift+T/W/C/V` | 있음 |
+| 분할 창 | **없음** (모바일이라 의도적으로 미구현) |
+
+터미널 벨은 BEL을 진동/비프로 옮긴다 — 무음 모드에서는 진동만, 활성 탭만 울린다.
+네이티브 알림은 포그라운드 서비스의 상시 알림 하나이고, 탭하면 앱으로 돌아온다.
+
+## 유휴 사망 — 두 개의 원인, 둘 다 실측
+
+증상은 "유휴 상태되면 터미널 죽음"이었다. 원인이 **둘**이었고, 앞의 것만 고쳐서는
+계속 죽었다.
+
+### 1. 앱 프로세스가 동결됨 (Android 12+ freezer)
+
+`dumpsys activity processes`를 배경 상태에서 읽었다:
+
+```
+isFrozen=true   curProcState=16 (CACHED_EMPTY)
+```
+
+동결된 프로세스는 소켓을 읽지 않는다. 제가 넣은 핑·타임아웃은 **죽는 것을 알아채게** 할
+뿐 **죽는 것을 막지 못한다**. 해결은 플랫폼의 정답인 포그라운드 서비스다:
+
+```
+TerminalService.startForeground()  →  curProcState=4, isFrozen=false   (수정 후 실측)
+```
+
+Termux 자신이 같은 이유로 같은 것을 쓴다.
+
+### 2. 데몬이 스스로 크래시 (진짜 원인)
+
+앱을 고친 뒤에도 죽었다. `~/fterm/daemon.log`:
+
+```
+[ftermd] client idle for 120s, dropped
+Traceback ... select.select(rfds, [], [], 1.0)
+ValueError: file descriptor cannot be a negative integer (-1)
+```
+
+`drop_idle()`이 **select용 fd 집합을 만든 뒤에** 소켓을 닫고 있었다. 닫힌 소켓은 fd `-1`이
+되어 select()가 예외를 던지고, 데몬이 종료되면서 **모든 살아있는 셸을 함께 데려갔다**.
+
+수정: `drop_idle()`을 fd 집합 구성 **전**으로 옮기고, 닫힌 fd는 집합에 넣지 않으며,
+select 오류는 루프를 죽이지 않게 했다.
+
+### 검증 (실기기)
+
+```
+30초 유휴  → curProcState=4, isFrozen=false
+150초 유휴 (데몬 timeout 120초 초과) → daemon_alive=True × 8회
+유휴 후 입력 → "echo IDLE-OK-$((7*6))"  →  화면에 IDLE-OK-42
+```
+
+`tests/jvm/harness/IdleDropTest.java`가 회귀를 막는다: 20회 급절단 접속 + 20초 유휴 +
+소스 순서 검사(select 전에 drop).
+
+## 이전 수정 (핑/타임아웃) — 여전히 유효하지만 충분하지 않았다
+
+기기에서 "유휴 아니면 프리징"이 보고됐고, `IdleTest`가 20초 유휴에서 세션이 죽는 것을
+재현했다. 로그가 원인을 짚었다: 클라이언트가 **15.0초**에 끊겼다.
+
+```
+SO_TIMEOUT_MS = 15000   (읽기 한도)
+IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
+```
+
+8초 자고 나서 "8초 넘게 조용했나"를 물으면 경계에 정확히 걸려 **핑을 건너뛰고**, 다음
+기회가 16초 — 읽기 한도(15초)보다 1초 늦다. 그래서 매번 15초 만에 죽었다.
+
+수정: 핑을 **무조건 5초마다** 보내고 읽기 한도를 20초로. 핑 두 번을 잃어도 살아남는다.
+데몬 쪽은 120초 무응답 클라이언트를 ghost로 보고 버린다(동결된 앱이 세션을 붙잡지 않게).
+
+## 최신 안드로이드 대응 (targetSdk 36)
+
+| 항목 | 처리 |
+|---|---|
+| API 35+ 강제 edge-to-edge | `EdgeToEdge` — 상태바/내비바/키보드 인셋을 탭 스트립·키 바 **높이**에 더한다 (패딩만 주면 행이 0높이가 된다) |
+| `setStatusBarColor` 무시됨 (35+) | 인셋으로 처리, 34 이하만 색 지정 |
+| 예측형 백 (33+) | `OnBackInvokedCallback` 등록 — `onBackPressed()`만으론 "뒤로=ESC"가 죽는다 |
+| 600dpi 화면 | 글자 크기를 **dp**로 모델링 (`12dp` → 45px). 이전엔 14px=3.7dp라 안 보였다 |
+| 한글 폰트 | `assets/D2Coding.ttf` 실제 로드 (이전엔 assets에만 있고 안 썼다) |
+| sticky CTRL 누수 | `onCodePoint`에서 한 글자 뒤 해제 — 이전엔 `abc`가 `^B^C^H`로 갔다 |
+
+## 검증 상태
+
+실제 기기에서 설치·실행·렌더링·영문 입력·셸 연결을 확인했다. 한글 IME는 아래 참조. 이 기기에서 `pm install` 이
+`SecurityException: INTERACT_ACROSS_USERS_FULL` 로 막혀 있어 설치 자체를 못 했다.
+대신 다음을 실제로 돌려 통과시켰다.
+
+| 검증 | 방법 | 결과 |
+|---|---|---|
+| 데몬 프로토콜 6종 (인증 거부, 에코, 한글, resize, replay, close) | `tests/run_all.sh` 의 python 파트 | 통과 |
+| Java `SocketTransport` 9종 (토큰 오류, 왕복, 한글, resize, pid, replay, close, 세션 분리) | 실제 `ftermd` 에 JVM으로 접속 | 통과 |
+| `DaemonClient` SYNC 5종 (빈 데몬, 목록, 토큰 오류, 포트 거부, 종료 후 제거) | 같음 | 통과 |
+| 폭 계산 15종 (한글 음절 2칸, 자모, emoji, 결합문자, zero-width) | `tests/run_core.sh` | 통과 |
+| **ANSI 파서 23종** (한글 2칸 점유, 커서 위치, 자동 줄바꿈이 음절을 쪼개지 않음, SGR, OSC 제목, resize, 패킷 분할 UTF-8) | 실제 `TerminalEmulator` | 통과 |
+| APK 빌드·서명 | `./build.sh` | 통과 (V3 서명, targetSdk 36) |
+| 붙여넣기 12종 (bracketed paste `\e[200~..\e[201~`, ESC 주입 차단, 모드 해제) | `tests/jvm/core/PasteTest.java` | 통과 |
+| 색상 147종 (mterm `ONE_HALF_DARK` 대조, OLED 순검정, 전 테마 4.5:1) | `tests/jvm/core/SchemesTest.java` | 통과 |
+| 폰트 라우팅 23종 (한글/아이콘/라틴, 상수 115.85) | `tests/jvm/core/FontsTest.java` | 통과 |
+| 탭 닫기 9종 (plate 제거, transport 종료, Enter 경로) | `tests/jvm/core/TabCloseTest.java` | 통과 |
+| 기기 설치·실행·렌더링·셸 연결 | `rish`로 `pm install` 후 화면 확인 | 통과 |
+| 기기 영문 입력 (`abc` → `a`,`b`,`c`) | daemon 로그 바이트 확인 | 통과 |
+| 유휴/프리징 3종 (20초 유휴 후 세션 생존·사용 가능, 데몬이 클라이언트 유지, 끊긴 링크 즉시 종료) | `tests/jvm/harness/IdleTest.java` | 통과 |
+| 데몬 크래시 회귀 5종 (20회 급절단, 세션 생존, select 전 drop 순서) | `tests/jvm/harness/IdleDropTest.java` | 통과 |
+| 구조 14종 (MainActivity 1264줄 상한, KeyBar/SettingsSheet 분리, 서비스·벨·keeper) | `tests/jvm/core/StructureTest.java` | 통과 |
+| UI 19종 (드롭다운·팔레트·이름 고정·테마 색·Enter) | `tests/jvm/core/UiTest.java` | 통과 |
+| 한글 IME 조합 16종 (ㅎ→하→한, 성장/축소, commit 꼬리, delete, 소스 대조) | `tests/jvm/core/ImeComposeTest.java` | 통과 |
+
+### 한글 입력 — termlib 방식
+
+ConnectBot이 같은 문제를 푼 방식([connectbot#2352](https://github.com/connectbot/connectbot/issues/2352),
+[termlib `ImeInputView`](https://github.com/connectbot/termlib))을 그대로 옮겼다.
+
+핵심 세 가지, 모두 소스에 주석으로 남겼다:
+
+1. **조합을 터미널에 투영한다.** IME는 키 입력마다 조합 **전체**를 보낸다("하" → "한").
+   터미널에는 조합 영역이 없으므로 늘어난 꼬리만 write하고, 줄어든 만큼 DEL을 보낸다.
+2. **`finishComposingText`는 다시 보내지 않는다.** 이미 화면에 있으므로 중복이 된다 —
+   원본 Termux가 `getEditable()`을 통째로 보내던 것이 자모 분리의 원인이었다.
+3. **`deleteSurroundingText`는 `sendKeyEvent`를 쓰지 않는다.** 키 이벤트는 IME의 editable을
+   비워서, 조합 중인 음절을 중간에 버리게 만든다. DEL 바이트를 직접 쓴다.
+
+`tests/jvm/core/ImeComposeTest.java`(16)가 이 규약을 검증하고, `TerminalView.java`가 그
+로직에서 벗어나지 않았는지 소스까지 대조한다.
+
+## 구조
+
+```
+app/src/ai/openclaw/fterm/    MainActivity, Prefs, Schemes
+app/src/com.termux/terminal/  벤더링 + SessionTransport / SocketTransport / DaemonClient
+app/src/com.termux/view/      벤더링 TerminalView / TerminalRenderer
+termux/ftermd                 PTY 소유 데몬 (토큰, ring replay, 세션 상한 16)
+tests/                        프로토콜, 전송, 파서, 폭 테스트
+```
+
+벤더링한 코드에서 고친 곳은 세 군데뿐이다: `androidx.annotation` 의존 제거,
+`TerminalBitmap` 의 `VANILLA_ICE_CREAM` 상수를 숫자 35로, 그리고 `JNI` PTY 경로와 나란히
+`SessionTransport` 분기를 넣은 `TerminalSession`. 나머지는 Termux 원본 그대로다.
+
+## 한글이 왜 정확한가
+
+`WcWidth` 는 U+1100–115F(자모)와 U+AC00–D7A3(음절)을 2칸으로 계산한다. 렌더러는 측정된
+글자 폭이 `wcwidth` 기대값과 다르면 그 코드포인트만 가로로 늘려 그리므로, 한글 글꼴의
+전각 advance와 라틴 셀 폭이 어긋나도 격자가 밀리지 않는다. IME는 `commitText` 로 완성형
+음절을 한 번에 보내고, `TerminalEmulator` 는 UTF-8 시퀀스가 패킷 경계에서 끊겨도
+버퍼링한다(테스트 8번).
+
+## 데몬 명령
+
+```bash
+ftermd start | stop | status | token | reset-token
+```
+
+환경 변수: `FTERM_PORT`(8791), `FTERM_SHELL`, `FTERM_RUNDIR`(`~/.fterm`),
+`FTERM_HISTORY_BYTES`(256KiB).

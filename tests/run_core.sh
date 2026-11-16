@@ -1,0 +1,54 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# ANSI 파서 검증: 실제 TerminalEmulator를 안드로이드 스텁 위에서 돌린다.
+# 렌더링은 안 하고 그리드만 확인한다 — 한글이 2칸을 차지하는지가 핵심.
+set -e
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+OUT=/data/data/com.termux/files/usr/tmp/fterm-core
+rm -rf "$OUT"; mkdir -p "$OUT"
+
+STUB=$ROOT/tests/androidstub
+CORE=$ROOT/app/src/com.termux/terminal
+
+echo "[1/2] 컴파일 (엔진 + 스텁 + 테스트)"
+javac -nowarn -d "$OUT" \
+  $(find "$STUB" -name '*.java') \
+  "$CORE/ByteQueue.java" \
+  "$CORE/WcWidth.java" \
+  "$CORE/TextStyle.java" \
+  "$CORE/TerminalColorScheme.java" \
+  "$CORE/TerminalColors.java" \
+  "$CORE/Logger.java" \
+  "$CORE/AndroidUtils.java" \
+  "$CORE/TerminalSixel.java" \
+  "$CORE/TerminalBitmap.java" \
+  "$CORE/ITermImage.java" \
+  "$CORE/TerminalRow.java" \
+  "$CORE/TerminalBuffer.java" \
+  "$CORE/TerminalEmulator.java" \
+  "$CORE/KeyHandler.java" \
+  "$CORE/TerminalSessionClient.java" \
+  "$ROOT/tests/corestub/com/termux/terminal/TerminalSession.java" \
+  "$ROOT/tests/corestub/ai/openclaw/fterm/Fonts.java" \
+  "$CORE/TerminalOutput.java" \
+  "$ROOT/tests/jvm/core/WidthTest.java" \
+  "$ROOT/tests/jvm/core/ScreenTest.java" \
+  "$ROOT/tests/jvm/core/SchemesTest.java" \
+  "$ROOT/tests/jvm/core/PasteTest.java" \
+  "$ROOT/tests/jvm/core/FontsTest.java" \
+  "$ROOT/tests/jvm/core/TabCloseTest.java" \
+  "$ROOT/tests/jvm/core/ImeComposeTest.java" \
+  "$ROOT/tests/jvm/core/UiTest.java" \
+  "$ROOT/tests/jvm/core/StructureTest.java" \
+  "$ROOT/app/src/ai/openclaw/fterm/Schemes.java" \
+
+echo "[2/2] 실행"
+java -cp "$OUT" WidthTest
+java -cp "$OUT" ScreenTest
+java -cp "$OUT" SchemesTest
+java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" PasteTest
+java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" FontsTest
+java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
+  -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" TabCloseTest
+java -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" ImeComposeTest
+java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" UiTest
+java -Dapp.dir="$ROOT/app/src/ai/openclaw/fterm/" -cp "$OUT" StructureTest

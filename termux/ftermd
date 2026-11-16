@@ -1,0 +1,674 @@
+#!/data/data/com.termux/files/usr/bin/env python3
+"""ftermd — fterm 앱을 위한 PTY 데몬.
+
+앱과 Termux 셸 사이에 선다. 앱 샌드박스는 /data/data/com.termux/files/usr(0700)에
+들어갈 수 없으므로, Termux 안에서 이 프로세스가 셸을 소유하고 TCP로 중계한다.
+
+  ftermd start            포그라운드 데몬 (MTERM_PORT 기본 8791)
+  ftermd stop             pidfile + SIGTERM
+  ftermd status           소켓/pid 확인
+  ftermd token            토큰 출력(없으면 생성)
+  ftermd reset-token      토큰 교체 (앱 재입력 필요)
+
+설계 노트
+- 세션은 데몬 수명과 함께 산다. 클라이언트가 끊겨도 셸은 계속 돈다.
+- 새 클라이언트가 붙으면 세션별 ring을 REPLAY로 먼저 보낸다. 그래서 앱을 껐다
+  켜도 화면 맨 아래가 즉시 복원된다 (scrollback 은 앱이 이미 가진다).
+- 셸은 setsid + forkpty 로 띄우고 프로세스 그룹째 종료한다.
+- 토큰은 ~/.fterm/token 0600. 인증 없이는 바이트를 하나도 흘리지 않는다.
+"""
+
+import errno
+import fcntl
+import json
+import os
+import pty
+import select
+import signal
+import socket
+import struct
+import sys
+import termios
+import time
+
+RUNDIR = os.path.expanduser(os.environ.get("FTERM_RUNDIR", "~/.fterm"))
+PORT = int(os.environ.get("FTERM_PORT", "8791"))
+SHELL = os.environ.get("FTERM_SHELL", "")
+HISTORY_BYTES = int(os.environ.get("FTERM_HISTORY_BYTES", "262144"))
+
+PROTO_VERSION = 1
+MAX_FRAME = 1 << 20
+
+# 클라 -> 데몬
+C_HELLO = 0x01
+C_SYNC = 0x09
+C_OPEN = 0x10
+C_CLOSE = 0x11
+C_INPUT = 0x12
+C_RESIZE = 0x13
+C_PING = 0x18
+
+# 데몬 -> 클라
+S_HELLO_OK = 0x80
+S_OPENED = 0x90
+S_OUTPUT = 0x91
+S_EXIT = 0x92
+S_REPLAY = 0x93
+S_SYNCED = 0x9E
+S_ERROR = 0x9F
+S_PONG = 0x98
+
+E_BAD_MAGIC = 1
+E_BAD_PROTO = 2
+E_BAD_TOKEN = 3
+E_BAD_FRAME = 4
+E_NO_SESSION = 5
+E_SPAWN = 6
+E_TOO_MANY = 7
+
+MAX_SESSIONS = 16
+
+# a client that has not sent a frame in this long is a ghost (a frozen app)
+IDLE_TIMEOUT = 120
+
+
+def default_shell():
+    if SHELL:
+        return SHELL
+    for cand in ("/data/data/com.termux/files/usr/bin/bash",
+                 "/data/data/com.termux/files/usr/bin/sh",
+                 "/bin/bash"):
+        if os.access(cand, os.X_OK):
+            return cand
+    return "/system/bin/sh"
+
+
+def ensure_rundir():
+    os.makedirs(RUNDIR, mode=0o700, exist_ok=True)
+    try:
+        os.chmod(RUNDIR, 0o700)
+    except OSError:
+        pass
+
+
+def token_path():
+    return os.path.join(RUNDIR, "token")
+
+
+def read_token(create=True):
+    p = token_path()
+    try:
+        with open(p, "r") as f:
+            t = f.read().strip()
+        if t:
+            return t
+    except FileNotFoundError:
+        if not create:
+            return None
+    if not create:
+        return None
+    t = os.urandom(24).hex()
+    fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(t)
+    os.chmod(p, 0o600)
+    return t
+
+
+def write_token_file(name, value):
+    p = os.path.join(RUNDIR, name)
+    tmp = p + ".tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(str(value))
+    os.replace(tmp, p)
+
+
+class Ring:
+    """세션 출력의 최근 바이트. 재접속 시 화면 복원용."""
+
+    def __init__(self, limit):
+        self.limit = limit
+        self.buf = bytearray()
+
+    def add(self, data):
+        self.buf += data
+        if len(self.buf) > self.limit:
+            # 바이트 경계가 아니라 UTF-8 시퀀스 경계에서 자른다. 아니면 복원된
+            # 화면 첫 글자가 깨진다.
+            cut = len(self.buf) - self.limit
+            while cut < len(self.buf) and (self.buf[cut] & 0xC0) == 0x80:
+                cut += 1
+            del self.buf[:cut]
+
+    def get(self):
+        return bytes(self.buf)
+
+
+class Session:
+    def __init__(self, sid, cols, rows, shell, env):
+        self.sid = sid
+        self.cols = cols
+        self.rows = rows
+        self.ring = Ring(HISTORY_BYTES)
+        self.closed = False
+        self.exit_code = None
+        pid, fd = pty.fork()
+        if pid == 0:
+            # 자식: forkpty가 이미 setsid를 했다. 여기서는 exec만.
+            try:
+                os.chdir(os.path.expanduser("~"))
+            except OSError:
+                pass
+            env = dict(env)
+            env.setdefault("TERM", "xterm-256color")
+            env.setdefault("COLORTERM", "truecolor")
+            env.setdefault("LANG", "en_US.UTF-8")
+            try:
+                os.execvpe(shell, [shell, "-l"], env)
+            except Exception:
+                os._exit(127)
+        self.pid = pid
+        self.fd = fd
+        self.set_size(cols, rows)
+
+    def set_size(self, cols, rows):
+        self.cols = max(1, min(cols, 2000))
+        self.rows = max(1, min(rows, 2000))
+        try:
+            fcntl.ioctl(self.fd, termios.TIOCSWINSZ,
+                        struct.pack("HHHH", self.rows, self.cols, 0, 0))
+        except OSError:
+            pass
+
+    def write(self, data):
+        try:
+            os.write(self.fd, data)
+        except OSError:
+            pass
+
+    def read(self):
+        try:
+            return os.read(self.fd, 65536)
+        except OSError as e:
+            if e.errno in (errno.EIO, errno.EBADF):
+                return b""
+            raise
+
+    def close(self, kill=True):
+        if self.closed:
+            return
+        self.closed = True
+        if kill and self.pid > 0:
+            for sig in (signal.SIGHUP, signal.SIGTERM, signal.SIGKILL):
+                try:
+                    os.killpg(self.pid, sig)
+                except OSError:
+                    try:
+                        os.kill(self.pid, sig)
+                    except OSError:
+                        break
+                time.sleep(0.02)
+        try:
+            os.close(self.fd)
+        except OSError:
+            pass
+
+
+class Client:
+    def __init__(self, sock, addr):
+        self.sock = sock
+        self.addr = addr
+        self.inbuf = bytearray()
+        self.authed = False
+        self.alive = True
+        self.outbuf = bytearray()
+        self.pending_sync = 0
+        self.attached = set()
+        self.last_seen = time.time()
+
+    def send(self, data):
+        if not self.alive:
+            return
+        self.outbuf += data
+        self.flush()
+
+    def flush(self):
+        while self.outbuf and self.alive:
+            try:
+                n = self.sock.send(self.outbuf[:65536])
+            except (BlockingIOError, InterruptedError):
+                return
+            except OSError:
+                self.alive = False
+                return
+            if n <= 0:
+                self.alive = False
+                return
+            del self.outbuf[:n]
+
+    def frame(self, typ, payload=b""):
+        return struct.pack("<BI", typ, len(payload)) + payload
+
+    def error(self, code, msg):
+        b = msg.encode("utf-8", "replace")
+        self.send(self.frame(S_ERROR, struct.pack("<BH", code, len(b)) + b))
+
+
+class Daemon:
+    def __init__(self):
+        ensure_rundir()
+        self.token = read_token()
+        self.sessions = {}
+        self.clients = []
+        self.shell = default_shell()
+        self.srv = None
+        self.base_env = {
+            "HOME": os.path.expanduser("~"),
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "TERM": "xterm-256color",
+            "COLORTERM": "truecolor",
+            "LANG": "en_US.UTF-8",
+            "PREFIX": os.environ.get("PREFIX", "/data/data/com.termux/files/usr"),
+            "TMPDIR": os.environ.get("TMPDIR", "/data/data/com.termux/files/usr/tmp"),
+        }
+
+    # ---------- lifecycle ----------
+
+    def listen(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("127.0.0.1", PORT))
+        s.listen(8)
+        s.setblocking(False)
+        self.srv = s
+        write_token_file("ftermd.pid", os.getpid())
+        print("ftermd %s listening on 127.0.0.1:%d (shell %s)"
+              % (PROTO_VERSION, PORT, self.shell), flush=True)
+
+    def stop(self, signum=None, frame=None):
+        for c in list(self.clients):
+            c.alive = False
+            try:
+                c.sock.close()
+            except OSError:
+                pass
+        for s in list(self.sessions.values()):
+            s.close()
+        try:
+            if self.srv:
+                self.srv.close()
+        except OSError:
+            pass
+        try:
+            os.unlink(os.path.join(RUNDIR, "ftermd.pid"))
+        except OSError:
+            pass
+        sys.exit(0)
+
+    # ---------- main loop ----------
+
+    def run(self):
+        self.listen()
+        signal.signal(signal.SIGTERM, self.stop)
+        signal.signal(signal.SIGINT, self.stop)
+        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+        while True:
+            # Drop idle clients BEFORE building the fd set. The previous order put a socket
+            # into rfds and then closed it, so select() received -1 and the daemon died with
+            # "file descriptor cannot be a negative integer" - a crash that also took every
+            # live shell with it, which is what "the terminal dies when idle" looked like.
+            self.drop_idle()
+
+            rfds = [self.srv]
+            for c in self.clients:
+                if c.alive:
+                    rfds.append(c.sock)
+            for s in self.sessions.values():
+                if not s.closed and s.fd >= 0:
+                    rfds.append(s.fd)
+            try:
+                r, _, _ = select.select(rfds, [], [], 1.0)
+            except InterruptedError:
+                continue
+            except (OSError, ValueError) as e:
+                # A closed fd or a signal; neither is a reason to lose every session.
+                self.log("select error: %s" % e)
+                time.sleep(0.05)
+                continue
+
+            for fd in r:
+                if fd is self.srv:
+                    self.accept()
+                elif isinstance(fd, socket.socket):
+                    cl = self.clients_by_sock(fd)
+                    if cl:
+                        self.read_client(cl)
+                else:
+                    self.read_pty(fd)
+
+            self.reap()
+
+    def clients_by_sock(self, sock):
+        for c in self.clients:
+            if c.sock is sock:
+                return c
+        return None
+
+    def accept(self):
+        try:
+            s, addr = self.srv.accept()
+        except OSError:
+            return
+        s.setblocking(False)
+        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.clients.append(Client(s, addr))
+
+    def drop(self, cl):
+        self.log("client %s dropped (attached=%s)" % (cl.addr, sorted(cl.attached)))
+        cl.alive = False
+        try:
+            cl.sock.close()
+        except OSError:
+            pass
+        if cl in self.clients:
+            self.clients.remove(cl)
+
+    def read_client(self, cl):
+        try:
+            data = cl.sock.recv(65536)
+        except (BlockingIOError, InterruptedError):
+            return
+        except OSError:
+            self.drop(cl)
+            return
+        if not data:
+            self.drop(cl)
+            return
+        cl.last_seen = time.time()
+        cl.inbuf += data
+        self.parse(cl)
+
+    def parse(self, cl):
+        while len(cl.inbuf) >= 5:
+            typ = cl.inbuf[0]
+            (length,) = struct.unpack_from("<I", cl.inbuf, 1)
+            if length > MAX_FRAME:
+                cl.error(E_BAD_FRAME, "frame too large")
+                self.drop(cl)
+                return
+            if len(cl.inbuf) < 5 + length:
+                return
+            payload = bytes(cl.inbuf[5:5 + length])
+            del cl.inbuf[:5 + length]
+            self.handle(cl, typ, payload)
+
+    def log(self, msg):
+        # stderr only; the daemon's stdout carries the one-line startup banner.
+        sys.stderr.write("[ftermd %s] %s\n" % (time.strftime("%H:%M:%S"), msg))
+        sys.stderr.flush()
+
+    def drop_idle(self):
+        """Drop clients that have not sent anything for a long time.
+
+        A frozen app keeps its TCP connection open without sending a byte. Holding its
+        session is harmless, but the client list would grow with ghosts and the next real
+        client's frames would compete with them for the socket budget.
+        """
+        now = time.time()
+        for c in list(self.clients):
+            if now - c.last_seen > IDLE_TIMEOUT:
+                self.log("client %s idle for %ds, dropped" % (c.addr, IDLE_TIMEOUT))
+                self.drop(c)
+
+    def handle(self, cl, typ, p):
+        if typ == C_HELLO:
+            if len(p) < 1:
+                cl.error(E_BAD_FRAME, "short hello")
+                self.drop(cl)
+                return
+            proto = p[0]
+            tokl = struct.unpack_from("<H", p, 1)[0] if len(p) >= 3 else 0
+            tok = p[3:3 + tokl].decode("utf-8", "replace") if len(p) >= 3 + tokl else ""
+            if proto != PROTO_VERSION:
+                cl.error(E_BAD_PROTO, "protocol %d != %d" % (proto, PROTO_VERSION))
+                self.drop(cl)
+                return
+            if tok != self.token:
+                cl.error(E_BAD_TOKEN, "bad token")
+                self.drop(cl)
+                return
+            cl.authed = True
+            self.log("hello ok from %s" % (cl.addr,))
+            cl.send(cl.frame(S_HELLO_OK, bytes([PROTO_VERSION])))
+            return
+
+        if not cl.authed:
+            cl.error(E_BAD_TOKEN, "hello first")
+            self.drop(cl)
+            return
+
+        if typ == C_PING:
+            cl.send(cl.frame(S_PONG, p))
+        elif typ == C_OPEN:
+            if len(p) < 6:
+                cl.error(E_BAD_FRAME, "short open")
+                return
+            sid, cols, rows = struct.unpack_from("<HHH", p, 0)
+            if sid in self.sessions:
+                sess = self.sessions[sid]
+                sess.set_size(cols, rows)
+            else:
+                if len(self.sessions) >= MAX_SESSIONS:
+                    cl.error(E_TOO_MANY, "too many sessions")
+                    return
+                try:
+                    sess = Session(sid, cols, rows, self.shell, self.base_env)
+                except Exception as e:
+                    cl.error(E_SPAWN, "spawn failed: %s" % e)
+                    return
+                self.sessions[sid] = sess
+            cl.attached.add(sid)
+            self.log("open sid=%d cols=%d rows=%d pid=%d (clients=%d)"
+                     % (sid, cols, rows, sess.pid, len(self.clients)))
+            cl.send(cl.frame(S_OPENED, struct.pack("<Hi", sid, sess.pid)))
+            ring = sess.ring.get()
+            if ring:
+                cl.send(cl.frame(S_REPLAY, struct.pack("<H", sid) + ring))
+        elif typ == C_CLOSE:
+            if len(p) < 2:
+                return
+            (sid,) = struct.unpack_from("<H", p, 0)
+            sess = self.sessions.pop(sid, None)
+            self.log("close sid=%d%s" % (sid, "" if sess else " (no such session)"))
+            if sess:
+                sess.close(kill=True)
+            for c in self.clients:
+                c.attached.discard(sid)
+        elif typ == C_INPUT:
+            if len(p) < 6:
+                return
+            sid = struct.unpack_from("<H", p, 0)[0]
+            (l,) = struct.unpack_from("<I", p, 2)
+            data = p[6:6 + l]
+            sess = self.sessions.get(sid)
+            if sess and not sess.closed:
+                self.log("input sid=%d %d bytes %r" % (sid, len(data), data[:40]))
+                sess.write(data)
+        elif typ == C_RESIZE:
+            if len(p) < 6:
+                return
+            sid, cols, rows = struct.unpack_from("<HHH", p, 0)
+            sess = self.sessions.get(sid)
+            if sess and not sess.closed:
+                sess.set_size(cols, rows)
+        elif typ == C_SYNC:
+            # 살아있는 세션 목록을 알려준다. 앱이 재접속 후 정리할 때 쓴다.
+            ids = [sid for sid, s in self.sessions.items() if not s.closed]
+            cl.send(cl.frame(S_SYNCED,
+                             struct.pack("<H", len(ids)) +
+                             b"".join(struct.pack("<H", i) for i in ids)))
+        else:
+            cl.error(E_BAD_FRAME, "unknown type %d" % typ)
+
+    def read_pty(self, fd):
+        for sid, s in list(self.sessions.items()):
+            if s.fd != fd:
+                continue
+            data = s.read()
+            if not data:
+                # 셸 종료
+                code = self.wait_exit(s)
+                s.closed = True
+                for c in self.clients:
+                    if sid in c.attached:
+                        c.send(c.frame(S_EXIT, struct.pack("<Hi", sid, code)))
+                self.sessions.pop(sid, None)
+                return
+            s.ring.add(data)
+            frame = struct.pack("<H", sid) + struct.pack("<I", len(data)) + data
+            for c in self.clients:
+                if sid in c.attached:
+                    c.send(c.frame(S_OUTPUT, frame))
+            return
+
+    def wait_exit(self, s):
+        try:
+            pid, status = os.waitpid(s.pid, os.WNOHANG)
+        except OSError:
+            return -1
+        return os.waitstatus_to_exitcode(status) if pid else -1
+
+    def reap(self):
+        for c in list(self.clients):
+            if not c.alive:
+                self.clients.remove(c)
+        for sid, s in list(self.sessions.items()):
+            if s.closed:
+                continue
+            try:
+                pid, status = os.waitpid(s.pid, os.WNOHANG)
+            except OSError:
+                continue
+            if pid:
+                code = os.waitstatus_to_exitcode(status)
+                s.closed = True
+                for c in self.clients:
+                    if sid in c.attached:
+                        c.send(c.frame(S_EXIT, struct.pack("<Hi", sid, code)))
+                try:
+                    os.close(s.fd)
+                except OSError:
+                    pass
+                self.sessions.pop(sid, None)
+
+
+# ---------- CLI ----------
+
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def cmd_start():
+    # 중복 실행 방지
+    pidf = os.path.join(RUNDIR, "ftermd.pid")
+    try:
+        with open(pidf) as f:
+            old = int(f.read().strip() or 0)
+        if old and pid_alive(old):
+            print("ftermd already running (pid %d)" % old)
+            return 1
+    except (OSError, ValueError):
+        pass
+    d = Daemon()
+    d.run()
+    return 0
+
+
+def cmd_stop():
+    pidf = os.path.join(RUNDIR, "ftermd.pid")
+    try:
+        with open(pidf) as f:
+            pid = int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        print("no pidfile")
+        return 1
+    if not pid:
+        return 1
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError as e:
+        print("kill failed: %s" % e)
+        return 1
+    for _ in range(100):
+        if not pid_alive(pid):
+            print("stopped")
+            return 0
+        time.sleep(0.05)
+    print("still running (pid %d)" % pid)
+    return 1
+
+
+def cmd_status():
+    pidf = os.path.join(RUNDIR, "ftermd.pid")
+    pid = 0
+    try:
+        with open(pidf) as f:
+            pid = int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        pass
+    alive = pid_alive(pid) if pid else False
+    reachable = False
+    try:
+        s = socket.create_connection(("127.0.0.1", PORT), 1.0)
+        s.close()
+        reachable = True
+    except OSError:
+        pass
+    print(json.dumps({"pid": pid, "alive": alive, "port": PORT,
+                      "reachable": reachable, "shell": default_shell(),
+                      "rundir": RUNDIR, "token_file": token_path()},
+                     ensure_ascii=False))
+    return 0 if (alive and reachable) else 2
+
+
+def cmd_token():
+    print(read_token())
+    return 0
+
+
+def cmd_reset_token():
+    p = token_path()
+    try:
+        os.unlink(p)
+    except OSError:
+        pass
+    print(read_token())
+    return 0
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__)
+        return 2
+    cmd = argv[1]
+    if cmd == "start":
+        return cmd_start()
+    if cmd == "stop":
+        return cmd_stop()
+    if cmd == "status":
+        return cmd_status()
+    if cmd == "token":
+        return cmd_token()
+    if cmd == "reset-token":
+        return cmd_reset_token()
+    print("ftermd: unknown command %s" % cmd, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
