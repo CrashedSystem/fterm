@@ -137,6 +137,10 @@ public final class TerminalView extends View {
         // A renderer is needed before the first layout pass: onSizeChanged() asks it for
         // font metrics and does not null-check it.
         mRenderer = new TerminalRenderer(14, Typeface.MONOSPACE);
+        // Focus reporting (DECSET 1004): the program in the shell - opencode, vim, tmux -
+        // learns the user left or came back through CSI I / CSI O, which onWindowFocusChanged
+        // emits on every real focus change. Without it a TUI gates its notifications on focus
+        // it cannot see and stays silent forever.
         mGestureRecognizer = new GestureAndScaleRecognizer(context, new GestureAndScaleRecognizer.Listener() {
 
             boolean scrolledWithFinger;
@@ -300,6 +304,12 @@ public final class TerminalView extends View {
         setTopRow(0, false);
 
         updateSize();
+
+        // Tell the new program whether the window is focused right now. A fresh TUI starts
+        // assuming focus "unknown"; giving it the real state on attach means a TUI opened in
+        // the background (or reattached while the user is elsewhere) reports correctly from
+        // the first frame instead of waiting for a focus change that may never come.
+        if (mEmulator != null) mEmulator.reportFocus(hasWindowFocus());
 
         // Wait with enabling the scrollbar until we have a terminal to get scroll position from.
         setVerticalScrollBarEnabled(true);
@@ -517,6 +527,17 @@ public final class TerminalView extends View {
 
         invalidate();
         if (mAccessibilityEnabled) setContentDescription(getText());
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        super.onWindowFocusChanged(hasWindowFocus);
+        // View focus tracks which widget the IME targets; WINDOW focus tracks whether the
+        // user can see the app at all. Focus reporting (DECSET 1004) means the second kind:
+        // "user is looking / user left". Emitted on every change so a TUI's notification
+        // gate - opencode skips notifications while focus is "unknown" or "focused" - sees
+        // the real thing.
+        if (mEmulator != null) mEmulator.reportFocus(hasWindowFocus);
     }
 
     /** This must be called by the hosting activity in {@link Activity#onContextMenuClosed(Menu)}

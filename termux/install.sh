@@ -50,6 +50,22 @@ if "$DEST/ftermd" status >/dev/null 2>&1; then
   sleep 2
 fi
 
+# Re-arm the keeper on every Termux start: it is the app's only handle for starting the
+# daemon, so a keeper that died quietly must come back without the user remembering this
+# script. Idempotent - the status check skips the spawn when it is already running.
+BASHRC="$HOME/.bashrc"
+if [ -f "$BASHRC" ] && ! grep -q "fterm-keeper" "$BASHRC"; then
+  cat >> "$BASHRC" <<'HOOK'
+
+# fterm: keep the daemon-keeper alive. The fterm app asks the keeper (via a file in
+# /sdcard/Download) to start the daemon; without the keeper the app cannot revive it.
+if [ -x "$HOME/fterm/fterm-keeper" ] && ! "$HOME/fterm/fterm-keeper" status >/dev/null 2>&1; then
+  setsid nohup "$HOME/fterm/fterm-keeper" start >/dev/null 2>&1 </dev/null &
+fi
+HOOK
+  echo "keeper 자동실행 훅을 ~/.bashrc에 추가했습니다"
+fi
+
 echo "앱을 열면 자동으로 연결됩니다."
 echo "수동 토큰(필요할 때만):"
 "$DEST/ftermd" token

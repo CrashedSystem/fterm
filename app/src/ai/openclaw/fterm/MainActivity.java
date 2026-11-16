@@ -267,12 +267,14 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             final String err = failure;
             mUi.post(() -> {
                 if (err != null) {
-                    Tab tab = new Tab();
-                    tab.id = 1;
-                    mTabs.add(tab);
-                    addTabChip(tab);
-                    activate(tab);
-                    showDaemonHelp(err);
+                    // The token exists but the daemon did not answer. This is the
+                    // "swiped the app, came back, nothing works" hole: provisioning (which
+                    // would ask the keeper to revive the daemon) only runs when the token is
+                    // MISSING, so a stale token meant the app sat on an error dialog forever.
+                    // Re-provisioning is safe here - the keeper publishes the same token
+                    // unless the daemon regenerated it, and if it did, the new token lands
+                    // and the retry below connects.
+                    beginProvisioning();
                     return;
                 }
                 for (int id : ids) {

@@ -41,6 +41,7 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/StructureTest.java" \
   "$ROOT/tests/jvm/core/BellTest.java" \
   "$ROOT/tests/jvm/core/NotifyTest.java" \
+  "$ROOT/tests/jvm/core/FocusTest.java" \
   "$ROOT/app/src/ai/openclaw/fterm/Schemes.java" \
 
 echo "[2/2] 실행"
@@ -57,3 +58,4 @@ java -Dapp.dir="$ROOT/app/src/ai/openclaw/fterm/" -cp "$OUT" StructureTest
 java -Droot="$ROOT" -cp "$OUT" BellTest
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
   -Dnotifier.src="$ROOT/app/src/ai/openclaw/fterm/Notifier.java" -cp "$OUT" NotifyTest
+java -Droot="$ROOT" -cp "$OUT" com.termux.terminal.FocusTest

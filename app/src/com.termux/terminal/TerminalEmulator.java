@@ -200,7 +200,13 @@ public final class TerminalEmulator {
     private static final int DECSET_BIT_MOUSE_TRACKING_PRESS_RELEASE = 1 << 6;
     /** DECSET 1002 - like 1000, but report moving mouse while pressed. */
     private static final int DECSET_BIT_MOUSE_TRACKING_BUTTON_EVENT = 1 << 7;
-    /** DECSET 1004 - NOT implemented. */
+    /**
+     * DECSET 1004 - focus reporting. When set, the emulator answers the app's window-focus
+     * changes with CSI I (focus gained) / CSI O (focus lost), which is how a full-screen TUI
+     * knows whether the user can see it. opencode gates its desktop notifications on exactly
+     * this: with reporting unsupported it reads focus as "unknown" forever and never notifies,
+     * even though its binary carries both OSC 9 and OSC 777 notify (measured).
+     */
     private static final int DECSET_BIT_SEND_FOCUS_EVENTS = 1 << 8;
     /** DECSET 1006 - SGR-like mouse protocol (the modern sane choice). */
     private static final int DECSET_BIT_MOUSE_PROTOCOL_SGR = 1 << 9;
@@ -443,6 +449,17 @@ public final class TerminalEmulator {
 
     private boolean isDecsetInternalBitSet(int bit) {
         return (mCurrentDecSetFlags & bit) != 0;
+    }
+
+    /**
+     * Report a window-focus change to the program, when DECSET 1004 asked for it. Called by
+     * the view when the app gains or loses window focus. A full-screen TUI uses CSI I / CSI O
+     * to know whether the user is looking at it right now - opencode, for one, will not send
+     * completion notifications while it believes the terminal is visible or focus is unknown.
+     */
+    public void reportFocus(boolean focused) {
+        if (!isDecsetInternalBitSet(DECSET_BIT_SEND_FOCUS_EVENTS)) return;
+        mSession.write(focused ? "\033[I" : "\033[O");
     }
 
     private void setDecsetinternalBit(int internalBit, boolean set) {
