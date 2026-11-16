@@ -166,6 +166,25 @@ fterm 에뮬레이터는 DECRQM에 "1004 = set"이라 답하면서(로그에 `ES
 `onWindowFocusChanged`(윈도우 포커스 — "사용자가 앱을 보고 있는가")가 구동하고,
 세션 부착 시 현재 상태를 즉시 알려준다. `FocusTest` 6개가 고정한다.
 
+### 알림이 폰에 도달하는 3단계 — 각각 다른 막힘
+
+opencode 턴 완료 → 폰 알림은 세 단계를 거친다. 전부 다른 이유로 막혀 있었다.
+
+1. **opencode가 알림을 만드는가** — `attention.notifications` 기본값 OFF.
+   바이너리 스키마에 `default:!1`로 명시. `~/.config/opencode/cli.json`에서 ON.
+2. **"화면 밖"이라고 판정하는가** — 알림의 기본 조건이 blurred. 포커스는 터미널의
+   DECSET 1004 리포트로만 알 수 있는데 fterm이 안 보냈다. 구현해 해결(위 참조).
+3. **만든 알림이 폰에 도달하는가** — 근본 문제. opencode의 알림은 데스크톱 전용
+   (DBus/Windows 토스트/macOS 알림센터). 안드로이드 터미널에는 그 시스템이 없어
+   **설정을 켜도 폰 알림은 안 온다.** 해결: `fterm-notify` 플러그인이 턴 완료/실패/
+   권한 요청 시 OSC 9을 출력하고, fterm이 그것을 파싱해 안드로이드 알림을 올린다.
+   (fterm 파서 쪽은 dumpsys로 실측 검증: id=2602, "FTERM-NOTIFY-TEST" 도착.)
+
+플러그인은 windows-notify의 검증된 구조를 따른다: `index.js`(server, 빈 setup) +
+`tui.js`(터미널 소유 프로세스, OSC 출력) + package.json exports에 `./tui` 슬롯.
+subagent 세션은 알림에서 제외. `TERM_PROGRAM=fterm`이 아니면 이스케이프를 쓰지
+않아 다른 터미널의 스크롤백을 오염시키지 않는다.
+
 ### 완전 내림 후 복구 불가의 두 원인
 
 1. **keeper 사망** — 하트비트가 23분 뒤인데 프로세스는 없었다. 앱이 데몬을 되살리는
