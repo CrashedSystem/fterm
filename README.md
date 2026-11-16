@@ -144,6 +144,38 @@ BEL                         → BELL            (알림 아님)
 기존 `windows-notify` 플러그인(SSH로 Windows 토스트 + `termux-notification`)은
 `plugins.disabled/`로 옮겨 비활성화했다. 되돌리려면 그 폴더를 `plugins/`로 되돌린다.
 
+### 알림이 "안 오는" 진짜 원인: 포커스 게이트 (DECSET 1004)
+
+opencode의 알림은 무조건 쏘는 게 아니었다. 바이너리의 attention 코드를 해독하면:
+
+```js
+let r = "unknown";                       // 포커스 상태
+t.renderer.on("focus", () => r = "focused");
+t.renderer.on("blur",  () => r = "blurred");
+// when: "blurred" (기본) — 화면 밖일 때만 알림
+let m = LW(h?.when ?? "blurred", r);     // r이 "unknown"이면 "focus_unknown"
+if (!_ && !R) { if (E && m) return skip(m); }  // ← 스킵
+```
+
+blur/focus는 **터미널이 보내는 포커스 리포트**(DECSET 1004 → `CSI I`/`CSI O`)로만 알 수 있다.
+fterm 에뮬레이터는 DECRQM에 "1004 = set"이라 답하면서(로그에 `ESC[?1004;2$y` 질의 기록)
+실제 리포트는 안 보냈다("NOT implemented" 주석). opencode는 포커스가 영원히 "unknown" →
+**알림 영구 스킵**. OSC 파서는 멀쩡했는데 그 위의 게이트가 안 열린 것.
+
+수정: 에뮬레이터가 1004 켜짐 시 `CSI I`/`CSI O`를 내보낸다. 뷰의
+`onWindowFocusChanged`(윈도우 포커스 — "사용자가 앱을 보고 있는가")가 구동하고,
+세션 부착 시 현재 상태를 즉시 알려준다. `FocusTest` 6개가 고정한다.
+
+### 완전 내림 후 복구 불가의 두 원인
+
+1. **keeper 사망** — 하트비트가 23분 뒤인데 프로세스는 없었다. 앱이 데몬을 되살리는
+   유일한 손이 keeper인데, 그게 죽으면 앱은 어쩔 수 없다. `install.sh`가 `~/.bashrc`에
+   훅을 넣어 Termux가 열릴 때마다 keeper를 되살린다(멱등).
+2. **토큰이 있으면 프로비저닝을 안 함** — `startSessions()`는 토큰이 *없을 때만*
+   provisioning을 돌렸다. 토큰이 남아 있고 데몬만 죽었으면 오류 다이얼로그에서 끝났다.
+   이제 연결 실패 시 provisioning을 다시 돌린다. keeper는 같은 토큰을 다시 발행하므로
+   재시도가 그대로 연결된다.
+
 ### 데몬은 파일 교체로 갱신되지 않는다
 
 `termux/install.sh`가 데몬을 재시작하는 이유: 실행 중인 프로세스는 디스크의 새 코드를
