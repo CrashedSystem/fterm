@@ -428,7 +428,22 @@ public final class TerminalView extends View {
                     sendBackspaces(mComposing);
                     pending = committed;
                 }
-                if (!pending.isEmpty()) writeToTerminal(pending);
+                if (!pending.isEmpty()) {
+                    // A multi-character commit that is not live composition is a paste (the
+                    // keyboard's clipboard button, autofill, a suggestion applied at once).
+                    // Send it through Emulator.paste(), which strips escapes, normalises
+                    // newlines to CR and - when the program asked for bracketed paste
+                    // (DECSET 2004) - wraps it in \e[200~..\e[201~ so a full-screen TUI
+                    // shows "[N lines pasted]" instead of executing one line at a time.
+                    // Character-by-character sendCodePointToTerminal() would deliver each
+                    // newline as a Return press.
+                    boolean multiLine = pending.indexOf('\n') >= 0 || pending.indexOf('\r') >= 0;
+                    if (multiLine && mEmulator != null) {
+                        mEmulator.paste(pending);
+                    } else {
+                        writeToTerminal(pending);
+                    }
+                }
                 mComposing = "";
                 content.clear();
                 return true;
