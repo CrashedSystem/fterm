@@ -29,4 +29,16 @@ public abstract class TerminalOutput {
 
     public abstract void onColorsChanged();
 
+    /**
+     * A desktop notification requested by the program in the shell.
+     *
+     * Terminals have no standard for this; the two de-facto ones are OSC 9 (iTerm2, and what
+     * most CLI tools emit) and OSC 777 (rxvt-unicode). Both are handled here so that a tool
+     * which already notifies on a desktop also notifies on the phone - no plugin, no
+     * termux-api, no helper binary.
+     *
+     * @param title the title, or an empty string when the sequence carried only a body
+     * @param body  the message text
+     */
+    public void onNotification(String title, String body) {}
 }

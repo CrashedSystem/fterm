@@ -80,6 +80,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private MikuBackground mMiku;
     private Bell mBell;
     private SettingsSheet mSettings;
+    private Notifier mNotifier;
     private int mScheme;
     private float mScale = 1f;
 
@@ -156,10 +157,10 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // the only discoverable gesture on a bar this small.
         TextView menu = new TextView(this);
         menu.setText("\u25be");
-        menu.setTextSize(15);
-        menu.setTextColor(0xffd0d0d0);
+        menu.setTextSize(13);
+        menu.setTextColor(0xffb0b0b0);
         menu.setGravity(Gravity.CENTER);
-        menu.setLayoutParams(new LinearLayout.LayoutParams(dp(34), dp(38)));
+        menu.setLayoutParams(new LinearLayout.LayoutParams(dp(30), dp(38)));
         menu.setOnClickListener(v -> showCommandMenu(v));
         plus.setOnLongClickListener(v -> {
             showCommandMenu(v);
@@ -553,9 +554,11 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
         TextView close = new TextView(this);
         close.setText("\u00d7");
-        close.setTextSize(14);
+        close.setTextSize(15);
         close.setGravity(Gravity.CENTER);
-        close.setLayoutParams(new LinearLayout.LayoutParams(dp(20), dp(34)));
+        // Right next to the title, not at the far edge: the X belongs to the tab, and a wide
+        // gap makes it look like it belongs to the next one.
+        close.setLayoutParams(new LinearLayout.LayoutParams(dp(22), dp(34)));
         close.setOnClickListener(v -> confirmClose(tab));
         plate.addView(close);
 
@@ -579,9 +582,15 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         int termBg = palette[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND];
 
         GradientDrawable d = new GradientDrawable();
-        d.setColor(active ? termBg : 0x00000000);
-        // Rounded at the top only: a tab is a plate that grows out of the pane.
-        d.setCornerRadii(new float[]{dp(8), dp(8), dp(8), dp(8), 0, 0, 0, 0});
+        // Inactive tabs are a slightly lighter gray than the bar so they read as tabs; the
+        // active one takes the terminal's own background and grows into the pane.
+        d.setColor(active ? termBg : (Schemes.isOled(mScheme) ? 0xff0a0a0a : 0xff303338));
+        d.setCornerRadii(new float[]{dp(7), dp(7), dp(7), dp(7), 0, 0, 0, 0});
+        // A 2dp accent at the bottom of the active tab is the cue that survives a dark theme,
+        // where the tab fill and the pane are the same colour by design.
+        if (active) {
+            d.setStroke(dp(2), 0xff4a7fc1);
+        }
         tab.plate.setBackground(d);
 
         tab.chip.setTextColor(active ? 0xffffffff : 0xff9a9a9a);
@@ -1234,6 +1243,15 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     @Override
     public void onPasteTextFromClipboard(TerminalSession session) {
         pasteClipboard();
+    }
+
+    @Override
+    public void onNotification(TerminalSession session, String title, String body) {
+        // Native: the escape sequence was parsed by the terminal, so there is no helper
+        // process and no termux-api dependency. A background tab is allowed to notify - that
+        // is the point (a build finished while you were reading another tab).
+        if (mNotifier == null) mNotifier = new Notifier(this);
+        mNotifier.post(title, body);
     }
 
     @Override

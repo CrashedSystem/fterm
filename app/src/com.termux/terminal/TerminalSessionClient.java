@@ -22,6 +22,14 @@ public interface TerminalSessionClient {
 
     void onColorsChanged(TerminalSession session);
 
+    /**
+     * A program in the shell asked for a notification (OSC 9 or OSC 777).
+     *
+     * Delivered to the app so it can raise a real Android notification, which is what makes
+     * "a long build finished" or "a test failed" visible without looking at the terminal.
+     */
+    void onNotification(TerminalSession session, String title, String body);
+
     void onTerminalCursorStateChange(boolean state);
 
     void setTerminalShellPid(TerminalSession session, int pid);

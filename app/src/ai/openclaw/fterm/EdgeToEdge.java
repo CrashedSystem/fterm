@@ -37,7 +37,7 @@ final class EdgeToEdge {
         }
         if (Build.VERSION.SDK_INT < 35) {
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.setStatusBarColor(0xff1e1e1e);
+            window.setStatusBarColor(0xff2b2b2b);
             window.setNavigationBarColor(0xff000000);
         }
     }

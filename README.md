@@ -100,6 +100,33 @@ bash termux/install.sh
 터미널 벨은 BEL을 진동/비프로 옮긴다 — 무음 모드에서는 진동만, 활성 탭만 울린다.
 네이티브 알림은 포그라운드 서비스의 상시 알림 하나이고, 탭하면 앱으로 돌아온다.
 
+## 셸이 띄우는 알림 — 네이티브, 플러그인 없음
+
+opencode 같은 도구는 데스크톱에서 알림을 띄운다. Termux에서는 그게 `termux-notification`
+(플러그인 + termux-api 패키지 + 프로세스 실행)을 거쳐야 했다. 여기서는 **이스케이프
+시퀀스를 터미널이 직접 읽는다**:
+
+```
+ESC ] 9 ; message BEL                  (iTerm2 형식, 대부분의 CLI 도구)
+ESC ] 777 ; notify ; title ; body BEL  (rxvt-unicode 형식)
+```
+
+`TerminalEmulator.doOsc`가 이 둘을 파싱해 `TerminalOutput.onNotification()`을 부르고,
+앱이 Android 알림으로 띄운다. 셸은 추가 비용이 0이다 — 바이트는 이미 터미널로 가고 있다.
+
+실제 파서로 검증:
+
+```
+ESC]9;빌드 완료BEL          → NOTIFY title=[] body=[빌드 완료]
+ESC]9;doneESC\              → NOTIFY title=[] body=[done]
+ESC]777;notify;테스트;3개 실패BEL → NOTIFY title=[테스트] body=[3개 실패]
+ESC]2;그냥 제목BEL          → TITLE=그냥 제목   (알림 아님)
+BEL                         → BELL            (알림 아님)
+```
+
+서비스 알림은 LOW(상태 표시), 셸 알림은 DEFAULT(알려야 하는 것) — 채널이 분리돼 있어
+하나만 끌 수 있다. 같은 제목의 알림은 대체되고, 다른 제목은 쌓인다.
+
 ## 유휴 사망 — 두 개의 원인, 둘 다 실측
 
 증상은 "유휴 상태되면 터미널 죽음"이었다. 원인이 **둘**이었고, 앞의 것만 고쳐서는
@@ -194,6 +221,8 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 | 색상 147종 (mterm `ONE_HALF_DARK` 대조, OLED 순검정, 전 테마 4.5:1) | `tests/jvm/core/SchemesTest.java` | 통과 |
 | 폰트 라우팅 23종 (한글/아이콘/라틴, 상수 115.85) | `tests/jvm/core/FontsTest.java` | 통과 |
 | 탭 닫기 9종 (plate 제거, transport 종료, Enter 경로) | `tests/jvm/core/TabCloseTest.java` | 통과 |
+| 알림 17종 (OSC 9 / 777 파싱, 제목·본문, 오탐 방지, 앱 배선) | `tests/jvm/core/NotifyTest.java` | 통과 |
+| 벨 13종 (VIBRATE 권한, 진동/비프, 활성 탭만, 설정 토글) | `tests/jvm/core/BellTest.java` | 통과 |
 | 기기 설치·실행·렌더링·셸 연결 | `rish`로 `pm install` 후 화면 확인 | 통과 |
 | 기기 영문 입력 (`abc` → `a`,`b`,`c`) | daemon 로그 바이트 확인 | 통과 |
 | 유휴/프리징 3종 (20초 유휴 후 세션 생존·사용 가능, 데몬이 클라이언트 유지, 끊긴 링크 즉시 종료) | `tests/jvm/harness/IdleTest.java` | 통과 |

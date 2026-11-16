@@ -2777,6 +2777,25 @@ public final class TerminalEmulator {
             case 2: // Change window title to T.
                 setTitle(textParameter);
                 break;
+            case 9:
+                // OSC 9 - iTerm2's notification, and what most CLI tools emit:
+                //   ESC ] 9 ; message BEL
+                // The whole parameter is the body; there is no title in this form.
+                mSession.onNotification("", textParameter);
+                break;
+            case 777:
+                // OSC 777 - rxvt-unicode:  ESC ] 777 ; notify ; title ; body BEL
+                // The first field names the kind ("notify"); the rest is title and body.
+                if (textParameter.startsWith("notify;")) {
+                    String rest = textParameter.substring("notify;".length());
+                    int sep = rest.indexOf(';');
+                    if (sep < 0) {
+                        mSession.onNotification("", rest);
+                    } else {
+                        mSession.onNotification(rest.substring(0, sep), rest.substring(sep + 1));
+                    }
+                }
+                break;
             case 4:
                 // P s = 4 ; c ; spec → Change Color Number c to the color specified by spec. This can be a name or RGB
                 // specification as per XParseColor. Any number of c name pairs may be given. The color numbers correspond

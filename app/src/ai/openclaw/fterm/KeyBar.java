@@ -39,9 +39,14 @@ final class KeyBar {
             {"CTRL", "ctrl"}, {"ALT", "alt"}, {"SHIFT", "shift"},
     };
 
-    private static final int BG = 0xff252526;
-    private static final int KEY = 0xff3a3a3a;
-    private static final int KEY_ON = 0xff5a8dd6;
+    // The bar sits directly on the keyboard, so it needs its own hairline or the two grays
+    // merge. Keys get a lighter fill than the bar and a 1dp gap, which is what makes them
+    // read as buttons rather than as a single strip.
+    private static final int BG = 0xff202124;
+    private static final int KEY = 0xff33363b;
+    private static final int KEY_PRESSED = 0xff44484f;
+    private static final int KEY_ON = 0xff4a7fc1;
+    private static final int DIVIDER = 0xff15161a;
 
     private final Context mContext;
     private final Action mAction;
@@ -86,7 +91,7 @@ final class KeyBar {
     private HorizontalScrollView build() {
         mRow.setOrientation(LinearLayout.HORIZONTAL);
         mRow.setBackgroundColor(BG);
-        mRow.setPadding(dp(3), dp(2), dp(3), dp(2));
+        mRow.setPadding(dp(4), dp(6), dp(4), dp(6));
 
         for (String[] m : MODIFIERS) {
             mRow.addView(modifier(m[0], m[1]));
@@ -103,8 +108,14 @@ final class KeyBar {
         HorizontalScrollView hsv = new HorizontalScrollView(mContext);
         hsv.setHorizontalScrollBarEnabled(false);
         hsv.setBackgroundColor(BG);
+        hsv.setForeground(null);
+        // A 1dp divider on top: the bar and the keyboard are both light greys otherwise.
+        hsv.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
+                new android.graphics.drawable.ColorDrawable(DIVIDER),
+                new android.graphics.drawable.ColorDrawable(BG),
+        }));
         hsv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(40)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(50)));
         hsv.addView(mRow);
         return hsv;
     }
@@ -141,12 +152,16 @@ final class KeyBar {
         d.setColor(bg);
         d.setCornerRadius(dp(6));
         t.setBackground(d);
+        // 36dp tall inside a 50dp bar: a finger target the platform would accept, with the
+        // visual weight of a key rather than a label.
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(30));
-        lp.rightMargin = dp(3);
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(36));
+        lp.rightMargin = dp(5);
         t.setLayoutParams(lp);
-        t.setPadding(dp(6), 0, dp(6), 0);
-        t.setMinWidth(dp(28));
+        t.setPadding(dp(10), 0, dp(10), 0);
+        t.setMinWidth(dp(38));
+        t.setClickable(true);
+        t.setFocusable(true);
         return t;
     }
 

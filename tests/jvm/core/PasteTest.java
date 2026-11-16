@@ -51,6 +51,7 @@ public class PasteTest {
             public void onPasteTextFromClipboard(com.termux.terminal.TerminalSession s) {}
             public void onBell(com.termux.terminal.TerminalSession s) {}
             public void onColorsChanged(com.termux.terminal.TerminalSession s) {}
+            public void onNotification(com.termux.terminal.TerminalSession s, String t, String b) {}
             public void onTerminalCursorStateChange(boolean state) {}
             public void setTerminalShellPid(com.termux.terminal.TerminalSession s, int pid) {}
             public Integer getTerminalCursorStyle() { return 0; }

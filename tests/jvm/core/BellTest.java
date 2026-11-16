@@ -1,0 +1,55 @@
+/**
+ * The terminal bell and the permission it needs.
+ *
+ * A bell whose vibration silently fails because the permission is missing is worse than no
+ * bell: it looks implemented. This asserts the manifest declares VIBRATE, that the class
+ * actually vibrates and only beeps when the ringer is normal, and that MainActivity rings for
+ * the active tab only.
+ */
+public class BellTest {
+
+    static int pass = 0;
+
+    static void check(boolean c, String what) {
+        if (!c) throw new AssertionError(what);
+        pass++;
+    }
+
+    static String read(String p) throws Exception {
+        return new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(p)), "UTF-8");
+    }
+
+    public static void main(String[] args) throws Exception {
+        String root = System.getProperty("root", ".");
+        String manifest = read(root + "/AndroidManifest.xml");
+        check(manifest.contains("android.permission.VIBRATE"),
+                "VIBRATE is declared (without it the bell's default is a silent no-op)");
+        check(manifest.contains("android.permission.POST_NOTIFICATIONS"),
+                "POST_NOTIFICATIONS is declared for the service notification");
+        check(manifest.contains("FOREGROUND_SERVICE_DATA_SYNC"),
+                "the foreground service type is declared");
+        check(manifest.contains("ai.openclaw.fterm.TerminalService"),
+                "the service is registered");
+
+        String bell = read(root + "/app/src/ai/openclaw/fterm/Bell.java");
+        check(bell.contains("VibrationEffect.createWaveform"), "the bell vibrates");
+        check(bell.contains("RINGER_MODE_NORMAL"), "and beeps only when the ringer is normal");
+        check(bell.contains("hasVibrator()"), "and checks the device has one");
+        check(bell.contains("ToneGenerator.TONE_PROP_BEEP"), "the beep is a short tone");
+        check(bell.contains("release()"), "the tone generator is releasable");
+
+        String main = read(root + "/app/src/ai/openclaw/fterm/MainActivity.java");
+        check(main.contains("mBell.ring(mPrefs.bellVibrate(), mPrefs.bellSound())"),
+                "MainActivity rings with the user's settings");
+        check(main.contains("mActive.session != session"), "and only for the active tab");
+
+        // The toggles must be reachable, or the bell cannot be turned off.
+        String settings = read(root + "/app/src/ai/openclaw/fterm/SettingsSheet.java");
+        check(settings.contains("진동") && settings.contains("소리"), "both toggles are in settings");
+        check(settings.contains("bellVibrate()") && settings.contains("bellSound()"),
+                "and are bound to the host");
+
+        System.out.println("ok  " + pass + " bell/notification assertions");
+        System.out.println("ALL OK");
+    }
+}

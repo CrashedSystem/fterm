@@ -342,6 +342,11 @@ public final class TerminalSession extends TerminalOutput {
         mClient.onColorsChanged(this);
     }
 
+    @Override
+    public void onNotification(String title, String body) {
+        mClient.onNotification(this, title, body);
+    }
+
     public int getPid() {
         return mShellPid;
     }

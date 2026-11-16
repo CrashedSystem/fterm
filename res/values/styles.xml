@@ -8,7 +8,7 @@
         <item name="android:windowLightStatusBar">false</item>
         <!-- targetSdk 35+ draws edge to edge by default; the status bar and navigation bar
              colours below are honoured only on older releases and are kept as a fallback. -->
-        <item name="android:statusBarColor">#FF1E1E1E</item>
+        <item name="android:statusBarColor">#FF2B2B2B</item>
         <item name="android:navigationBarColor">#FF000000</item>
         <item name="android:enforceStatusBarContrast">false</item>
         <item name="android:enforceNavigationBarContrast">false</item>

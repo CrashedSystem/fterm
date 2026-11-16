@@ -39,6 +39,8 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/ImeComposeTest.java" \
   "$ROOT/tests/jvm/core/UiTest.java" \
   "$ROOT/tests/jvm/core/StructureTest.java" \
+  "$ROOT/tests/jvm/core/BellTest.java" \
+  "$ROOT/tests/jvm/core/NotifyTest.java" \
   "$ROOT/app/src/ai/openclaw/fterm/Schemes.java" \
 
 echo "[2/2] 실행"
@@ -52,3 +54,6 @@ java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
 java -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" ImeComposeTest
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" UiTest
 java -Dapp.dir="$ROOT/app/src/ai/openclaw/fterm/" -cp "$OUT" StructureTest
+java -Droot="$ROOT" -cp "$OUT" BellTest
+java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
+  -Dnotifier.src="$ROOT/app/src/ai/openclaw/fterm/Notifier.java" -cp "$OUT" NotifyTest
