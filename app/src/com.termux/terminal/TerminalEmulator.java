@@ -2778,9 +2778,20 @@ public final class TerminalEmulator {
                 setTitle(textParameter);
                 break;
             case 9:
-                // OSC 9 - iTerm2's notification, and what most CLI tools emit:
-                //   ESC ] 9 ; message BEL
-                // The whole parameter is the body; there is no title in this form.
+                // OSC 9 has two unrelated meanings and they are told apart by a single digit:
+                //
+                //   ESC ] 9 ; message BEL        iTerm2 notification (what tools emit)
+                //   ESC ] 9 ; 4 ; state BEL      ConEmu/Windows Terminal progress bar
+                //
+                // opencode emits the progress form (measured: `ESC]9;4;0` in its binary), so
+                // treating every OSC 9 as a notification would fire a notification for every
+                // progress update - a stream of them during a single build.
+                if (textParameter.length() >= 2 && textParameter.charAt(0) == '4'
+                        && textParameter.charAt(1) == ';') {
+                    // Progress: intentionally ignored. The terminal has no progress bar and a
+                    // notification per step would be worse than none.
+                    break;
+                }
                 mSession.onNotification("", textParameter);
                 break;
             case 777:

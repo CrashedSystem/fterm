@@ -102,6 +102,18 @@ public class NotifyTest {
         Recorder e = feed("\u001b]777;somethingelse;x\u0007");
         eq(e.count, 0, "only the notify form notifies");
 
+        // 5b. OSC 9;4 is a PROGRESS BAR, not a notification. opencode emits `ESC]9;4;0`
+        //     (measured in its binary), so getting this wrong means a notification per
+        //     progress update.
+        Recorder prog = feed("\u001b]9;4;0\u0007");
+        eq(prog.count, 0, "OSC 9;4 (progress) is not a notification");
+        Recorder prog2 = feed("\u001b]9;4;1;50\u0007");
+        eq(prog2.count, 0, "OSC 9;4;1;50 is still progress");
+        // But a message that merely starts with a 4 is still a message.
+        Recorder four = feed("\u001b]9;4 files changed\u0007");
+        eq(four.count, 1, "a message beginning with '4 ' is a notification");
+        eq(four.body, "4 files changed", "and keeps its text");
+
         // 6. An OSC title change must not be mistaken for a notification.
         Recorder f = feed("\u001b]2;my-title\u0007");
         eq(f.count, 0, "OSC 2 sets the title, it does not notify");

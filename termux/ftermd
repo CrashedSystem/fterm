@@ -163,6 +163,12 @@ class Session:
             env = dict(env)
             env.setdefault("TERM", "xterm-256color")
             env.setdefault("COLORTERM", "truecolor")
+            # Programs that can notify a terminal check this. fterm parses OSC 9 and OSC 777
+            # itself, which is what lets a tool raise a real Android notification with no
+            # helper process and no Termux:API.
+            env.setdefault("TERM_PROGRAM", "fterm")
+            env.setdefault("TERM_PROGRAM_VERSION", "0.2.0")
+            env.setdefault("FTERM_NOTIFY", "1")
             env.setdefault("LANG", "en_US.UTF-8")
             try:
                 os.execvpe(shell, [shell, "-l"], env)
@@ -268,6 +274,9 @@ class Daemon:
             "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             "TERM": "xterm-256color",
             "COLORTERM": "truecolor",
+            "TERM_PROGRAM": "fterm",
+            "TERM_PROGRAM_VERSION": "0.2.0",
+            "FTERM_NOTIFY": "1",
             "LANG": "en_US.UTF-8",
             "PREFIX": os.environ.get("PREFIX", "/data/data/com.termux/files/usr"),
             "TMPDIR": os.environ.get("TMPDIR", "/data/data/com.termux/files/usr/tmp"),

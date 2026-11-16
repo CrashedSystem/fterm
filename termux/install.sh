@@ -40,6 +40,16 @@ fi
 "$DEST/fterm-keeper" status
 
 echo
+# The daemon is a long-running process: replacing the file on disk does not change the
+# process already in memory. Restart it so fixes (and TERM_PROGRAM) actually take effect.
+if "$DEST/ftermd" status >/dev/null 2>&1; then
+  echo "데몬 재시작 (실행 중인 프로세스는 옛 코드를 들고 있다)"
+  "$DEST/ftermd" stop >/dev/null 2>&1 || true
+  sleep 1
+  setsid nohup "$DEST/ftermd" start > "$DEST/daemon.log" 2>&1 < /dev/null &
+  sleep 2
+fi
+
 echo "앱을 열면 자동으로 연결됩니다."
 echo "수동 토큰(필요할 때만):"
 "$DEST/ftermd" token

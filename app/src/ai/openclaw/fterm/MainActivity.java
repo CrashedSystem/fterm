@@ -539,6 +539,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         icon.setTextColor(0xff8a8a8a);
         icon.setTypeface(Typeface.MONOSPACE);
         icon.setGravity(Gravity.CENTER);
+        icon.setIncludeFontPadding(false);
         icon.setLayoutParams(new LinearLayout.LayoutParams(dp(18), dp(34)));
         plate.addView(icon);
 
@@ -547,6 +548,11 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         title.setSingleLine(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         title.setMaxWidth(dp(150));
+        // A TextView inside a taller row draws its text at the TOP unless told otherwise.
+        // The tab title was doing exactly that - the row is 34dp and the text sat on its
+        // upper edge, which reads as "글자가 위로 붙었다".
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        title.setIncludeFontPadding(false);
         title.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)));
         title.setPadding(dp(2), 0, dp(6), 0);
@@ -556,6 +562,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         close.setText("\u00d7");
         close.setTextSize(15);
         close.setGravity(Gravity.CENTER);
+        close.setIncludeFontPadding(false);
         // Right next to the title, not at the far edge: the X belongs to the tab, and a wide
         // gap makes it look like it belongs to the next one.
         close.setLayoutParams(new LinearLayout.LayoutParams(dp(22), dp(34)));
