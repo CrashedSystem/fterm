@@ -7,6 +7,9 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 
 /**
  * Notifications raised by the program in the shell.
@@ -83,6 +86,32 @@ final class Notifier {
         NotificationManager nm =
                 (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null) nm.notify(id, b.build());
+
+        // The user asked for a buzz even while looking at the terminal: a notification the
+        // user is staring at still has to say "now" through the hand. Android suppresses
+        // notification vibration on the focused app's channel, so post with the hand here -
+        // a short double-pulse, distinct from the bell's single buzz.
+        vibrate();
+    }
+
+    private void vibrate() {
+        try {
+            Vibrator v;
+            if (Build.VERSION.SDK_INT >= 31) {
+                VibratorManager vm = (VibratorManager)
+                        mContext.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+                v = vm == null ? null : vm.getDefaultVibrator();
+            } else {
+                v = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
+            }
+            if (v == null || !v.hasVibrator()) return;
+            if (Build.VERSION.SDK_INT >= 26) {
+                v.vibrate(VibrationEffect.createWaveform(new long[]{0, 35, 70, 35}, -1));
+            } else {
+                v.vibrate(new long[]{0, 35, 70, 35}, -1);
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     private void createChannel() {

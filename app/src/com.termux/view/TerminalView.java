@@ -412,6 +412,16 @@ public final class TerminalView extends View {
                 super.commitText(text, newCursorPosition);
                 if (mEmulator == null) return true;
 
+                // Some keyboards (Samsung's, measured on this device) deliver a clipboard
+                // paste as one commitText PER CHARACTER instead of one commit for the whole
+                // clip. Character-by-character delivery defeats the multi-line branch below,
+                // so the opencode prompt received each newline as a Return press and the
+                // "[Pasted N lines]" summary never appeared. Detect it: a run of commits that
+                // walks through the clipboard text exactly is a paste - buffer the progress
+                // and, once the clip is fully typed, send it through Emulator.paste() as one
+                // bracketed block. Anything that breaks the walk (normal typing) resets it.
+                if (trackClipboardTyping(text)) return true;
+
                 Editable content = getEditable();
                 String committed = content.toString();
                 String pending;
@@ -464,7 +474,67 @@ public final class TerminalView extends View {
                 return true;
             }
 
-            private void writeToTerminal(String text) {
+            /** Clipboard state for {@link #trackClipboardTyping}. */
+    private String mClipText = "";
+    private int mClipProgress = 0;
+
+    /**
+     * Recognise a clipboard paste that the keyboard delivers character by character.
+     *
+     * Returns true when the caller should NOT send {@code text} itself - either because it
+     * was consumed as the next piece of the clip (a paste in progress) or because the run
+     * just completed and the whole clip was re-sent through {@link TerminalEmulator#paste}.
+     * The already-sent characters are unsent with backspaces, which the shell erases from
+     * the prompt before the bracketed block arrives.
+     */
+    private boolean trackClipboardTyping(CharSequence text) {
+        String clip = getClipboardText();
+        if (clip == null || clip.isEmpty() || clip.length() < 3) {
+            resetClipboardTracking();
+            return false;
+        }
+        String t = text.toString();
+        int pos = mClipProgress;
+        if (pos >= clip.length() || !clip.startsWith(t, pos)) {
+            resetClipboardTracking();
+            return false;
+        }
+        pos += t.length();
+        if (pos < clip.length()) {
+            // Mid-paste: the characters are already on screen (and in the shell's input).
+            // Remember how far we are; the completion step below rewinds and re-sends.
+            mClipText = clip;
+            mClipProgress = pos;
+            return true;
+        }
+        // The clip is fully typed. Erase what the per-character commits already sent and
+        // re-send the whole thing through the emulator: one bracketed block, escapes
+        // stripped, newlines as CR - what a TUI recognises as a single paste.
+        resetClipboardTracking();
+        int chars = clip.codePointCount(0, clip.length());
+        StringBuilder bs = new StringBuilder();
+        for (int i = 0; i < chars; i++) bs.append('\u007f');
+        if (mTermSession != null) mTermSession.write(bs.toString());
+        mEmulator.paste(clip);
+        return true;
+    }
+
+    private void resetClipboardTracking() {
+        mClipText = "";
+        mClipProgress = 0;
+    }
+
+    private String getClipboardText() {
+        android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                getContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        if (cm == null || !cm.hasPrimaryClip()) return null;
+        android.content.ClipData.Item item = cm.getPrimaryClip().getItemAt(0);
+        if (item == null) return null;
+        CharSequence cs = item.coerceToText(getContext());
+        return cs == null ? null : cs.toString();
+    }
+
+    private void writeToTerminal(String text) {
                 if (text.isEmpty()) return;
                 stopTextSelectionMode();
                 for (int i = 0; i < text.length(); ) {
