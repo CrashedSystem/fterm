@@ -95,11 +95,12 @@ final class KeyBar {
     // The bar sits directly on the keyboard, so it needs its own hairline or the two grays
     // merge. Keys get a lighter fill than the bar and a 1dp gap, which is what makes them
     // read as buttons rather than as a single strip.
-    private static final int BG = 0xff202124;
-    private static final int KEY = 0xff33363b;
-    private static final int KEY_PRESSED = 0xff44484f;
+    private static final int BG = 0xff17181b;      // darker bar: keys pop forward
+    private static final int KEY = 0xff3d434b;     // brighter resting key
+    private static final int KEY_PRESSED = 0xff585f6a;
     private static final int KEY_ON = 0xff4a7fc1;
-    private static final int DIVIDER = 0xff15161a;
+    private static final int DIVIDER = 0xff0b0c0e;
+    private static final int KEY_EDGE = 0xff565d68; // top highlight line
 
     private final Context mContext;
     private final Action mAction;
@@ -143,6 +144,7 @@ final class KeyBar {
 
     private HorizontalScrollView build() {
         mRow.setOrientation(LinearLayout.HORIZONTAL);
+        mRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
         mRow.setBackgroundColor(BG);
         mRow.setPadding(dp(4), dp(6), dp(4), dp(6));
 
@@ -156,6 +158,8 @@ final class KeyBar {
         hsv.setHorizontalScrollBarEnabled(false);
         hsv.setBackgroundColor(BG);
         hsv.setForeground(null);
+        hsv.setFillViewport(true);   // the row fills the inset-grown height, centred
+        hsv.setClipToPadding(false); // keys stay visible while the bottom padding grows
         // A 1dp divider on top: the bar and the keyboard are both light greys otherwise.
         hsv.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
                 new android.graphics.drawable.ColorDrawable(DIVIDER),
@@ -220,38 +224,49 @@ final class KeyBar {
 
     private TextView special(String label, Runnable action) {
         TextView b = pill(label, KEY);
-        b.setOnClickListener(v -> action.run());
-        // Hold to repeat: arrows and DEL-type keys are useless on a phone without it. The
-        // repeat starts after 350ms and re-fires every 60ms, on the UI thread.
-        b.setOnLongClickListener(v -> {
-            final Handler h = new Handler();
-            final Runnable[] tick = new Runnable[1];
-            tick[0] = new Runnable() {
-                @Override public void run() {
-                    action.run();
-                    h.postDelayed(tick[0], 60);
-                }
-            };
-            h.postDelayed(tick[0], 350);
-            b.setTag(R.id.repeat_tag, tick[0]);
-            b.setTag(R.id.repeat_handler, h);
-            return true;   // consume: a long press is not also a click
-        });
-        // Release cancels the repeat - the tag carries the pending runnable.
+        // Hold to repeat, entirely in the touch listener. Two cancellable pieces: a
+        // 350ms starter and the 60ms chain it spawns - BOTH stored under one tag so a
+        // short press cancels everything. The previous version cancelled only the chain,
+        // the starter then fired it forever: "one press, endless repeat".
         b.setOnTouchListener((v, ev) -> {
-            if (ev.getAction() == android.view.MotionEvent.ACTION_UP
-                    || ev.getAction() == android.view.MotionEvent.ACTION_CANCEL) {
-                Runnable pending = (Runnable) v.getTag(R.id.repeat_tag);
-                if (pending != null) {
-                    v.removeCallbacks(pending);
+            int actionId = ev.getAction();
+            if (actionId == android.view.MotionEvent.ACTION_DOWN) {
+                final Handler h = new Handler();
+                final Runnable[] starter = new Runnable[1];
+                final Runnable[] chain = new Runnable[1];
+                chain[0] = () -> {
+                    action.run();
+                    h.postDelayed(chain[0], 60);
+                };
+                starter[0] = () -> {
+                    action.run();
+                    h.postDelayed(chain[0], 60);
+                };
+                v.setTag(R.id.repeat_handler, h);
+                v.setTag(R.id.repeat_tag, new Runnable[]{starter[0], chain[0]});
+                action.run();   // tap = one keypress, immediately
+                h.postDelayed(starter[0], 350);
+                // Keep the touch even if the finger wanders - without this the
+                // HorizontalScrollView cancels the press on the first pixel of movement.
+                v.getParent().requestDisallowInterceptTouchEvent(true);
+            } else if (actionId == android.view.MotionEvent.ACTION_UP
+                    || actionId == android.view.MotionEvent.ACTION_CANCEL) {
+                Handler h = (Handler) v.getTag(R.id.repeat_handler);
+                Object tag = v.getTag(R.id.repeat_tag);
+                if (h != null && tag instanceof Runnable[]) {
+                    // Cancel BOTH pieces: the 350ms starter and the 60ms chain it spawns.
+                    // The chain re-posts itself, so removing only the starter let it run
+                    // forever - the "one press, endless repeat" bug.
+                    for (Runnable r : (Runnable[]) tag) h.removeCallbacks(r);
                     v.setTag(R.id.repeat_tag, null);
+                } else if (h != null && tag instanceof Runnable) {
+                    h.removeCallbacks((Runnable) tag);
                 }
             }
-            return false;   // let the click/long-click still fire
+            return false;
         });
         return b;
     }
-
 
     private TextView pill(String label, int bg) {
         TextView t = new TextView(mContext);
@@ -263,10 +278,10 @@ final class KeyBar {
         // A raised key: top highlight + bottom shade make it sit above the bar instead of
         // being a flat pill painted onto it.
         GradientDrawable d = new GradientDrawable();
-        d.setColors(new int[]{0xff3d4148, bg, bg, 0xff26292e});
+        d.setColors(new int[]{KEY_EDGE, bg, bg, 0xff202329});
         d.setOrientation(GradientDrawable.Orientation.TL_BR);
-        d.setCornerRadius(dp(8));
-        d.setStroke(dp(1), 0xff4a4e56);
+        d.setCornerRadius(dp(9));
+        d.setStroke(dp(1), 0xff626a75);
         t.setBackground(d);
         // 36dp tall inside a 50dp bar: a finger target the platform would accept, with the
         // visual weight of a key rather than a label.

@@ -53,6 +53,8 @@ final class EdgeToEdge {
      */
     static void applyInsets(final View root, final View topBar, final View keyBar,
                             final int topBase, final int keyBase) {
+        // 8dp of slack under the key row (see the padding computation below).
+        final int slack = Math.round(8 * root.getResources().getDisplayMetrics().density);
         root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             @Override
             public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
@@ -89,9 +91,13 @@ final class EdgeToEdge {
                         lp.height = want;
                         keyBar.setLayoutParams(lp);
                     }
-                    if (keyBar.getPaddingBottom() != bottom) {
+                    // +8dp of slack: on some OneUI builds the reported IME inset is a few
+                    // pixels short of the real keyboard top, which visually sinks the
+                    // bottom edge of the key row into the keyboard.
+                    int pad = bottom + slack;
+                    if (keyBar.getPaddingBottom() != pad) {
                         keyBar.setPadding(keyBar.getPaddingLeft(), keyBar.getPaddingTop(),
-                                keyBar.getPaddingRight(), bottom);
+                                keyBar.getPaddingRight(), pad);
                     }
                 }
                 return insets;
