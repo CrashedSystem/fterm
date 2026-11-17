@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,6 +24,8 @@ import java.io.OutputStream;
  * prompt, which turns "I pasted a screenshot" into an image the model can see.
  */
 final class ClipboardImage {
+
+    private static final String TAG = "fterm";
 
     private ClipboardImage() {}
 
@@ -51,8 +54,25 @@ final class ClipboardImage {
      */
     static Watcher watch(Context context, Handler postToUi, Paste paste) {
         Watcher watcher = new Watcher(context, postToUi, paste);
+        if (context instanceof android.app.Activity
+                && ((android.app.Activity) context).getIntent().getBooleanExtra("clipSelfTest", false)) {
+            selfTest(context);
+        }
         watcher.listen();
         return watcher;
+    }
+
+    /**
+     * Device check for the save path alone: encode a red 2x2 PNG the same way a pasted
+     * screenshot is encoded and log where it landed. Started with
+     * {@code am start -n ai.openclaw.fterm/.MainActivity --ez clipSelfTest true}.
+     */
+    private static void selfTest(Context context) {
+        Bitmap bmp = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888);
+        bmp.eraseColor(0xFFFF0000);
+        String path = writeFile(bmp);
+        Log.i(TAG, "selfTest: file=" + path);
+        if (path == null) Log.i(TAG, "selfTest: mediaStore=" + writeMediaStore(context, bmp));
     }
 
     /**
@@ -91,7 +111,9 @@ final class ClipboardImage {
         void poll() {
             try {
                 ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm == null || !paste.ready() || !cm.hasPrimaryClip()) return;
+                if (cm == null) return;
+                if (!paste.ready()) return;
+                if (!cm.hasPrimaryClip()) return;
                 ClipData clip = cm.getPrimaryClip();
                 if (clip == null) return;
                 ClipDescription description = clip.getDescription();
@@ -100,9 +122,15 @@ final class ClipboardImage {
                 // reports none must still get through, or its image is skipped forever.
                 if (stamp != Long.MIN_VALUE && stamp == lastStamp) return;
                 Uri uri = uriOf(clip);
-                if (uri == null || !isImage(context, clip)) return;
+                // Text is the common clipboard; only an image is worth a log line, and
+                // only when it fails, so a normal focus change stays silent.
+                if (uri == null || !isImage(context, clip)) {
+                    Log.d(TAG, "poll: not an image, mimes=" + describe(clip));
+                    return;
+                }
                 String path = save(context, uri);
-                if (path == null) return;
+                if (path == null) { Log.w(TAG, "poll: save failed for " + uri); return; }
+                Log.i(TAG, "poll: saved " + path);
                 // Copying the same picture twice must not insert its path twice.
                 if (uri.toString().equals(lastUri)) {
                     lastStamp = stamp;
@@ -118,8 +146,7 @@ final class ClipboardImage {
     }
 
     /** True when the primary clip is an image (any image/* MIME). */
-    static boolean isImage(Context context, ClipData clip) {
-        if (clip.getDescription() != null) {
+    static boolean isImage(Context context, ClipData clip) {        if (clip.getDescription() != null) {
             for (String mime : clip.getDescription().filterMimeTypes("image/*")) {
                 if (mime.startsWith("image/")) return true;
             }
@@ -132,6 +159,18 @@ final class ClipboardImage {
 
     static android.net.Uri uriOf(ClipData clip) {
         return clip.getItemAt(0).getUri();
+    }
+
+    /** Mime list of a clip, for the one log line that explains why a copy did nothing. */
+    private static String describe(ClipData clip) {
+        ClipDescription d = clip.getDescription();
+        if (d == null) return "none";
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < d.getMimeTypeCount(); i++) {
+            if (i > 0) b.append(',');
+            b.append(d.getMimeType(i));
+        }
+        return b.toString();
     }
 
     /**
