@@ -2,7 +2,6 @@ package ai.openclaw.fterm;
 
 import android.content.Context;
 import android.graphics.Typeface;
-import android.os.Handler;
 import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -170,7 +169,6 @@ final class KeyBar {
         addGridCell(mUserRow, "\u2193", () -> mAction.special("down"),  "down");
         addGridCell(mUserRow, "\u2192", () -> mAction.special("right"), "right");
         addGridCell(mUserRow, "PgDn", () -> mAction.special("pgdn"),  "pgdn");
-        addGridCell(mUserRow, "Paste", mAction::paste,                 "paste");
 
         mRoot.addView(mRow, rowParams());
         mRoot.addView(mUserRow, rowParams());
@@ -203,8 +201,14 @@ final class KeyBar {
 
     /**
      * One grid cell: the label centred in the cell, the cell is the touch target.
-     * mterm-style - text on the bar, not buttons on the bar. Hold-to-repeat for the
-     * arrow cells (glyph=true).
+     * mterm-style - text on the bar, not buttons on the bar.
+     *
+     * <p>ONE PRESS = ONE KEY. There is deliberately no hold-to-repeat here. The repeat
+     * implementation posted a 350 ms starter that re-posted a 60 ms chain, and every
+     * attempt to cancel it left a path alive: the measured result was ~200 frames per
+     * second for nine seconds straight (1,800 synthetic keypresses from one touch). A
+     * phone key bar does not need auto-repeat badly enough to justify that failure mode,
+     * so the whole mechanism is gone rather than patched again.
      */
     private void addGridCell(LinearLayout row, String label, Runnable action,
                              String tag) {
@@ -222,40 +226,7 @@ final class KeyBar {
         lp.rightMargin = dp(1);
         cell.setLayoutParams(lp);
 
-        {
-            cell.setOnTouchListener((v, ev) -> {
-                int actionId = ev.getAction();
-                if (actionId == android.view.MotionEvent.ACTION_DOWN) {
-                    final Handler h = new Handler();
-                    final Runnable[] starter = new Runnable[1];
-                    final Runnable[] chain = new Runnable[1];
-                    chain[0] = () -> {
-                        action.run();
-                        h.postDelayed(chain[0], 60);
-                    };
-                    starter[0] = () -> {
-                        action.run();
-                        h.postDelayed(chain[0], 60);
-                    };
-                    // BOTH runnables under one tag - cancelling only the chain left the
-                    // starter alive, which re-spawned it after every short press (the
-                    // "one tap, endless buzz" bug).
-                    v.setTag(R.id.repeat_tag, new Runnable[]{starter[0], chain[0]});
-                    v.setTag(R.id.repeat_handler, h);
-                    action.run();
-                    h.postDelayed(starter[0], 350);
-                    v.getParent().requestDisallowInterceptTouchEvent(true);
-                } else if (actionId == android.view.MotionEvent.ACTION_UP
-                        || actionId == android.view.MotionEvent.ACTION_CANCEL) {
-                    Object tagObj = v.getTag(R.id.repeat_tag);
-                    if (tagObj instanceof Runnable[]) {
-                        for (Runnable r : (Runnable[]) tagObj) v.removeCallbacks(r);
-                    }
-                    v.setTag(R.id.repeat_tag, null);
-                }
-                return false;
-            });
-        }
+        cell.setOnClickListener(v -> action.run());
         row.addView(cell);
     }
 
@@ -321,47 +292,10 @@ final class KeyBar {
 
     private TextView special(String label, Runnable action) {
         TextView b = pill(label, KEY);
-        // Hold to repeat, entirely in the touch listener. Two cancellable pieces: a
-        // 350ms starter and the 60ms chain it spawns - BOTH stored under one tag so a
-        // short press cancels everything. The previous version cancelled only the chain,
-        // the starter then fired it forever: "one press, endless repeat".
-        b.setOnTouchListener((v, ev) -> {
-            int actionId = ev.getAction();
-            if (actionId == android.view.MotionEvent.ACTION_DOWN) {
-                final Handler h = new Handler();
-                final Runnable[] starter = new Runnable[1];
-                final Runnable[] chain = new Runnable[1];
-                chain[0] = () -> {
-                    action.run();
-                    h.postDelayed(chain[0], 60);
-                };
-                starter[0] = () -> {
-                    action.run();
-                    h.postDelayed(chain[0], 60);
-                };
-                v.setTag(R.id.repeat_handler, h);
-                v.setTag(R.id.repeat_tag, new Runnable[]{starter[0], chain[0]});
-                action.run();   // tap = one keypress, immediately
-                h.postDelayed(starter[0], 350);
-                // Keep the touch even if the finger wanders - without this the
-                // HorizontalScrollView cancels the press on the first pixel of movement.
-                v.getParent().requestDisallowInterceptTouchEvent(true);
-            } else if (actionId == android.view.MotionEvent.ACTION_UP
-                    || actionId == android.view.MotionEvent.ACTION_CANCEL) {
-                Handler h = (Handler) v.getTag(R.id.repeat_handler);
-                Object tag = v.getTag(R.id.repeat_tag);
-                if (h != null && tag instanceof Runnable[]) {
-                    // Cancel BOTH pieces: the 350ms starter and the 60ms chain it spawns.
-                    // The chain re-posts itself, so removing only the starter let it run
-                    // forever - the "one press, endless repeat" bug.
-                    for (Runnable r : (Runnable[]) tag) h.removeCallbacks(r);
-                    v.setTag(R.id.repeat_tag, null);
-                } else if (h != null && tag instanceof Runnable) {
-                    h.removeCallbacks((Runnable) tag);
-                }
-            }
-            return false;
-        });
+        // One press, one action - same rule as addGridCell. This used to carry the same
+        // 350ms-starter/60ms-chain repeat that flooded the PTY from a single arrow tap;
+        // a keyboard toggle has even less use for auto-repeat than an arrow key does.
+        b.setOnClickListener(v -> action.run());
         return b;
     }
 

@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -214,26 +215,20 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         });
         mKeyBar.setKeys(mPrefs.keybarKeys());
 
-        // Clipboard watcher: when an IMAGE lands on the clipboard while fterm is in the
-        // foreground, save it to a file and insert the path into the prompt. A screenshot
-        // then reaches opencode by just copying it - no paste button needed. The insert
-        // happens only when a session is active, and each image inserts once.
-        try {
-            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm != null) {
-                cm.addPrimaryClipChangedListener(() -> mUi.post(() -> {
-                    if (mActive == null || mActive.session == null) return;
-                    if (cm.hasPrimaryClip() && ClipboardImage.isImage(this, cm.getPrimaryClip())) {
-                        String path = ClipboardImage.save(this, ClipboardImage.uriOf(cm.getPrimaryClip()));
-                        if (path != null) {
-                            pasteText(path);
-                            Toast.makeText(this, "이미지 첨부: " + path, Toast.LENGTH_LONG).show();
-                        }
-                    }
-                }));
+        // Copying an image anywhere (a screenshot in the gallery, "copy" in a viewer) pastes
+        // it into the prompt. The watcher owns the whole rule so MainActivity keeps only the
+        // wiring; see ClipboardImage.Paste for why a path and not the clipboard itself.
+        ClipboardImage.watch(this, mUi, new ClipboardImage.Paste() {
+            @Override public boolean ready() {
+                // A screenshot taken in another app lands on the clipboard while fterm is
+                // backgrounded; pasting then would type into a prompt nobody is looking at.
+                return hasWindowFocus() && mActive != null && mActive.session != null;
             }
-        } catch (Throwable ignored) {
-        }
+            @Override public void insert(String path) {
+                pasteText(path);
+                Toast.makeText(MainActivity.this, "이미지 첨부: " + path, Toast.LENGTH_LONG).show();
+            }
+        });
 
         mRoot.addView(top);
         mRoot.addView(mTermFrame);
@@ -971,9 +966,21 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         clearSticky();
     }
 
+    /** Last time each escape sequence went out, for the flood guard below. */
+    private final java.util.HashMap<String, Long> mLastEscapeAt = new java.util.HashMap<>();
+
     private void sendEscape(String what) {
         TerminalSession s = mActive == null ? null : mActive.session;
         if (s == null || s.getEmulator() == null) return;
+        // Flood guard: a key source gone bad (a touch listener firing on MOVE, a keyboard
+        // driver stuck on repeat) can push hundreds of the same sequence per second - the
+        // measured "18:15:52, 200 frames/sec for 9s" flood. Same sequence within 40ms is
+        // a synthetic duplicate, not a human keypress: drop it. Hold-to-repeat in the key
+        // bar fires every 60ms and stays above this floor.
+        long now = android.os.SystemClock.uptimeMillis();
+        Long last = mLastEscapeAt.get(what);
+        if (last != null && now - last < 40) return;
+        mLastEscapeAt.put(what, now);
         TerminalEmulator e = s.getEmulator();
         int code;
         switch (what) {
