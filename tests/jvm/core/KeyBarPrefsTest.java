@@ -58,12 +58,13 @@ public class KeyBarPrefsTest {
       check(hit, "catalogue missing " + need);
     }
 
-    // 5. Prefs: pipe format + default list exists and matches the bar's default spec set.
+    // 5. Prefs: pipe format + default list exists, modifiers included and migrated.
     check(prefs.contains("keybar_keys"), "prefs key present");
     check(prefs.contains("DEFAULT_KEYBAR_KEYS"), "defaults list present");
-    for (String d : new String[]{"special:tab","special:esc","special:left","special:right","special:up","special:down"}) {
+    for (String d : new String[]{"mod:ctrl","mod:alt","mod:shift","special:tab","special:esc","special:left","special:right","special:up","special:down"}) {
       check(prefs.contains("\"" + d + "\""), "default missing " + d);
     }
+    check(prefs.contains("hasMod"), "migration for pre-modifier lists present");
 
     // 6. MainActivity wires the saved list into the bar and the editor into settings.
     String main = src("MainActivity.java");

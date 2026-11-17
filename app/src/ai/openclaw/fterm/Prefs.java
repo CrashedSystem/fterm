@@ -85,6 +85,7 @@ public final class Prefs {
      * and punctuation from the catalogue only), so splitting is exact.
      */
     public static final String[] DEFAULT_KEYBAR_KEYS = {
+            "mod:ctrl", "mod:alt", "mod:shift",
             "special:tab", "special:esc", "raw:\u0003",
             "special:left", "special:right", "special:up", "special:down",
     };
@@ -95,6 +96,15 @@ public final class Prefs {
         if (s != null) {
             for (String part : s.split("\\|", -1)) {
                 if (!part.isEmpty()) out.add(part);
+            }
+            // Migrate a pre-modifier list: the modifiers were fixed then, and a saved
+            // list without any of them would lose CTRL/ALT/SHIFT on first run.
+            boolean hasMod = false;
+            for (String k : out) if (k.startsWith("mod:")) hasMod = true;
+            if (!hasMod) {
+                out.add(0, "mod:ctrl");
+                out.add(1, "mod:alt");
+                out.add(2, "mod:shift");
             }
         }
         if (out.isEmpty()) {

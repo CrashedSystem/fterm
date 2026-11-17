@@ -199,6 +199,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             @Override public void special(String name) { sendEscape(name); }
             @Override public void raw(String bytes) { sendRaw(bytes); }
             @Override public void toggleKeyboard() { MainActivity.this.toggleKeyboard(); }
+            @Override public void paste() { pasteClipboard(); }
         });
         mKeyBar.setKeys(mPrefs.keybarKeys());
 

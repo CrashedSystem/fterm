@@ -2,6 +2,7 @@ package ai.openclaw.fterm;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.os.Handler;
 import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -33,11 +34,10 @@ final class KeyBar {
         void raw(String bytes);
 
         void toggleKeyboard();
-    }
 
-    private static final String[][] MODIFIERS = {
-            {"CTRL", "ctrl"}, {"ALT", "alt"}, {"SHIFT", "shift"},
-    };
+        /** The terminal's own paste (clipboard image detection included). */
+        void paste();
+    }
 
     /**
      * A configurable key: the label shown on the pill and an action spec, saved to prefs as
@@ -50,7 +50,13 @@ final class KeyBar {
      * The default set is the classic Termux row; everything the user adds comes from the
      * catalogue below so the editor cannot invent a broken spec.
      */
+    /** Modifiers are also just keys: the editor treats them like the rest. */
+    static final String[][] MODIFIERS = {
+            {"CTRL", "mod:ctrl"}, {"ALT", "mod:alt"}, {"SHIFT", "mod:shift"},
+    };
+
     static final String[][] CATALOGUE = {
+            {"\ud074\ub9bd\ubcf5\uc0ac", "action:paste"},
             {"TAB", "special:tab"}, {"ESC", "special:esc"},
             {"^C", "raw:\u0003"}, {"^Z", "raw:\u001a"}, {"^D", "raw:\u0004"},
             {"^L", "raw:\u000c"}, {"^W", "raw:\u0017"}, {"^U", "raw:\u0015"},
@@ -63,6 +69,7 @@ final class KeyBar {
     };
 
     static String labelOf(String spec) {
+        for (String[] c : MODIFIERS) if (c[1].equals(spec)) return c[0];
         for (String[] c : CATALOGUE) if (c[1].equals(spec)) return c[0];
         if (spec.startsWith("raw:")) {
             String r = spec.substring(4);
@@ -80,6 +87,8 @@ final class KeyBar {
             action.special(spec.substring(8));
         } else if (spec.startsWith("raw:")) {
             action.raw(spec.substring(4));
+        } else if (spec.equals("action:paste")) {
+            action.paste();
         }
     }
 
@@ -137,14 +146,9 @@ final class KeyBar {
         mRow.setBackgroundColor(BG);
         mRow.setPadding(dp(4), dp(6), dp(4), dp(6));
 
-        for (String[] m : MODIFIERS) {
-            mRow.addView(modifier(m[0], m[1]));
-        }
-        // The keyboard toggle lives at the END of the row, after the user keys that
-        // setKeys() inserts at MODIFIERS.length. Keeping it fixed there is what makes
-        // setKeys()'s "replace everything after the modifiers" logic safe - an earlier
-        // version put it between the modifiers and the user keys, and setKeys deleted it
-        // on the first call, which is why the bar stopped matching the editor.
+        // Modifiers are NOT added here: setKeys() renders the whole configurable segment
+        // (modifiers included) from prefs, so the editor fully owns the order. Only the
+        // keyboard toggle is fixed, at the end.
         mUserKeyCount = 0;
         addKeyboardToggle();
 
@@ -191,17 +195,25 @@ final class KeyBar {
     void setKeys(java.util.List<String> specs) {
         // Remove exactly the user keys (they sit between the modifiers and the toggle).
         while (mUserKeyCount > 0) {
-            mRow.removeViewAt(MODIFIERS.length);
+            mRow.removeViewAt(0);   // the segment starts at index 0; toggle is last
             mUserKeyCount--;
         }
         // Re-insert the new set right after the modifiers, before the toggle. Inserting
         // at MODIFIERS.length + i keeps the order and pushes the toggle to the end.
         for (int i = 0; i < specs.size(); i++) {
             String spec = specs.get(i);
-            TextView b = special(KeyBar.labelOf(spec), () -> KeyBar.apply(spec, mAction));
-            b.setTag(spec);
+            TextView b;
+            if (spec.startsWith("mod:")) {
+                // A modifier from the editor: same latching behaviour as the built-ins.
+                // modifier() tags the view with the bare kind - refresh() needs that to
+                // recolour the latched state.
+                b = modifier(KeyBar.labelOf(spec), spec.substring(4));
+            } else {
+                b = special(KeyBar.labelOf(spec), () -> KeyBar.apply(spec, mAction));
+                b.setTag(spec);
+            }
             b.setLongClickable(true);
-            mRow.addView(b, MODIFIERS.length + i);
+            mRow.addView(b, i);   // the toggle is the only thing after the segment
             mUserKeyCount++;
         }
     }
@@ -209,6 +221,34 @@ final class KeyBar {
     private TextView special(String label, Runnable action) {
         TextView b = pill(label, KEY);
         b.setOnClickListener(v -> action.run());
+        // Hold to repeat: arrows and DEL-type keys are useless on a phone without it. The
+        // repeat starts after 350ms and re-fires every 60ms, on the UI thread.
+        b.setOnLongClickListener(v -> {
+            final Handler h = new Handler();
+            final Runnable[] tick = new Runnable[1];
+            tick[0] = new Runnable() {
+                @Override public void run() {
+                    action.run();
+                    h.postDelayed(tick[0], 60);
+                }
+            };
+            h.postDelayed(tick[0], 350);
+            b.setTag(R.id.repeat_tag, tick[0]);
+            b.setTag(R.id.repeat_handler, h);
+            return true;   // consume: a long press is not also a click
+        });
+        // Release cancels the repeat - the tag carries the pending runnable.
+        b.setOnTouchListener((v, ev) -> {
+            if (ev.getAction() == android.view.MotionEvent.ACTION_UP
+                    || ev.getAction() == android.view.MotionEvent.ACTION_CANCEL) {
+                Runnable pending = (Runnable) v.getTag(R.id.repeat_tag);
+                if (pending != null) {
+                    v.removeCallbacks(pending);
+                    v.setTag(R.id.repeat_tag, null);
+                }
+            }
+            return false;   // let the click/long-click still fire
+        });
         return b;
     }
 
@@ -219,9 +259,13 @@ final class KeyBar {
         t.setTextColor(0xffe6e6e6);
         t.setGravity(Gravity.CENTER);
         t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        // A raised key: top highlight + bottom shade make it sit above the bar instead of
+        // being a flat pill painted onto it.
         GradientDrawable d = new GradientDrawable();
-        d.setColor(bg);
-        d.setCornerRadius(dp(6));
+        d.setColors(new int[]{0xff3d4148, bg, bg, 0xff26292e});
+        d.setOrientation(GradientDrawable.Orientation.TL_BR);
+        d.setCornerRadius(dp(8));
+        d.setStroke(dp(1), 0xff4a4e56);
         t.setBackground(d);
         // 36dp tall inside a 50dp bar: a finger target the platform would accept, with the
         // visual weight of a key rather than a label.

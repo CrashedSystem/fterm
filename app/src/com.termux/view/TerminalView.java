@@ -480,8 +480,12 @@ public final class TerminalView extends View {
     private long mClipLastAt = 0;
     /** Manual typing rarely lands under 60ms/char; a keyboard-internal paste does. */
     private static final long CLIPBOARD_TYPING_GAP_MS = 60;
-    /** A paste worth rewriting must be at least this long - short clips collide with words. */
-    private static final int CLIPBOARD_MIN_LENGTH = 8;
+    /**
+     * Only multi-line clips are candidates: the rewrite (backspace + bracketed re-send)
+     * is worth it exactly when the paste would otherwise submit line by line, and a
+     * 5-line threshold makes it impossible for ordinary typing to look like a paste.
+     */
+    private static final int CLIPBOARD_MIN_LINES = 5;
 
     /**
      * Recognise a clipboard paste that the keyboard delivers character by character.
@@ -494,7 +498,12 @@ public final class TerminalView extends View {
      */
     private boolean trackClipboardTyping(CharSequence text) {
         String clip = getClipboardText();
-        if (clip == null || clip.isEmpty() || clip.length() < CLIPBOARD_MIN_LENGTH) {
+        int lines = 0;
+        if (clip != null) {
+            for (int i = clip.indexOf('\n'); i >= 0; i = clip.indexOf('\n', i + 1)) lines++;
+            if (lines > 0 || !clip.isEmpty()) lines++;
+        }
+        if (clip == null || clip.isEmpty() || lines < CLIPBOARD_MIN_LINES) {
             resetClipboardTracking();
             return false;
         }

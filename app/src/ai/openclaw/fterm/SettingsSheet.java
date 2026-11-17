@@ -228,6 +228,10 @@ final class SettingsSheet {
     /** The catalogue as a picker: one dialog, tap a key to add it, stays open. */
     private void showAddDialog(java.util.ArrayList<String> chips, Runnable redraw) {
         java.util.ArrayList<String> available = new java.util.ArrayList<>();
+        // Modifiers are configurable keys too - they belong in the same picker.
+        for (String[] c : KeyBar.MODIFIERS) {
+            if (!chips.contains(c[1])) available.add(c[1]);
+        }
         for (String[] c : KeyBar.CATALOGUE) {
             if (!chips.contains(c[1])) available.add(c[1]);
         }
