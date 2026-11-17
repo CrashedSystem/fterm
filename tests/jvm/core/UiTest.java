@@ -23,20 +23,23 @@ public class UiTest {
         // Dropdown: a caret in the tab bar, reachable by long-pressing "+".
         check(src.contains("showCommandMenu(v)"), "the tab bar has a dropdown trigger");
         check(src.contains("plus.setOnLongClickListener"), "long-press on + opens it");
-        check(src.contains("\\u25be"), "the trigger is a caret glyph");
+        check(src.contains("Chrome.icon(this, \"chevron\""), "the trigger is a caret glyph");
 
         // A phone has no Ctrl+Shift+P, so the same commands must be on the menu.
         for (String cmd : new String[]{"새 탭", "붙여넣기", "복사", "설정"}) {
             check(src.contains(cmd), "the menu offers: " + cmd);
         }
 
-        // Palette: WT's Ctrl+Shift+P, with the commands it lists.
+        // Palette: WT's Ctrl+Shift+P. The list itself moved to Chrome.java when the activity
+        // had to shrink below its line budget, so the assertions follow it there.
+        String chrome = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get("app/src/ai/openclaw/fterm/Chrome.java")), "UTF-8");
         check(src.contains("KEYCODE_P") && src.contains("showCommandPalette()"),
                 "Ctrl+Shift+P opens the palette");
         for (String cmd : new String[]{"새 탭 열기", "탭 닫기", "다음 탭", "글자 크기 키우기"}) {
-            check(src.contains(cmd), "the palette lists: " + cmd);
+            check(chrome.contains(cmd), "the palette lists: " + cmd);
         }
-        check(src.contains("getFilter().filter"), "the palette is searchable");
+        check(chrome.contains("getFilter().filter"), "the palette is searchable");
 
         // Renaming a tab must survive the shell's OSC title.
         check(src.contains("userTitled"), "a renamed tab is marked");

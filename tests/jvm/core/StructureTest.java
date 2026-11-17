@@ -65,17 +65,19 @@ public class StructureTest {
         check(!code.toString().contains("RUN_COMMAND"),
                 "RUN_COMMAND is not called (it is ignored on this device)");
 
-        // 6. A copied screenshot must survive the round trip out of the app and back.
-        //    These are the three ways that silently failed before.
+        // 6. An image reaches the prompt by ONE tap in the keyboard's clipboard panel, not
+        //    by a focus-time poll. Three things have to be true for that to work.
         String clip = read(dir + "ClipboardImage.java");
-        check(clip.contains("getTimestamp"), "a clip is identified by its timestamp");
-        check(!clip.contains("lastUri"), "not by its URI (two copies of one picture both attach)");
         check(clip.contains("new Thread("), "decoding runs off the UI thread");
         check(clip.contains("text/uri-list") || clip.contains("// text/uri-list"),
                 "a URI given only as text is still read");
-        String activity = main;
-        check(activity.contains("onWindowFocusChanged") && activity.contains(".poll()"),
-                "focus regained is where the clipboard is re-read");
+        String view = read(dir + "../../../com.termux/view/TerminalView.java");
+        check(view.contains("contentMimeTypes"), "the editor announces it takes images");
+        check(view.contains("commitContent"), "and implements the IME image commit");
+        check(view.contains("requestPermission"), "releasing the URI grant the IME hands over");
+        check(main.contains("onCommitImage"), "the activity receives the committed image");
+        check(!main.contains("addPrimaryClipChangedListener"),
+                "no clipboard polling: the tap is the trigger");
 
         System.out.println("ok  " + pass + " structure assertions");
         System.out.println("ALL OK");

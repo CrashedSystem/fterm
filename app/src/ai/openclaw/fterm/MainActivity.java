@@ -81,6 +81,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private MikuBackground mMiku;
     private Bell mBell;
     private SettingsSheet mSettings;
+    /** Windows Terminal chrome: the command palette and the icon strip. */
+    private Chrome mChrome;
     private Notifier mNotifier;
     private int mScheme;
     private float mScale = 1f;
@@ -89,8 +91,6 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private boolean mShowKeyboardOnce = true;
 
     private final Handler mUi = new Handler(Looper.getMainLooper());
-    /** Holds the clipboard image rule; polled again on focus because background copies are invisible. */
-    private ClipboardImage.Watcher mClipWatch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -158,36 +158,31 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mTabScroll.setLayoutParams(new LinearLayout.LayoutParams(0, dp(38), 1f));
         mTabScroll.addView(mTabStrip);
 
-        TextView plus = new TextView(this);
-        plus.setText("＋");
-        plus.setTextSize(20);
-        plus.setTextColor(0xffd0d0d0);
-        plus.setGravity(Gravity.CENTER);
-        plus.setLayoutParams(new LinearLayout.LayoutParams(dp(40), dp(38)));
-        plus.setOnClickListener(v -> newTab(true));
-
-        // WT's tab bar: "+" to open a tab, and a caret beside it for the dropdown menu
-        // (new tab, split, settings, rename, close). Long-press on "+" opens it too, which is
-        // the only discoverable gesture on a bar this small.
-        TextView menu = new TextView(this);
-        menu.setText("\u25be");
-        menu.setTextSize(13);
-        menu.setTextColor(0xffb0b0b0);
-        menu.setGravity(Gravity.CENTER);
-        menu.setLayoutParams(new LinearLayout.LayoutParams(dp(30), dp(38)));
-        menu.setOnClickListener(v -> showCommandMenu(v));
+        // WT's title bar: line-art glyphs at one stroke weight, not text characters. The old
+        // strip used "＋" "▾" "⚙", which rendered as a full-width CJK plus, a solid triangle
+        // and a coloured emoji gear - three weights, one of them in colour. These are paths,
+        // so they are identical at every density and never fall back to an emoji font.
+        View plus = Chrome.icon(this, "plus", 30, false, v -> newTab(true));
+        // Long-press "+" still opens the menu: on a bar this small it is the discoverable
+        // gesture, and it survived the change from text glyphs to line art.
         plus.setOnLongClickListener(v -> {
             showCommandMenu(v);
             return true;
         });
+        View menu = Chrome.icon(this, "chevron", 28, true, v -> showCommandMenu(v));
+        View palette = Chrome.icon(this, "terminal", 28, true, v -> showCommandPalette());
+        View gear = Chrome.icon(this, "gear", 28, true, v -> showSettings());
 
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.BOTTOM);
         top.setBackgroundColor(0xff2b2b2b);
+        top.setPadding(0, 0, dp(6), 0);
         top.addView(mTabScroll);
         top.addView(plus);
+        top.addView(palette);
         top.addView(menu);
+        top.addView(gear);
         top.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
         mTopBar = top;
@@ -214,28 +209,34 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             @Override public void raw(String bytes) { sendRaw(bytes); }
             @Override public void toggleKeyboard() { MainActivity.this.toggleKeyboard(); }
             @Override public void paste() { pasteClipboard(); }
+            @Override public void function(int number) { sendFunctionKey(number); }
         });
-        mKeyBar.setKeys(mPrefs.keybarKeys());
 
-        // Copying an image anywhere pastes it in: the watcher owns the rule (see
-        // ClipboardImage.Paste for why a path, not the clipboard itself).
-        mClipWatch = ClipboardImage.watch(this, mUi, new ClipboardImage.Paste() {
-            @Override public boolean ready() {
-                // Focus is not part of readiness (the copy happens while unfocused); see
-                // onWindowFocusChanged().
-                return mActive != null && mActive.session != null;
-            }
-            @Override public void insert(String path) {
-                pasteText(path);
-                Toast.makeText(MainActivity.this, "이미지 첨부: " + path, Toast.LENGTH_LONG).show();
-            }
-        });
+        // Images arrive by one deliberate tap: the keyboard's clipboard panel hands the
+        // picture over through commitContent() (see TerminalView), and this is where it
+        // becomes a path in the prompt. Nothing polls the clipboard and nothing fires on
+        // focus - the user asked for "tap the clipboard", not "it pastes itself".
+        ClipboardImage.selfTestIfRequested(this);
 
         mRoot.addView(top);
         mRoot.addView(mTermFrame);
         mRoot.addView(mKeyBar.view());
         setContentView(mRoot);
         EdgeToEdge.applyInsets(mRoot, mTopBar, mKeyBar.view(), dp(38), dp(88));
+
+        mChrome = new Chrome(this, new Chrome.Commands() {
+            @Override public void newTab() { MainActivity.this.newTab(true); }
+            @Override public void closeTab() { if (mActive != null) confirmClose(mActive); }
+            @Override public void renameTab() { renameActiveTab(); }
+            @Override public void nextTab() { cycleTab(); }
+            @Override public void paste() { pasteClipboard(); }
+            @Override public void copy() { copySelection(); }
+            @Override public void biggerFont() { applyFontSize(mFontDp + 1); }
+            @Override public void smallerFont() { applyFontSize(mFontDp - 1); }
+            @Override public void settings() { showSettings(); }
+            @Override public void toggleKeyboard() { MainActivity.this.toggleKeyboard(); }
+            @Override public void palette() { showCommandPalette(); }
+        });
 
         loadFonts();
         mMiku = MikuBackground.load(this);
@@ -580,7 +581,17 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         TextView title = new TextView(this);
         title.setTextSize(12);
         title.setSingleLine(true);
-        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        // Scrolling text needs all four of these, and getting any one wrong silently leaves
+        // the title clipped instead: MARQUEE as the ellipsizer, horizontally scrolling on,
+        // selected (the platform's marquee is driven by the selected state, not by focus),
+        // and a bounded width - a wrap_content TextView always has room for its text, so it
+        // has nothing to scroll and the marquee never starts.
+        title.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);
+        title.setHorizontallyScrolling(true);
+        title.setMarqueeRepeatLimit(-1);
+        title.setFocusable(false);
+        // The cap is what gives the marquee something to scroll: with wrap_content and no
+        // limit the view is always exactly as wide as the text.
         title.setMaxWidth(dp(150));
         // A TextView inside a taller row draws its text at the TOP unless told otherwise.
         // The tab title was doing exactly that - the row is 34dp and the text sat on its
@@ -591,7 +602,6 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)));
         title.setPadding(dp(2), 0, dp(6), 0);
         plate.addView(title);
-
         TextView close = new TextView(this);
         close.setText("\u00d7");
         close.setTextSize(15);
@@ -618,6 +628,15 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         if (tab.chip == null || tab.plate == null) return;
         boolean active = tab == mActive;
         tab.chip.setText(tab.title);
+        // The marquee runs only on the active tab. The platform drives a marquee from the
+        // selected state, and leaving it set on inactive tabs would have every long title in
+        // the strip scrolling at once, which is noise rather than information.
+        //
+        // Cleared first so a title change restarts the scroll at column zero. setSelected(true)
+        // on a view that is already selected is a no-op, so without the toggle a shell that
+        // updates its title mid-scroll leaves the new text halfway across the tab.
+        tab.chip.setSelected(false);
+        tab.chip.setSelected(active);
 
         int[] palette = Schemes.colors(mScheme);
         int termBg = palette[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND];
@@ -768,77 +787,9 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mTermView.invalidate();
     }
 
-    /**
-     * Windows Terminal's command palette (Ctrl+Shift+P).
-     *
-     * A phone has no Ctrl+Shift+P, so the same list is also on the "+" menu; this exists for
-     * a hardware keyboard and because it is the one WT affordance that scales down to a
-     * searchable list rather than a menu of five items.
-     */
     private void showCommandPalette() {
-        final String[] commands = {
-                "새 탭 열기",
-                "탭 닫기",
-                "탭 이름 바꾸기",
-                "다음 탭",
-                "붙여넣기",
-                "복사",
-                "글자 크기 키우기",
-                "글자 크기 줄이기",
-                "설정 열기",
-        };
-
-        final EditText filter = new EditText(this);
-        filter.setHint("명령 검색");
-        filter.setSingleLine(true);
-
-        final android.widget.ArrayAdapter<String> adapter =
-                new android.widget.ArrayAdapter<>(this, android.R.layout.simple_list_item_1, commands);
-        final android.widget.ListView list = new android.widget.ListView(this);
-        list.setAdapter(adapter);
-
-        filter.addTextChangedListener(new android.text.TextWatcher() {
-            public void afterTextChanged(android.text.Editable e) {
-                adapter.getFilter().filter(e.toString());
-            }
-            public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
-            public void onTextChanged(CharSequence s, int a, int b, int c) {}
-        });
-
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.addView(filter);
-        box.addView(list, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(280)));
-
-        final AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("명령 팔레트")
-                .setView(box)
-                .setNegativeButton("닫기", null)
-                .create();
-
-        list.setOnItemClickListener((parent, view, position, id) -> {
-            runPaletteCommand(adapter.getItem(position));
-            dialog.dismiss();
-        });
-        dialog.show();
+        if (mChrome != null) mChrome.palette();
     }
-
-    private void runPaletteCommand(String command) {
-        switch (command) {
-            case "새 탭 열기": newTab(true); break;
-            case "탭 닫기": if (mActive != null) confirmClose(mActive); break;
-            case "탭 이름 바꾸기": renameActiveTab(); break;
-            case "다음 탭": cycleTab(); break;
-            case "붙여넣기": pasteClipboard(); break;
-            case "복사": copySelection(); break;
-            case "글자 크기 키우기": applyFontSize(mFontDp + 1); break;
-            case "글자 크기 줄이기": applyFontSize(mFontDp - 1); break;
-            case "설정 열기": showSettings(); break;
-            default: break;
-        }
-    }
-
     private void cycleTab() {
         if (mTabs.size() < 2) return;
         int i = mTabs.indexOf(mActive);
@@ -929,13 +880,6 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                     mPrefs.setKeyBarVisible(visible);
                     if (mKeyBar != null) mKeyBar.setVisible(visible);
                 }
-                @Override public java.util.ArrayList<String> keybarKeys() {
-                    return new java.util.ArrayList<>(mPrefs.keybarKeys());
-                }
-                @Override public void onKeybarKeys(java.util.ArrayList<String> keys) {
-                    mPrefs.setKeybarKeys(keys);
-                    if (mKeyBar != null) mKeyBar.setKeys(keys);
-                }
                 @Override public String statusLine() {
                     return "세션: " + mTabs.size() + " · 서버 "
                             + mPrefs.host() + ":" + mPrefs.port();
@@ -1001,8 +945,25 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         clearSticky();
     }
 
-    private void clearSticky() {
-        mFn = false;
+    /**
+     * F1..F12 from the key bar's function layer.
+     *
+     * <p>Routed through {@link TerminalView#handleKeyCode} like every other special key, which
+     * is what makes the emulator translate it with the running program's terminfo: a TUI that
+     * asked for {@code kf1=\eOP} gets that, and a shell that expects {@code \e[11~} gets that.
+     * Sending a hardcoded sequence was the reason F-keys used to break inside vim.
+     *
+     * <p>No flood guard runs here. These cells repeat while held, and the point of a repeat is
+     * a stream of identical codes; the guard's 40 ms floor would swallow every other one.
+     */
+    private void sendFunctionKey(int number) {
+        if (number < 1 || number > 12) return;
+        if (mActive == null || mActive.session == null) return;
+        mTermView.handleKeyCode(KeyEvent.KEYCODE_F1 + (number - 1), 0);
+        clearSticky();
+    }
+
+    private void clearSticky() {        mFn = false;
         if (mKeyBar != null) mKeyBar.clear();
     }
 
@@ -1025,12 +986,6 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             mShowKeyboardOnce = false;
             showKeyboardSoon();
         }
-    }
-
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus && mClipWatch != null) mClipWatch.poll();
     }
 
     /**
@@ -1329,6 +1284,22 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             }
             Toast.makeText(this, "셸이 종료되었습니다 — Enter로 탭을 닫습니다", Toast.LENGTH_SHORT).show();
         });
+    }
+
+    @Override
+    public void onCommitImage(final android.net.Uri uri, String description,
+                              final Runnable afterRead) {
+        // The IME's tap. The client is asked because the read needs the activity's content
+        // resolver and the result belongs in the active tab's prompt, not in this view.
+        ClipboardImage.saveAsync(this, uri, mUi, new ClipboardImage.Paste() {
+            @Override public boolean ready() {
+                return mActive != null && mActive.session != null;
+            }
+            @Override public void insert(String path) {
+                pasteText(path);
+                Toast.makeText(MainActivity.this, "이미지 첨부: " + path, Toast.LENGTH_SHORT).show();
+            }
+        }, afterRead);
     }
 
     @Override

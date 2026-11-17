@@ -283,11 +283,32 @@ public final class TerminalSession extends TerminalOutput {
         }
     }
 
+    /**
+     * Chunk size for {@link #transportDeliver}, and it must stay well under the queue's capacity.
+     *
+     * <p>The queue is 64 KiB and {@link ByteQueue#write} blocks when it is full, while the main
+     * thread only drains it after {@link #MSG_NEW_INPUT} is posted - which used to happen after
+     * the write returned. A single ring replay can be 256 KiB, so the sequence was: reader
+     * fills 64 KiB, blocks for space, waits for a consumer that was never told there was
+     * anything to consume. That deadlock is the blank screen: the shell is alive, the replay is
+     * stuck in a queue nobody is draining, and switching tabs reattaches and hides it. Writing
+     * in chunks makes the notification arrive between chunks, so the consumer always gets a
+     * chance to run.
+     */
+    private static final int DELIVER_CHUNK = 8192;
+
     /** Called by a {@link SessionTransport} when the remote shell wrote bytes. */
     void transportDeliver(byte[] data, int count) {
         mDeliveredBytes += count;
-        if (!mProcessToTerminalIOQueue.write(data, 0, count)) return;
-        mMainThreadHandler.sendEmptyMessage(MSG_NEW_INPUT);
+        int offset = 0;
+        while (offset < count) {
+            int n = Math.min(DELIVER_CHUNK, count - offset);
+            if (!mProcessToTerminalIOQueue.write(data, offset, n)) return;
+            // Wake the consumer per chunk. The handler reads a whole buffer at a time, so this
+            // costs one message per 8 KiB rather than one per byte.
+            mMainThreadHandler.sendEmptyMessage(MSG_NEW_INPUT);
+            offset += n;
+        }
     }
 
     /** Called by a {@link SessionTransport} when the remote shell is gone. */

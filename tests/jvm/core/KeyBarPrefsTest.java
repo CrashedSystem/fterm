@@ -1,10 +1,15 @@
 import java.nio.file.*;
 
 /**
- * The key bar editor's data model, verified against the real sources: the pipe
- * round-trip used by Prefs, the label rules in KeyBar, and that the defaults are
- * catalogue entries. Reading the sources keeps KeyBar's Android imports out of
- * this JVM test while still checking the shipped strings.
+ * The key bar's fixed layout, verified against the real sources.
+ *
+ * <p>The bar is no longer user-editable: the user removed the editor ("키바 편집 기능은
+ * 삭제해. 이대로가 좋아"). That makes the layout a constant, and a constant is worth asserting
+ * precisely - the two rows of six are the contract with the screenshot the bar was matched to,
+ * and the function layer is what replaced the editor as the way to reach more keys.
+ *
+ * <p>Android imports keep KeyBar out of this JVM test, so the checks are made against the
+ * source text. They are meant to break when the shape changes, not when a colour does.
  */
 public class KeyBarPrefsTest {
   static int pass = 0;
@@ -17,62 +22,66 @@ public class KeyBarPrefsTest {
     return new String(Files.readAllBytes(Paths.get(System.getProperty("root") + "/app/src/ai/openclaw/fterm/" + name)));
   }
 
-  /** Mirrors Prefs.setKeybarKeys/keybarKeys - the same pipe format, extracted. */
-  static String save(java.util.ArrayList<String> keys) {
-    StringBuilder b = new StringBuilder();
-    for (int i = 0; i < keys.size(); i++) {
-      if (i > 0) b.append('|');
-      b.append(keys.get(i));
-    }
-    return b.toString();
-  }
-  static java.util.ArrayList<String> load(String s) {
-    java.util.ArrayList<String> out = new java.util.ArrayList<>();
-    if (s != null) for (String p : s.split("\\|", -1)) if (!p.isEmpty()) out.add(p);
-    return out;
-  }
-
   public static void main(String[] args) throws Exception {
     String kb = src("KeyBar.java");
     String prefs = src("Prefs.java");
-
-    // 1. Round trip with a control-char spec (the pipe format's worst case).
-    java.util.ArrayList<String> keys = new java.util.ArrayList<>();
-    keys.add("special:tab"); keys.add("raw:\u0003"); keys.add("special:pgup");
-    eq(load(save(keys)), keys, "pipe round-trip");
-
-    // 2. Empty segments from a trailing pipe are dropped on load.
-    eq(load("special:tab|").size(), 1, "trailing pipe dropped");
-    eq(load("|").size(), 0, "all-pipe -> empty");
-
-    // 3. KeyBar's labelOf maps a raw control char to ^X (checked in the source text).
-    check(kb.contains("'@' + r.charAt(0)"), "labelOf ^X rule present");
-    check(kb.contains("startsWith(\"special:\")"), "special: branch present");
-    check(kb.contains("startsWith(\"raw:\")"), "raw: branch present");
-
-    // 4. The catalogue covers home/end/pgup/pgdn and the ^-keys a CLI misses.
-    // Raw specs are written as escapes in the source (\u0004), so search for the
-    // escaped literal form too.
-    for (String need : new String[]{"special:home","special:end","special:pgup","special:pgdn","raw:\\u0004","raw:\\u001a"}) {
-      boolean hit = kb.contains("\"" + need + "\"") || kb.contains(need);
-      check(hit, "catalogue missing " + need);
-    }
-
-    // 5. Prefs: pipe format + default list exists, modifiers included and migrated.
-    check(prefs.contains("keybar_keys"), "prefs key present");
-    check(prefs.contains("DEFAULT_KEYBAR_KEYS"), "defaults list present");
-    for (String d : new String[]{"mod:ctrl","mod:alt","mod:shift","special:tab","special:esc","special:left","special:right","special:up","special:down"}) {
-      check(prefs.contains("\"" + d + "\""), "default missing " + d);
-    }
-    check(prefs.contains("hasMod"), "migration for pre-modifier lists present");
-
-    // 6. MainActivity wires the saved list into the bar and the editor into settings.
     String main = src("MainActivity.java");
-    check(main.contains("mKeyBar.setKeys(mPrefs.keybarKeys())"), "bar gets saved keys on build");
-    check(main.contains("mKeyBar.setKeys(keys)"), "bar updates live from the editor");
-    check(main.contains("KEYCODE_MOVE_HOME"), "HOME key handled");
-    check(main.contains("KEYCODE_PAGE_UP"), "PGUP key handled");
+    String settings = src("SettingsSheet.java");
+
+    // 1. The main layer is the two fixed rows of six, in the screenshot's order.
+    for (String label : new String[]{"\"Esc\"", "\"Tab\"", "\"Home\"", "\"End\"", "\"PgUp\"", "\"PgDn\"",
+                                     "\"Ctrl\"", "\"Alt\""}) {
+      check(kb.contains(label), "main layer missing " + label);
+    }
+    check(kb.contains("\\u2191") && kb.contains("\\u2193")
+            && kb.contains("\\u2190") && kb.contains("\\u2192"), "all four arrow cells present");
+    // Six cells per row: the count is what keeps the grid from silently becoming seven. The
+    // function layer reuses the same rows, so its "F" cells are subtracted first.
+    check(countOccurrences(kb, "addGridCell(mRow,")
+            - countOccurrences(kb, "addGridCell(mRow, \"F\"") == 6, "row 1 has six cells");
+    check(countOccurrences(kb, "addGridCell(mUserRow,")
+            - countOccurrences(kb, "addGridCell(mUserRow, \"F\"") == 6, "row 2 has six cells");
+
+    // 2. The function layer exists, is reachable, and is twelve keys.
+    check(kb.contains("mAction.function("), "function keys are routed through the action");
+    check(kb.contains("F\" + i"), "F-labels are generated, not typed out");
+    check(kb.contains("i <= 12") || kb.contains("<= 12"), "the layer covers F1..F12");
+    check(kb.contains("setFnLayer"), "a layer switch exists");
+    check(kb.contains("mLeftTab") && kb.contains("mRightTab"), "both edge tabs exist");
+    check(kb.contains("View.INVISIBLE"), "the edge tab hides when it has no target");
+    // Direction matters more than existence: both tabs used to point at the layer they were
+    // already on, so the F keys were unreachable and neither tab did anything.
+    check(kb.contains("edgeTab(\"\\u2039\", () -> setFnLayer(false))"),
+            "the left tab returns to the main layer");
+    check(kb.contains("edgeTab(\"\\u203a\", () -> setFnLayer(true))"),
+            "and the right tab opens the function layer");
+
+    // 3. Hold-to-repeat is owned by one place and bounded - the old flood was 1,800 presses.
+    String repeat = src("KeyRepeat.java");
+    check(repeat.contains("MAX_PRESSES"), "a hold has a ceiling");
+    check(repeat.contains("mGeneration"), "a stale chain is invalidated by generation");
+    check(repeat.contains("removeCallbacksAndMessages"), "cancel clears the queue, not just one token");
+    check(kb.contains("mRepeat.stop()"), "the bar stops the chain on release and layer change");
+    check(kb.contains("ACTION_CANCEL"), "and on a cancelled touch");
+
+    // 4. The editor is gone, all the way down: no host hook, no prefs, no picker.
+    check(!settings.contains("keybarKeys"), "settings no longer asks for editable keys");
+    check(!settings.contains("showAddDialog"), "the add-key picker is gone");
+    check(!prefs.contains("keybarKeys"), "prefs no longer store a key list");
+    check(!prefs.contains("DEFAULT_KEYBAR_KEYS"), "and its default list is gone");
+    check(!main.contains("mKeyBar.setKeys"), "the bar is never fed a user list");
+
+    // 5. Function keys go through the emulator's translation, never a hardcoded sequence.
+    check(main.contains("KEYCODE_F1 + (number - 1)"), "F-keys map to real key codes");
+    check(main.contains("handleKeyCode(KeyEvent.KEYCODE_F1"), "and are translated by the emulator");
+    check(!main.contains("\\u001bOP"), "no hardcoded SS3 sequence (which broke inside vim)");
 
     System.out.println("KeyBarPrefsTest: " + pass + " assertions OK");
+  }
+
+  static int countOccurrences(String haystack, String needle) {
+    int n = 0;
+    for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + needle.length())) n++;
+    return n;
   }
 }

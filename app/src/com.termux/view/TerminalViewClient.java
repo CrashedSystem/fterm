@@ -62,6 +62,22 @@ public interface TerminalViewClient {
 
     boolean onCodePoint(int codePoint, boolean ctrlDown, TerminalSession session);
 
+    /**
+     * An image the IME handed over through {@code commitContent()} - a tap on the clipboard
+     * thumbnail in Samsung keyboard's clipboard panel, or Gboard's clipboard row.
+     *
+     * <p>Rich content is the only way a keyboard can deliver a picture: it is not text, so
+     * {@code commitText()} cannot carry it, and a terminal has no editable field for an
+     * editor-style paste. The client is responsible for reading {@code uri} (it may need to
+     * request the temporary read grant, which this view does not hand out) and for calling
+     * {@code afterRead} when it is done, so the grant can be released.
+     *
+     * @param uri       the content URI of the committed image, readable for this call
+     * @param description the IME's human-readable description, may be null
+     * @param afterRead run once the content has been read (releases the URI permission)
+     */
+    void onCommitImage(android.net.Uri uri, String description, Runnable afterRead);
+
 
     void onEmulatorSet();
 

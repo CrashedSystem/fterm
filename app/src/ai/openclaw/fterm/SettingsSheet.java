@@ -2,23 +2,30 @@ package ai.openclaw.fterm;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.graphics.Typeface;
 import android.content.res.Resources;
+import android.graphics.Typeface;
 import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 
 /**
- * The settings sheet.
+ * The settings sheet, in the shape Windows Terminal uses.
  *
- * Extracted from MainActivity so the activity is about sessions and input, and so the list of
- * settings can be read in one place. It owns no state: every control reports through
- * {@link Host}, and the host decides what to persist and repaint.
+ * <p>WT's settings are a flat list of labelled rows: a section heading in small caps, then one
+ * row per setting with its name on the left and its control on the right, separated by hairlines
+ * and nothing else. No cards, no coloured buttons, no dialog-per-value. The earlier version here
+ * was a stack of full-width Android {@link android.widget.Button}s and {@link android.widget.CheckBox}es,
+ * which is the default look of an Android dialog and reads as a form rather than as a
+ * configuration surface.
+ *
+ * <p>It owns no state: every control reports through {@link Host}, and the host decides what to
+ * persist and repaint.
  */
 final class SettingsSheet {
 
@@ -41,16 +48,19 @@ final class SettingsSheet {
 
         void onKeyBarVisible(boolean visible);
 
-        java.util.ArrayList<String> keybarKeys();
-
-        void onKeybarKeys(java.util.ArrayList<String> keys);
-
         /** e.g. "3 tabs · 127.0.0.1:8791" */
         String statusLine();
     }
 
+    private static final int BG = 0xff1f2126;        // the sheet's surface
+    private static final int TEXT = 0xffe8eaee;
+    private static final int HINT = 0xff8a8f99;
+    private static final int HAIRLINE = 0xff2c2f36;
+    private static final int ACCENT = 0xff4a9eff;
+
     private final Activity mActivity;
     private final Host mHost;
+    private android.app.Dialog mDialog;
 
     SettingsSheet(Activity activity, Host host) {
         mActivity = activity;
@@ -59,16 +69,138 @@ final class SettingsSheet {
 
     void show() {
         ScrollView sv = new ScrollView(mActivity);
+        sv.setBackgroundColor(BG);
         LinearLayout box = new LinearLayout(mActivity);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(20), dp(12), dp(20), dp(12));
+        box.setPadding(dp(18), dp(4), dp(18), dp(18));
+        box.setBackgroundColor(BG);
         sv.addView(box);
 
-        box.addView(label("글자 크기"));
+        // ---- appearance
+        section(box, "모양");
 
+        box.addView(row("글자 크기", mHost.fontSizeDp() + "dp", sizeControl()));
+
+        // ---- colour scheme: one row per scheme, the active one marked with an accent bar
+        box.addView(row("색상 구성", null, null));
+        for (int i = 0; i < Prefs.SCHEME_NAMES.length; i++) {
+            final int idx = i;
+            box.addView(schemeRow(Prefs.SCHEME_NAMES[i], mHost.scheme() == idx, () -> {
+                mHost.onScheme(idx);
+                show();                       // redraw so the accent bar moves
+            }));
+        }
+
+        // ---- behaviour
+        section(box, "동작");
+        box.addView(toggleRow("터미널 벨 · 진동", mHost.bellVibrate(),
+                on -> mHost.onBell(on, mHost.bellSound())));
+        box.addView(toggleRow("터미널 벨 · 소리", mHost.bellSound(),
+                on -> mHost.onBell(mHost.bellVibrate(), on)));
+        box.addView(toggleRow("키 바 표시", mHost.keyBarVisible(), mHost::onKeyBarVisible));
+
+        // ---- about
+        section(box, "정보");
+        TextView about = new TextView(mActivity);
+        about.setText(mHost.statusLine() + "\n길게 누르기: 텍스트 선택 · 탭 길게: 닫기");
+        about.setTextColor(HINT);
+        about.setTextSize(12);
+        about.setLineSpacing(dp(3), 1f);
+        about.setPadding(0, dp(4), 0, 0);
+        box.addView(about);
+
+        mDialog = new AlertDialog.Builder(mActivity)
+                .setTitle("설정")
+                .setView(sv)
+                .setPositiveButton("닫기", null)
+                .create();
+        mDialog.show();
+        // Match the sheet's surface instead of the platform's white card; on OneUI the
+        // default is light, which is what made this look unlike the terminal behind it.
+        android.view.Window w = mDialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(Chrome.plate(BG, 10));
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,
+                    (int) (mActivity.getResources().getDisplayMetrics().heightPixels * 0.78f));
+        }
+    }
+
+    // ------------------------------------------------------------------ rows
+
+    /** A small all-caps heading with a hairline under it, like WT's section labels. */
+    private void section(LinearLayout parent, String title) {
+        if (parent.getChildCount() > 0) {
+            View gap = new View(mActivity);
+            gap.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(10)));
+            parent.addView(gap);
+        }
+        TextView t = new TextView(mActivity);
+        t.setText(title.toUpperCase());
+        t.setTextColor(HINT);
+        t.setTextSize(10);
+        t.setLetterSpacing(0.12f);
+        t.setPadding(0, dp(4), 0, dp(4));
+        UiFont.apply(t, true);
+        parent.addView(t);
+
+        View line = new View(mActivity);
+        line.setBackgroundColor(HAIRLINE);
+        line.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(0.7f))));
+        parent.addView(line);
+    }
+
+    /**
+     * One settings row: name on the left (with an optional hint under it), control on the right.
+     * The whole row is as tall as its tallest part, so a {@link Switch} is a full-height target.
+     */
+    private View row(String name, String value, View control) {
+        LinearLayout r = new LinearLayout(mActivity);
+        r.setOrientation(LinearLayout.HORIZONTAL);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setPadding(0, dp(9), 0, dp(9));
+
+        LinearLayout text = new LinearLayout(mActivity);
+        text.setOrientation(LinearLayout.VERTICAL);
+        text.setLayoutParams(new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView t = new TextView(mActivity);
+        t.setText(name);
+        t.setTextColor(TEXT);
+        t.setTextSize(14);
+        UiFont.apply(t, false);
+        text.addView(t);
+
+        if (value != null) {
+            TextView v = new TextView(mActivity);
+            v.setText(value);
+            v.setTextColor(HINT);
+            v.setTextSize(11);
+            text.addView(v);
+        }
+        r.addView(text);
+
+        if (control != null) r.addView(control);
+
+        View line = new View(mActivity);
+        line.setBackgroundColor(HAIRLINE);
+        LinearLayout wrap = new LinearLayout(mActivity);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.addView(r);
+        wrap.addView(line, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(0.7f))));
+        return wrap;
+    }
+
+    private View sizeControl() {
         SeekBar size = new SeekBar(mActivity);
         size.setMax(22);
-        size.setProgress(mHost.fontSizeDp() - 6);
+        size.setProgress(Math.max(0, mHost.fontSizeDp() - 6));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(150),
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        size.setLayoutParams(lp);
         size.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar sb, int p, boolean fromUser) {
                 if (fromUser) mHost.onFontSize(p + 6);
@@ -76,209 +208,61 @@ final class SettingsSheet {
             @Override public void onStartTrackingTouch(SeekBar sb) {}
             @Override public void onStopTrackingTouch(SeekBar sb) {}
         });
-        box.addView(size);
-
-        TextView schemeLabel = label("색상 구성");
-        schemeLabel.setPadding(0, dp(12), 0, dp(4));
-        box.addView(schemeLabel);
-
-        for (int i = 0; i < Prefs.SCHEME_NAMES.length; i++) {
-            final int idx = i;
-            Button b = new Button(mActivity);
-            b.setText((mHost.scheme() == idx ? "\u2713 " : "") + Prefs.SCHEME_NAMES[i]);
-            b.setAllCaps(false);
-            b.setOnClickListener(v -> {
-                mHost.onScheme(idx);
-                show();                 // repaint with the new tick
-            });
-            box.addView(b);
-        }
-
-        // ---- key bar editor: chips in one wrap row ----------------------------
-        TextView keyEditLabel = label("키 바 편집");
-        keyEditLabel.setPadding(0, dp(12), 0, dp(2));
-        box.addView(keyEditLabel);
-        TextView keyEditHint = new TextView(mActivity);
-        keyEditHint.setText("←→: 순서 변경 · 제거: 키를 목록에서 뺌 · + : 키 추가");
-        keyEditHint.setTextColor(0xff8a8a8a);
-        keyEditHint.setTextSize(11);
-        keyEditHint.setPadding(0, 0, 0, dp(4));
-        box.addView(keyEditHint);
-
-        final LinearLayout chipRow = new LinearLayout(mActivity);
-        chipRow.setOrientation(LinearLayout.VERTICAL);
-        // Wrap: chips flow onto as many lines as needed.
-        final java.util.ArrayList<String> chips = new java.util.ArrayList<>(mHost.keybarKeys());
-
-        final Runnable[] redrawHolder = new Runnable[1];
-        Runnable redraw = () -> {
-            chipRow.removeAllViews();
-            for (int i = 0; i < chips.size(); i++) {
-                final int pos = i;
-                String spec = chips.get(pos);
-                chipRow.addView(chip(KeyBar.labelOf(spec), () -> {
-                    chips.remove(pos);
-                    mHost.onKeybarKeys(chips);
-                    redrawHolder[0].run();
-                }, pos > 0 ? () -> {
-                    chips.add(pos - 1, chips.remove(pos));
-                    mHost.onKeybarKeys(chips);
-                    redrawHolder[0].run();
-                } : null, pos < chips.size() - 1 ? () -> {
-                    chips.add(pos + 1, chips.remove(pos));
-                    mHost.onKeybarKeys(chips);
-                    redrawHolder[0].run();
-                } : null));
-            }
-            Button addAll = new Button(mActivity);
-            addAll.setText("+ 키 추가");
-            addAll.setAllCaps(false);
-            addAll.setOnClickListener(v -> showAddDialog(chips, redrawHolder[0]));
-            chipRow.addView(addAll);
-        };
-        redrawHolder[0] = redraw;
-        redraw.run();
-        box.addView(chipRow);
-
-        TextView bellLabel = label("터미널 벨 (BEL)");
-        bellLabel.setPadding(0, dp(12), 0, dp(4));
-        box.addView(bellLabel);
-
-        CheckBox vibrate = new CheckBox(mActivity);
-        vibrate.setText("진동");
-        vibrate.setChecked(mHost.bellVibrate());
-        box.addView(vibrate);
-
-        CheckBox sound = new CheckBox(mActivity);
-        sound.setText("소리 (무음 모드에서는 나지 않음)");
-        sound.setChecked(mHost.bellSound());
-        box.addView(sound);
-
-        vibrate.setOnCheckedChangeListener((v, on) -> mHost.onBell(on, sound.isChecked()));
-        sound.setOnCheckedChangeListener((v, on) -> mHost.onBell(vibrate.isChecked(), on));
-
-        CheckBox keys = new CheckBox(mActivity);
-        keys.setText("키 바 표시");
-        keys.setChecked(mHost.keyBarVisible());
-        keys.setOnCheckedChangeListener((v, on) -> mHost.onKeyBarVisible(on));
-        keys.setPadding(0, dp(12), 0, 0);
-        box.addView(keys);
-
-        TextView about = new TextView(mActivity);
-        about.setText("\n" + mHost.statusLine()
-                + "\n길게 누르기: 텍스트 선택 · 탭 길게: 닫기");
-        about.setTextColor(0xff8a8a8a);
-        about.setTextSize(12);
-        box.addView(about);
-
-        new AlertDialog.Builder(mActivity)
-                .setTitle("fterm 설정")
-                .setView(sv)
-                .setPositiveButton("닫기", null)
-                .show();
+        return size;
     }
-    /**
-     * One key editor row: the key name on the left, then order arrows and remove - all
-     * full-height touch targets (44dp buttons in a 52dp row). Vertical list, not chips:
-     * the chip row was too small to hit reliably on a phone.
-     */
-    private android.view.View chip(String label, Runnable remove,
-                                   Runnable moveLeft, Runnable moveRight) {
-        LinearLayout row = new LinearLayout(mActivity);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        rowLp.bottomMargin = dp(2);
-        row.setLayoutParams(rowLp);
+
+    /** A scheme as a row with an accent bar on the left when it is the active one. */
+    private View schemeRow(String name, boolean active, Runnable onPick) {
+        LinearLayout r = new LinearLayout(mActivity);
+        r.setOrientation(LinearLayout.HORIZONTAL);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setPadding(0, 0, 0, 0);
+        r.setClickable(true);
+        r.setOnClickListener(v -> onPick.run());
+
+        View bar = new View(mActivity);
+        bar.setBackgroundColor(active ? ACCENT : 0x00000000);
+        bar.setLayoutParams(new LinearLayout.LayoutParams(Math.max(2, dp(2)), dp(30)));
+        r.addView(bar);
 
         TextView t = new TextView(mActivity);
-        t.setText(label);
-        t.setTextSize(15);
-        t.setTextColor(0xffe6e6e6);
-        UiFont.apply(t, false);
+        t.setText(name);
+        t.setTextColor(active ? TEXT : HINT);
+        t.setTextSize(14);
+        t.setPadding(dp(10), dp(9), 0, dp(9));
+        UiFont.apply(t, active);
         t.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        row.addView(t);
+        r.addView(t);
 
-        Button l = new Button(mActivity);
-        l.setText("\u2190");
-        l.setAllCaps(false);
-        l.setPadding(dp(14), 0, dp(14), 0);
-        l.setEnabled(moveLeft != null);
-        l.setOnClickListener(v -> { if (moveLeft != null) moveLeft.run(); });
-        row.addView(l);
+        if (active) {
+            TextView tick = new TextView(mActivity);
+            tick.setText("\u2713");
+            tick.setTextColor(ACCENT);
+            tick.setTextSize(14);
+            tick.setPadding(0, 0, dp(6), 0);
+            r.addView(tick);
+        }
 
-        Button r = new Button(mActivity);
-        r.setText("\u2192");
-        r.setAllCaps(false);
-        r.setPadding(dp(14), 0, dp(14), 0);
-        r.setEnabled(moveRight != null);
-        r.setOnClickListener(v -> { if (moveRight != null) moveRight.run(); });
-        row.addView(r);
-
-        Button x = new Button(mActivity);
-        x.setText("제거");
-        x.setAllCaps(false);
-        x.setOnClickListener(v -> remove.run());
-        row.addView(x);
-        return row;
+        View line = new View(mActivity);
+        line.setBackgroundColor(HAIRLINE);
+        LinearLayout wrap = new LinearLayout(mActivity);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.addView(r);
+        wrap.addView(line, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(0.7f))));
+        return wrap;
     }
 
-    /** The catalogue as a picker: one dialog, tap a key to add it, stays open. */
-    private void showAddDialog(java.util.ArrayList<String> chips, Runnable redraw) {
-        java.util.ArrayList<String> available = new java.util.ArrayList<>();
-        // Modifiers are configurable keys too - they belong in the same picker.
-        for (String[] c : KeyBar.MODIFIERS) {
-            if (!chips.contains(c[1])) available.add(c[1]);
-        }
-        for (String[] c : KeyBar.CATALOGUE) {
-            if (!chips.contains(c[1])) available.add(c[1]);
-        }
-        if (available.isEmpty()) {
-            android.widget.Toast.makeText(mActivity, "추가할 수 있는 키가 없습니다", android.widget.Toast.LENGTH_SHORT).show();
-            return;
-        }
-        // A 3-column grid: all remaining keys visible at once, no scrolling list.
-        android.widget.GridLayout grid = new android.widget.GridLayout(mActivity);
-        grid.setColumnCount(3);
-        grid.setPadding(dp(8), dp(8), dp(8), dp(8));
-        final java.util.List<android.app.Dialog> holder =
-                new java.util.ArrayList<>(1);
-        for (final String spec : available) {
-            Button add = new Button(mActivity);
-            add.setText(KeyBar.labelOf(spec));
-            add.setAllCaps(false);
-            add.setPadding(dp(2), dp(2), dp(2), dp(2));
-            add.setOnClickListener(v -> {
-                chips.add(spec);
-                mHost.onKeybarKeys(chips);
-                redraw.run();
-                if (!holder.isEmpty()) holder.get(0).dismiss();
-            });
-            android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
-            lp.width = 0;
-            lp.columnSpec = android.widget.GridLayout.spec(
-                    android.widget.GridLayout.UNDEFINED, 1f);
-            add.setLayoutParams(lp);
-            grid.addView(add);
-        }
-        android.app.Dialog dialog = new AlertDialog.Builder(mActivity)
-                .setTitle("키 추가")
-                .setView(grid)
-                .setNegativeButton("닫기", null)
-                .create();
-        holder.add(dialog);
-        dialog.show();
+    private View toggleRow(String name, boolean checked, OnToggle on) {
+        Switch sw = new Switch(mActivity);
+        sw.setChecked(checked);
+        sw.setOnCheckedChangeListener((v, c) -> on.on(c));
+        return row(name, null, sw);
     }
 
-    private TextView label(String text) {
-        TextView t = new TextView(mActivity);
-        t.setText(text);
-        t.setTextColor(0xffcfcfcf);
-        t.setTextSize(13);
-        UiFont.apply(t, true);
-        return t;
+    private interface OnToggle {
+        void on(boolean checked);
     }
 
     private int dp(float v) {

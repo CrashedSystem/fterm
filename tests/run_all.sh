@@ -25,7 +25,8 @@ javac -d "$T/out" \
   "$ROOT/tests/jvm/harness/TransportTest.java" \
   "$ROOT/tests/jvm/harness/SyncTest.java" \
   "$ROOT/tests/jvm/harness/IdleTest.java" \
-  "$ROOT/tests/jvm/harness/IdleDropTest.java"
+  "$ROOT/tests/jvm/harness/IdleDropTest.java" \
+  "$ROOT/tests/jvm/harness/ReconnectTest.java"
 
 TOKEN=$(cat "$FTERM_RUNDIR/token")
 java -cp "$T/out" TransportTest "$TOKEN" "$PORT"
@@ -35,5 +36,7 @@ echo
 java -cp "$T/out" IdleTest "$TOKEN" "$PORT"
 echo
 java -Ddaemon.src="$ROOT/termux/ftermd" -cp "$T/out" IdleDropTest "$TOKEN" "$PORT"
+echo
+java -cp "$T/out" ReconnectTest
 echo
 echo "ALL SUITES OK"

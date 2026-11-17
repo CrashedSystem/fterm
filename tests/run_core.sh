@@ -36,6 +36,7 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/PasteTest.java" \
   "$ROOT/tests/jvm/core/FontsTest.java" \
   "$ROOT/tests/jvm/core/TabCloseTest.java" \
+  "$ROOT/tests/jvm/core/TabTitleTest.java" \
   "$ROOT/tests/jvm/core/ImeComposeTest.java" \
   "$ROOT/tests/jvm/core/UiTest.java" \
   "$ROOT/tests/jvm/core/StructureTest.java" \
@@ -55,6 +56,7 @@ java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" F
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
   -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" TabCloseTest
 java -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" ImeComposeTest
+java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" TabTitleTest
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" UiTest
 java -Dapp.dir="$ROOT/app/src/ai/openclaw/fterm/" -cp "$OUT" StructureTest
 java -Droot="$ROOT" -cp "$OUT" BellTest

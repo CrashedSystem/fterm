@@ -78,47 +78,4 @@ public final class Prefs {
 
     public boolean showKeyboardOnStart() { return sp().getBoolean("kb_on_start", true); }
     public void setShowKeyboardOnStart(boolean v) { sp().edit().putBoolean("kb_on_start", v).apply(); }
-
-    /**
-     * The user-configured key bar keys, as action specs ("special:tab", "raw:\u0003").
-     * Stored as one pipe-delimited string: the specs never contain a pipe (control chars
-     * and punctuation from the catalogue only), so splitting is exact.
-     */
-    public static final String[] DEFAULT_KEYBAR_KEYS = {
-            "mod:ctrl", "mod:alt", "mod:shift",
-            "special:tab", "special:esc", "raw:\u0003",
-            "special:left", "special:right", "special:up", "special:down",
-    };
-
-    public java.util.List<String> keybarKeys() {
-        String s = sp().getString("keybar_keys", null);
-        java.util.ArrayList<String> out = new java.util.ArrayList<>();
-        if (s != null) {
-            for (String part : s.split("\\|", -1)) {
-                if (!part.isEmpty()) out.add(part);
-            }
-            // Migrate a pre-modifier list: the modifiers were fixed then, and a saved
-            // list without any of them would lose CTRL/ALT/SHIFT on first run.
-            boolean hasMod = false;
-            for (String k : out) if (k.startsWith("mod:")) hasMod = true;
-            if (!hasMod) {
-                out.add(0, "mod:ctrl");
-                out.add(1, "mod:alt");
-                out.add(2, "mod:shift");
-            }
-        }
-        if (out.isEmpty()) {
-            for (String d : DEFAULT_KEYBAR_KEYS) out.add(d);
-        }
-        return out;
-    }
-
-    public void setKeybarKeys(java.util.List<String> keys) {
-        StringBuilder b = new StringBuilder();
-        for (int i = 0; i < keys.size(); i++) {
-            if (i > 0) b.append('|');
-            b.append(keys.get(i));
-        }
-        sp().edit().putString("keybar_keys", b.toString()).apply();
-    }
 }

@@ -10,9 +10,11 @@ import android.graphics.Canvas;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.content.ClipDescription;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -362,6 +364,15 @@ public final class TerminalView extends View {
         // keyboard on Android TV (see https://github.com/termux/termux-app/issues/221).
         outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_FULLSCREEN;
 
+        // Announce that this editor takes pictures, so a keyboard shows its clipboard
+        // thumbnails at all: Samsung keyboard and Gboard only offer the image row when the
+        // editor lists a content type. "image/*" rather than "*/*" is deliberate - measured
+        // Samsung behaviour is that a */* list makes it refuse the commit ("Can't enter this
+        // content here"), while image/* is accepted. API 25+ only; older IMEs ignore it.
+        if (Build.VERSION.SDK_INT >= 25) {
+            outAttrs.contentMimeTypes = new String[]{"image/*"};
+        }
+
         return new BaseInputConnection(this, true) {
 
             /**
@@ -376,6 +387,60 @@ public final class TerminalView extends View {
              * next write - not after it, which is what made it look like a stutter.
              */
             private String mComposing = "";
+
+            /**
+             * A picture tapped in the keyboard's clipboard panel.
+             *
+             * <p>This is the "one tap on the clipboard" path: the copy happens in the
+             * gallery, the user opens the keyboard here, taps the thumbnail, and the IME
+             * calls {@code commitContent()} instead of {@code commitText()} because a
+             * picture is not text. Without a {@code contentMimeTypes} declaration in
+             * {@link EditorInfo} the panel does not even show images for a terminal.
+             *
+             * <p>The URI grant is temporary; it is requested here and released by the
+             * client through {@code afterRead} once the bytes are on disk.
+             */
+            @Override
+            public boolean commitContent(android.view.inputmethod.InputContentInfo info,
+                                         int flags, Bundle opts) {
+                if (Build.VERSION.SDK_INT < 25 || info == null) return false;
+                android.net.Uri uri;
+                try {
+                    uri = info.getContentUri();
+                } catch (Throwable t) {
+                    return false;
+                }
+                if (uri == null) return false;
+                ClipDescription description = info.getDescription();
+                // Anything but an image is not ours to handle: a terminal has no place for
+                // a sticker or an animated GIF frame.
+                if (description != null && !description.hasMimeType("image/*")) {
+                    mClient.logInfo(LOG_TAG, "IME: commitContent ignored, not an image");
+                    return false;
+                }
+                final boolean granted =
+                        (flags & InputConnection.INPUT_CONTENT_GRANT_READ_URI_PERMISSION) != 0;
+                if (granted) {
+                    try {
+                        info.requestPermission();
+                    } catch (Throwable t) {
+                        // No grant means the read would fail with EACCES later; say so now.
+                        mClient.logWarn(LOG_TAG, "IME: commitContent permission denied");
+                        return false;
+                    }
+                }
+                CharSequence label = description == null ? null : description.getLabel();
+                mClient.logInfo(LOG_TAG, "IME: commitContent " + uri);
+                mClient.onCommitImage(uri, label == null ? null : label.toString(), () -> {
+                    if (!granted) return;
+                    try {
+                        info.releasePermission();
+                    } catch (Throwable ignored) {
+                        // The grant expires with the process anyway.
+                    }
+                });
+                return true;
+            }
 
             @Override
             public boolean setComposingText(CharSequence text, int newCursorPosition) {

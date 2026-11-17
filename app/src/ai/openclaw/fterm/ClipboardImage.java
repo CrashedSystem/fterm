@@ -2,7 +2,6 @@ package ai.openclaw.fterm;
 
 import android.content.ClipData;
 import android.content.ClipDescription;
-import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -13,6 +12,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,34 +39,16 @@ final class ClipboardImage {
     }
 
     /**
-     * Watch the clipboard and hand every NEW image to {@code paste}.
-     *
-     * <p>Copying an image in any app (a screenshot in the gallery, "copy" in a viewer) is
-     * the whole gesture: nothing else triggers it and no paste button exists.
-     *
-     * <p>Why a file path rather than the image itself: opencode's paste command asks
-     * OpenTUI for the clipboard, and OpenTUI reads the <em>host</em> clipboard
-     * ({@code createClipboard().read()} delegates only to the native X11/Wayland backend).
-     * Android has neither, so a TUI inside this terminal can never see the Android
-     * clipboard - OSC 52/5522 do not change that path. What it can do is open a file: its
-     * paste handler resolves a local filepath into a {@code data:} URI attachment. Hence
-     * the path, and hence {@link #CLIP_DIR} must be readable by the Termux uid.
-     */
-    static Watcher watch(Context context, Handler postToUi, Paste paste) {
-        Watcher watcher = new Watcher(context, postToUi, paste);
-        if (context instanceof android.app.Activity
-                && ((android.app.Activity) context).getIntent().getBooleanExtra("clipSelfTest", false)) {
-            selfTest(context);
-        }
-        watcher.listen();
-        return watcher;
-    }
-
-    /**
      * Device check for the save path alone: encode a red 2x2 PNG the same way a pasted
      * screenshot is encoded and log where it landed. Started with
      * {@code am start -n ai.openclaw.fterm/.MainActivity --ez clipSelfTest true}.
      */
+    static void selfTestIfRequested(Context context) {
+        if (!(context instanceof android.app.Activity)) return;
+        if (!((android.app.Activity) context).getIntent().getBooleanExtra("clipSelfTest", false)) return;
+        selfTest(context);
+    }
+
     private static void selfTest(Context context) {
         android.content.Intent intent = ((android.app.Activity) context).getIntent();
         // A real gallery image, if one was named: the encoder is the same, but a PNG
@@ -86,73 +68,49 @@ final class ClipboardImage {
     }
 
     /**
-     * The clipboard rule, kept in a object because a change listener alone is not enough.
+     * Save a committed image and hand its path to {@code paste}.
      *
-     * <p>Copying a screenshot happens in the gallery, where this app is in the background.
-     * Android 10+ refuses clipboard access to a background app and the change listener does
-     * not fire for one either, so the event that matters is lost by the time the user comes
-     * back. {@link #poll()} is therefore called again whenever the window regains focus,
-     * and a clip is only acted on once thanks to {@link ClipDescription#getTimestamp()}.
+     * <p>The gesture this serves is one tap: the picture is copied in the gallery, the
+     * keyboard's clipboard panel shows its thumbnail, and tapping the thumbnail makes the
+     * IME call {@code commitContent()} (see {@code TerminalView.commitContent}). Nothing
+     * happens on focus or on a timer - an image attaches exactly when the user taps it,
+     * which is the difference between "it pastes itself" and "I paste it".
+     *
+     * <p>Why a file path rather than the image itself: opencode's paste command asks
+     * OpenTUI for the clipboard, and OpenTUI reads the <em>host</em> clipboard
+     * ({@code createClipboard().read()} delegates only to the native X11/Wayland backend).
+     * Android has neither, so a TUI inside this terminal can never see the Android
+     * clipboard - OSC 52/5522 do not change that path. What it can do is open a file: its
+     * paste handler resolves a local filepath into a {@code data:} URI attachment. Hence
+     * the path, and hence {@link #CLIP_DIR} must be readable by the Termux uid.
      */
-    static final class Watcher {
-        private final Context context;
-        private final Handler postToUi;
-        private final Paste paste;
-        private long lastStamp = Long.MIN_VALUE;
-        /** A save is decoding a full screenshot; a second poll must not start another. */
-        private boolean inFlight;
-
-        private Watcher(Context context, Handler postToUi, Paste paste) {
-            this.context = context;
-            this.postToUi = postToUi;
-            this.paste = paste;
+    static void saveAsync(final Context context, final Uri uri, final Handler postToUi,
+                          final Paste paste, final Runnable afterRead) {
+        if (uri == null) {
+            if (afterRead != null) afterRead.run();
+            return;
         }
-
-        private void listen() {
-            try {
-                ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm == null) return;
-                cm.addPrimaryClipChangedListener(() -> postToUi.post(this::poll));
-            } catch (Throwable ignored) {
-                // A device with no clipboard service still gets every other feature.
-            }
+        if (!paste.ready()) {
+            if (afterRead != null) afterRead.run();
+            return;
         }
-
-        /** Save the current clipboard image and paste its path, unless it was already done. */
-        void poll() {
-            try {
-                ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm == null || inFlight || !paste.ready() || !cm.hasPrimaryClip()) return;
-                ClipData clip = cm.getPrimaryClip();
-                if (clip == null) return;
-                ClipDescription description = clip.getDescription();
-                // A real timestamp identifies one copy. Two copies of the same picture must
-                // both attach, which is why the URI is not used for this.
-                long stamp = description == null ? Long.MIN_VALUE : description.getTimestamp();
-                if (stamp != Long.MIN_VALUE && stamp == lastStamp) return;
-                Uri uri = uriOf(clip);
-                if (uri == null || !isImage(context, clip)) {
-                    Log.d(TAG, "poll: not an image, mimes=" + describe(clip));
+        // Decoding a screenshot on the UI thread would freeze the terminal. No in-flight
+        // guard is needed: a tap is one call, and the IME will not send a second image
+        // until this one returns.
+        Thread worker = new Thread(() -> {
+            final String path = save(context, uri);
+            if (afterRead != null) afterRead.run();
+            postToUi.post(() -> {
+                if (path == null) {
+                    Log.w(TAG, "clip save failed: " + uri);
+                    Toast.makeText(context, "이미지를 읽지 못했습니다", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                lastStamp = stamp;
-                inFlight = true;
-                // Decoding a screenshot on the UI thread would freeze the terminal.
-                Thread worker = new Thread(() -> {
-                    String path = save(context, uri);
-                    postToUi.post(() -> {
-                        inFlight = false;
-                        if (path == null) { Log.w(TAG, "clip save failed: " + uri); return; }
-                        Log.i(TAG, "clip saved: " + path);
-                        paste.insert(path);
-                    });
-                }, "clip-save");
-                worker.start();
-            } catch (Throwable ignored) {
-                inFlight = false;
-                // A clipboard that cannot be read is not worth crashing over.
-            }
-        }
+                Log.i(TAG, "clip saved: " + path);
+                paste.insert(path);
+            });
+        }, "clip-save");
+        worker.start();
     }
 
     /** True when the primary clip is an image (any image/* MIME, or a URI that resolves to one). */
@@ -193,18 +151,6 @@ final class ClipboardImage {
             }
         }
         return null;
-    }
-
-    /** Mime list of a clip, for the one log line that explains why a copy did nothing. */
-    private static String describe(ClipData clip) {
-        ClipDescription d = clip.getDescription();
-        if (d == null) return "none";
-        StringBuilder b = new StringBuilder();
-        for (int i = 0; i < d.getMimeTypeCount(); i++) {
-            if (i > 0) b.append(',');
-            b.append(d.getMimeType(i));
-        }
-        return b.toString();
     }
 
     /**
