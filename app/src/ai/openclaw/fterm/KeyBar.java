@@ -225,21 +225,32 @@ final class KeyBar {
     }
 
     void setKeys(java.util.List<String> specs) {
-        // Docked layout: the configured keys render into their own row, appended after
-        // the fixed arrows/paste keys. Removing and re-adding keeps the order stable and
-        // never touches the fixed rows.
+        // Docked layout: only keys that are NOT already in the fixed rows are appended.
+        // The default prefs list (TAB/ESC/arrows) duplicates the fixed keys, which is
+        // where the doubled TAB/ESC/arrows came from.
         if (mUserRow == null) return;
-        // Keep the fixed arrow/paste keys: they are the first five children.
-        int fixed = 5;
-        while (mUserRow.getChildCount() > fixed) {
-            mUserRow.removeViewAt(fixed);
-        }
+        int fixed = 5;   // arrows x4 + PASTE
+        while (mUserRow.getChildCount() > fixed) mUserRow.removeViewAt(fixed);
         for (String spec : specs) {
-            if (spec.startsWith("mod:")) continue;   // modifiers are always in row 1
+            if (spec.startsWith("mod:")) continue;      // row 1
+            if (isFixed(spec)) continue;                // already in a fixed row
             TextView b = special(KeyBar.labelOf(spec), () -> KeyBar.apply(spec, mAction));
             b.setTag(spec);
             b.setLongClickable(true);
             mUserRow.addView(b);
+        }
+    }
+
+    /** True when the spec is one of the keys already drawn in the fixed rows. */
+    private static boolean isFixed(String spec) {
+        switch (spec) {
+            case "special:tab": case "special:esc": case "raw:\u0003":
+            case "special:left": case "special:right":
+            case "special:up": case "special:down":
+            case "action:paste":
+                return true;
+            default:
+                return false;
         }
     }
 
