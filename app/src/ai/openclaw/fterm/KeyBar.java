@@ -39,6 +39,50 @@ final class KeyBar {
             {"CTRL", "ctrl"}, {"ALT", "alt"}, {"SHIFT", "shift"},
     };
 
+    /**
+     * A configurable key: the label shown on the pill and an action spec, saved to prefs as
+     * text so the bar survives restarts. Spec grammar:
+     *
+     *   special:tab | special:esc | special:left | special:right | special:up
+     *   special:down | special:home | special:end | special:pgup | special:pgdn
+     *   raw:&lt;characters&gt;        e.g. raw:\u0003 is ^C
+     *
+     * The default set is the classic Termux row; everything the user adds comes from the
+     * catalogue below so the editor cannot invent a broken spec.
+     */
+    static final String[][] CATALOGUE = {
+            {"TAB", "special:tab"}, {"ESC", "special:esc"},
+            {"^C", "raw:\u0003"}, {"^Z", "raw:\u001a"}, {"^D", "raw:\u0004"},
+            {"^L", "raw:\u000c"}, {"^W", "raw:\u0017"}, {"^U", "raw:\u0015"},
+            {"^R", "raw:\u0012"}, {"|", "raw:|"}, {"~", "raw:~"},
+            {"/", "raw:/"}, {"-", "raw:-"},
+            {"\u2190", "special:left"}, {"\u2192", "special:right"},
+            {"\u2191", "special:up"}, {"\u2193", "special:down"},
+            {"HOME", "special:home"}, {"END", "special:end"},
+            {"PGUP", "special:pgup"}, {"PGDN", "special:pgdn"},
+    };
+
+    static String labelOf(String spec) {
+        for (String[] c : CATALOGUE) if (c[1].equals(spec)) return c[0];
+        if (spec.startsWith("raw:")) {
+            String r = spec.substring(4);
+            // A control char reads as ^X; anything else shows as itself.
+            if (r.length() == 1 && r.charAt(0) < 32) {
+                return "^" + (char) ('@' + r.charAt(0));
+            }
+            return r;
+        }
+        return spec;
+    }
+
+    static void apply(String spec, Action action) {
+        if (spec.startsWith("special:")) {
+            action.special(spec.substring(8));
+        } else if (spec.startsWith("raw:")) {
+            action.raw(spec.substring(4));
+        }
+    }
+
     // The bar sits directly on the keyboard, so it needs its own hairline or the two grays
     // merge. Keys get a lighter fill than the bar and a 1dp gap, which is what makes them
     // read as buttons rather than as a single strip.
@@ -96,13 +140,6 @@ final class KeyBar {
         for (String[] m : MODIFIERS) {
             mRow.addView(modifier(m[0], m[1]));
         }
-        mRow.addView(special("TAB", () -> mAction.special("tab")));
-        mRow.addView(special("ESC", () -> mAction.special("esc")));
-        mRow.addView(special("^C", () -> mAction.raw("\u0003")));
-        mRow.addView(special("\u2190", () -> mAction.special("left")));
-        mRow.addView(special("\u2192", () -> mAction.special("right")));
-        mRow.addView(special("\u2191", () -> mAction.special("up")));
-        mRow.addView(special("\u2193", () -> mAction.special("down")));
         mRow.addView(special("\u2328", mAction::toggleKeyboard));
 
         HorizontalScrollView hsv = new HorizontalScrollView(mContext);
@@ -133,6 +170,20 @@ final class KeyBar {
             refresh();
         });
         return b;
+    }
+
+    /** The configured user keys, between the modifiers and the keyboard toggle. */
+    void setKeys(java.util.List<String> specs) {
+        // Remove everything after the modifiers and before the keyboard toggle.
+        while (mRow.getChildCount() > MODIFIERS.length + 1) {
+            mRow.removeViewAt(MODIFIERS.length);
+        }
+        for (String spec : specs) {
+            TextView b = special(KeyBar.labelOf(spec), () -> KeyBar.apply(spec, mAction));
+            b.setTag(spec);          // keep the spec on the view for the editor
+            b.setLongClickable(true);
+            mRow.addView(b, MODIFIERS.length);
+        }
     }
 
     private TextView special(String label, Runnable action) {

@@ -200,6 +200,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             @Override public void raw(String bytes) { sendRaw(bytes); }
             @Override public void toggleKeyboard() { MainActivity.this.toggleKeyboard(); }
         });
+        mKeyBar.setKeys(mPrefs.keybarKeys());
 
         mRoot.addView(top);
         mRoot.addView(mTermFrame);
@@ -896,6 +897,13 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                     mPrefs.setKeyBarVisible(visible);
                     if (mKeyBar != null) mKeyBar.setVisible(visible);
                 }
+                @Override public java.util.ArrayList<String> keybarKeys() {
+                    return new java.util.ArrayList<>(mPrefs.keybarKeys());
+                }
+                @Override public void onKeybarKeys(java.util.ArrayList<String> keys) {
+                    mPrefs.setKeybarKeys(keys);
+                    if (mKeyBar != null) mKeyBar.setKeys(keys);
+                }
                 @Override public String statusLine() {
                     return "세션: " + mTabs.size() + " · 서버 "
                             + mPrefs.host() + ":" + mPrefs.port();
@@ -939,6 +947,10 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             case "down": code = KeyEvent.KEYCODE_DPAD_DOWN; break;
             case "left": code = KeyEvent.KEYCODE_DPAD_LEFT; break;
             case "right": code = KeyEvent.KEYCODE_DPAD_RIGHT; break;
+            case "home": code = KeyEvent.KEYCODE_MOVE_HOME; break;
+            case "end": code = KeyEvent.KEYCODE_MOVE_END; break;
+            case "pgup": code = KeyEvent.KEYCODE_PAGE_UP; break;
+            case "pgdn": code = KeyEvent.KEYCODE_PAGE_DOWN; break;
             default: return;
         }
         mTermView.handleKeyCode(code, 0);
