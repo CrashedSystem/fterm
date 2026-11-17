@@ -1,6 +1,7 @@
 package ai.openclaw.fterm;
 
 import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
@@ -27,7 +28,7 @@ final class ClipboardImage {
 
     /** What the activity does when an image is pasted. Kept out of the watcher so it stays testable. */
     interface Paste {
-        /** False while there is no live session or the app is not in front. */
+        /** False while there is no live session to insert into. Focus is the caller's job. */
         boolean ready();
 
         /** Insert the saved path into the active session's prompt. */
@@ -48,25 +49,69 @@ final class ClipboardImage {
      * paste handler resolves a local filepath into a {@code data:} URI attachment. Hence
      * the path, and hence {@link #CLIP_DIR} must be readable by the Termux uid.
      */
-    static void watch(Context context, Handler postToUi, Paste paste) {
-        try {
-            ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm == null) return;
-            final String[] lastUri = new String[1];
-            cm.addPrimaryClipChangedListener(() -> postToUi.post(() -> {
-                if (!paste.ready() || !cm.hasPrimaryClip()) return;
+    static Watcher watch(Context context, Handler postToUi, Paste paste) {
+        Watcher watcher = new Watcher(context, postToUi, paste);
+        watcher.listen();
+        return watcher;
+    }
+
+    /**
+     * The clipboard rule, kept in a object because a change listener alone is not enough.
+     *
+     * <p>Copying a screenshot happens in the gallery, where this app is in the background.
+     * Android 10+ refuses clipboard access to a background app and the change listener does
+     * not fire for one either, so the event that matters is lost by the time the user comes
+     * back. {@link #poll()} is therefore called again whenever the window regains focus,
+     * and a clip is only acted on once thanks to {@link ClipDescription#getTimestamp()}.
+     */
+    static final class Watcher {
+        private final Context context;
+        private final Handler postToUi;
+        private final Paste paste;
+        private String lastUri;
+        private long lastStamp = Long.MIN_VALUE;
+
+        private Watcher(Context context, Handler postToUi, Paste paste) {
+            this.context = context;
+            this.postToUi = postToUi;
+            this.paste = paste;
+        }
+
+        private void listen() {
+            try {
+                ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cm == null) return;
+                cm.addPrimaryClipChangedListener(() -> postToUi.post(this::poll));
+            } catch (Throwable ignored) {
+                // A device with no clipboard service still gets every other feature.
+            }
+        }
+
+        /** Save the current clipboard image and paste its path, unless it was already done. */
+        void poll() {
+            try {
+                ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cm == null || !paste.ready() || !cm.hasPrimaryClip()) return;
                 ClipData clip = cm.getPrimaryClip();
+                if (clip == null) return;
+                ClipDescription description = clip.getDescription();
+                long stamp = description == null ? Long.MIN_VALUE : description.getTimestamp();
+                if (stamp == lastStamp) return;
                 Uri uri = uriOf(clip);
-                // Copying the same screenshot twice fires twice; insert one path per image.
-                if (uri == null || uri.toString().equals(lastUri[0])) return;
-                if (!isImage(context, clip)) return;
+                if (uri == null || !isImage(context, clip)) return;
                 String path = save(context, uri);
                 if (path == null) return;
-                lastUri[0] = uri.toString();
+                // Copying the same picture twice must not insert its path twice.
+                if (uri.toString().equals(lastUri)) {
+                    lastStamp = stamp;
+                    return;
+                }
+                lastUri = uri.toString();
+                lastStamp = stamp;
                 paste.insert(path);
-            }));
-        } catch (Throwable ignored) {
-            // A device with no clipboard service still gets every other feature.
+            } catch (Throwable ignored) {
+                // A clipboard that cannot be read is not worth crashing over.
+            }
         }
     }
 

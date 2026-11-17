@@ -89,6 +89,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private boolean mShowKeyboardOnce = true;
 
     private final Handler mUi = new Handler(Looper.getMainLooper());
+    /** Holds the clipboard image rule; polled again on focus because background copies are invisible. */
+    private ClipboardImage.Watcher mClipWatch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -215,14 +217,13 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         });
         mKeyBar.setKeys(mPrefs.keybarKeys());
 
-        // Copying an image anywhere (a screenshot in the gallery, "copy" in a viewer) pastes
-        // it into the prompt. The watcher owns the whole rule so MainActivity keeps only the
-        // wiring; see ClipboardImage.Paste for why a path and not the clipboard itself.
-        ClipboardImage.watch(this, mUi, new ClipboardImage.Paste() {
+        // Copying an image anywhere pastes it in: the watcher owns the rule (see
+        // ClipboardImage.Paste for why a path, not the clipboard itself).
+        mClipWatch = ClipboardImage.watch(this, mUi, new ClipboardImage.Paste() {
             @Override public boolean ready() {
-                // A screenshot taken in another app lands on the clipboard while fterm is
-                // backgrounded; pasting then would type into a prompt nobody is looking at.
-                return hasWindowFocus() && mActive != null && mActive.session != null;
+                // Focus is not part of readiness (the copy happens while unfocused); see
+                // onWindowFocusChanged().
+                return mActive != null && mActive.session != null;
             }
             @Override public void insert(String path) {
                 pasteText(path);
@@ -1026,6 +1027,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         }
     }
 
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && mClipWatch != null) mClipWatch.poll();
+    }
+
     /**
      * With {@code enableOnBackInvokedCallback="true"} in the manifest, API 33+ calls the
      * OnBackInvokedCallback instead of {@link #onBackPressed()}. Without this, the
@@ -1239,10 +1246,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         ClipData.Item item = clip.getItemAt(0);
         if (item == null) return;
 
-        // An image clipboard has no text: coerceToText would give null or a bare "res/..."
-        // URI string. ClipboardImage saves the bitmap and this pastes the PATH - opencode
-        // attaches file:// URIs in the prompt, so a pasted screenshot becomes an image the
-        // model can see.
+        // An image clip has no text at all. Save it and paste the PATH: opencode resolves a
+        // local filepath into a data: URI attachment, which is how a screenshot gets in.
         if (ClipboardImage.isImage(this, clip)) {
             String path = ClipboardImage.save(this, ClipboardImage.uriOf(clip));
             if (path != null) {
