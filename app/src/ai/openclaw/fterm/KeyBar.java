@@ -309,7 +309,8 @@ final class KeyBar {
     private TextView pill(String label, int bg) {
         TextView t = new TextView(mContext);
         t.setText(label);
-        t.setTextSize(13);
+        boolean isGlyph = label.length() == 1 && !Character.isLetterOrDigit(label.charAt(0));
+        t.setTextSize(isGlyph ? 16 : 13);
         t.setTextColor(KEY_TEXT);
         t.setGravity(Gravity.CENTER);
         UiFont.apply(t, false);
