@@ -68,6 +68,16 @@ final class ClipboardImage {
      * {@code am start -n ai.openclaw.fterm/.MainActivity --ez clipSelfTest true}.
      */
     private static void selfTest(Context context) {
+        android.content.Intent intent = ((android.app.Activity) context).getIntent();
+        // A real gallery image, if one was named: the encoder is the same, but a PNG
+        // straight from MediaStore also proves the content resolver path.
+        String given = intent.getStringExtra("clipSelfTestUri");
+        if (given != null) {
+            String saved = save(context, Uri.parse(given));
+            Log.i(TAG, "selfTest: uri=" + given + " -> " + saved
+                    + (saved == null ? "" : " (" + new File(saved).length() + " bytes)"));
+            return;
+        }
         Bitmap bmp = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888);
         bmp.eraseColor(0xFFFF0000);
         String path = writeFile(bmp);
@@ -88,8 +98,9 @@ final class ClipboardImage {
         private final Context context;
         private final Handler postToUi;
         private final Paste paste;
-        private String lastUri;
         private long lastStamp = Long.MIN_VALUE;
+        /** A save is decoding a full screenshot; a second poll must not start another. */
+        private boolean inFlight;
 
         private Watcher(Context context, Handler postToUi, Paste paste) {
             this.context = context;
@@ -111,54 +122,77 @@ final class ClipboardImage {
         void poll() {
             try {
                 ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm == null) return;
-                if (!paste.ready()) return;
-                if (!cm.hasPrimaryClip()) return;
+                if (cm == null || inFlight || !paste.ready() || !cm.hasPrimaryClip()) return;
                 ClipData clip = cm.getPrimaryClip();
                 if (clip == null) return;
                 ClipDescription description = clip.getDescription();
+                // A real timestamp identifies one copy. Two copies of the same picture must
+                // both attach, which is why the URI is not used for this.
                 long stamp = description == null ? Long.MIN_VALUE : description.getTimestamp();
-                // Only a real timestamp is a safe "already handled" signal. A clip that
-                // reports none must still get through, or its image is skipped forever.
                 if (stamp != Long.MIN_VALUE && stamp == lastStamp) return;
                 Uri uri = uriOf(clip);
-                // Text is the common clipboard; only an image is worth a log line, and
-                // only when it fails, so a normal focus change stays silent.
                 if (uri == null || !isImage(context, clip)) {
                     Log.d(TAG, "poll: not an image, mimes=" + describe(clip));
                     return;
                 }
-                String path = save(context, uri);
-                if (path == null) { Log.w(TAG, "poll: save failed for " + uri); return; }
-                Log.i(TAG, "poll: saved " + path);
-                // Copying the same picture twice must not insert its path twice.
-                if (uri.toString().equals(lastUri)) {
-                    lastStamp = stamp;
-                    return;
-                }
-                lastUri = uri.toString();
                 lastStamp = stamp;
-                paste.insert(path);
+                inFlight = true;
+                // Decoding a screenshot on the UI thread would freeze the terminal.
+                Thread worker = new Thread(() -> {
+                    String path = save(context, uri);
+                    postToUi.post(() -> {
+                        inFlight = false;
+                        if (path == null) { Log.w(TAG, "clip save failed: " + uri); return; }
+                        Log.i(TAG, "clip saved: " + path);
+                        paste.insert(path);
+                    });
+                }, "clip-save");
+                worker.start();
             } catch (Throwable ignored) {
+                inFlight = false;
                 // A clipboard that cannot be read is not worth crashing over.
             }
         }
     }
 
-    /** True when the primary clip is an image (any image/* MIME). */
-    static boolean isImage(Context context, ClipData clip) {        if (clip.getDescription() != null) {
-            for (String mime : clip.getDescription().filterMimeTypes("image/*")) {
+    /** True when the primary clip is an image (any image/* MIME, or a URI that resolves to one). */
+    static boolean isImage(Context context, ClipData clip) {
+        ClipDescription description = clip.getDescription();
+        if (description != null) {
+            for (String mime : description.filterMimeTypes("image/*")) {
                 if (mime.startsWith("image/")) return true;
             }
         }
-        if (clip.getItemAt(0) == null || clip.getItemAt(0).getUri() == null) return false;
-        String[] uris = context.getContentResolver().getStreamTypes(
-                clip.getItemAt(0).getUri(), "image/*");
-        return uris != null && uris.length > 0;
+        // OneUI's gallery copies a picture as a URI, and some apps hand it over as
+        // text/uri-list rather than a typed item. The URI is the truth either way.
+        Uri uri = uriOf(clip);
+        if (uri == null) return false;
+        String[] types = context.getContentResolver().getStreamTypes(uri, "image/*");
+        return types != null && types.length > 0;
     }
 
-    static android.net.Uri uriOf(ClipData clip) {
-        return clip.getItemAt(0).getUri();
+    /**
+     * The item's URI, or the one written into its text.
+     *
+     * <p>A copy from a gallery usually arrives as a typed item, but "copy link/image" style
+     * clips arrive as {@code text/uri-list} with the URI only in the text. Reading both
+     * costs nothing and the alternative is a copied picture that silently does nothing.
+     */
+    static Uri uriOf(ClipData clip) {
+        if (clip == null || clip.getItemCount() == 0) return null;
+        ClipData.Item item = clip.getItemAt(0);
+        if (item == null) return null;
+        Uri direct = item.getUri();
+        if (direct != null) return direct;
+        CharSequence text = item.getText();
+        if (text == null) return null;
+        // text/uri-list allows comment lines and may hold several URIs; the first is ours.
+        for (String line : text.toString().split("\\s+")) {
+            if (line.startsWith("content://") || line.startsWith("file://")) {
+                return Uri.parse(line);
+            }
+        }
+        return null;
     }
 
     /** Mime list of a clip, for the one log line that explains why a copy did nothing. */

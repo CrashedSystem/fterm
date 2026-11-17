@@ -65,6 +65,18 @@ public class StructureTest {
         check(!code.toString().contains("RUN_COMMAND"),
                 "RUN_COMMAND is not called (it is ignored on this device)");
 
+        // 6. A copied screenshot must survive the round trip out of the app and back.
+        //    These are the three ways that silently failed before.
+        String clip = read(dir + "ClipboardImage.java");
+        check(clip.contains("getTimestamp"), "a clip is identified by its timestamp");
+        check(!clip.contains("lastUri"), "not by its URI (two copies of one picture both attach)");
+        check(clip.contains("new Thread("), "decoding runs off the UI thread");
+        check(clip.contains("text/uri-list") || clip.contains("// text/uri-list"),
+                "a URI given only as text is still read");
+        String activity = main;
+        check(activity.contains("onWindowFocusChanged") && activity.contains(".poll()"),
+                "focus regained is where the clipboard is re-read");
+
         System.out.println("ok  " + pass + " structure assertions");
         System.out.println("ALL OK");
     }
