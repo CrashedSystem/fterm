@@ -95,12 +95,12 @@ final class KeyBar {
     // The bar sits directly on the keyboard, so it needs its own hairline or the two grays
     // merge. Keys get a lighter fill than the bar and a 1dp gap, which is what makes them
     // read as buttons rather than as a single strip.
-    private static final int BG = 0xff17181b;      // darker bar: keys pop forward
-    private static final int KEY = 0xff3d434b;     // brighter resting key
-    private static final int KEY_PRESSED = 0xff585f6a;
-    private static final int KEY_ON = 0xff4a7fc1;
-    private static final int DIVIDER = 0xff0b0c0e;
-    private static final int KEY_EDGE = 0xff565d68; // top highlight line
+    private static final int BG = 0xff1b1d21;       // bar: a shade above pure black
+    private static final int KEY = 0xff2a2d33;      // key: one step up from the bar
+    private static final int KEY_PRESSED = 0xff3a3f47;
+    private static final int KEY_ON = 0xff2f5a9e;   // latched: muted accent, not neon
+    private static final int KEY_TEXT = 0xffd7d9dd;
+    private static final int DIVIDER = 0xff101114;
 
     private final Context mContext;
     private final Action mAction;
@@ -272,10 +272,10 @@ final class KeyBar {
     private TextView pill(String label, int bg) {
         TextView t = new TextView(mContext);
         t.setText(label);
-        t.setTextSize(11);
-        t.setTextColor(0xffe6e6e6);
+        t.setTextSize(12);
+        t.setTextColor(KEY_TEXT);
         t.setGravity(Gravity.CENTER);
-        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        t.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         // A raised key: top highlight + bottom shade make it sit above the bar instead of
         // being a flat pill painted onto it.
         t.setBackground(pillBackground());
@@ -312,29 +312,35 @@ final class KeyBar {
             if (on) {
                 GradientDrawable onBg = new GradientDrawable();
                 onBg.setColor(KEY_ON);
-                onBg.setCornerRadius(dp(9));
+                onBg.setCornerRadius(dp(10));
                 v.setBackground(onBg);
+                ((TextView) v).setTextColor(0xffffffff);
             } else if (!(v.getBackground() instanceof android.graphics.drawable.StateListDrawable)) {
                 v.setBackground(pillBackground());
+                ((TextView) v).setTextColor(KEY_TEXT);
             }
         }
     }
 
-    /** The resting key background: the gradient + hairline a fresh pill gets. */
+    /**
+     * The resting key background. Flat, one step lighter than the bar, no gradient or
+     * bevel - a modern terminal key is a quiet surface, not a plastic button.
+     */
     private android.graphics.drawable.Drawable pillBackground() {
-        GradientDrawable d = new GradientDrawable();
-        d.setColors(new int[]{KEY_EDGE, KEY, KEY, 0xff202329});
-        d.setOrientation(GradientDrawable.Orientation.TL_BR);
-        d.setCornerRadius(dp(9));
-        d.setStroke(dp(1), 0xff626a75);
-        android.graphics.drawable.StateListDrawable sl = new android.graphics.drawable.StateListDrawable();
-        GradientDrawable pressed = new GradientDrawable();
-        pressed.setColors(new int[]{0xff565b64, KEY_PRESSED, KEY_PRESSED, 0xff33363b});
-        pressed.setOrientation(GradientDrawable.Orientation.TL_BR);
-        pressed.setCornerRadius(dp(9));
-        pressed.setStroke(dp(1), 0xff5b616b);
+        android.graphics.drawable.GradientDrawable resting =
+                new android.graphics.drawable.GradientDrawable();
+        resting.setColor(KEY);
+        resting.setCornerRadius(dp(10));
+
+        android.graphics.drawable.GradientDrawable pressed =
+                new android.graphics.drawable.GradientDrawable();
+        pressed.setColor(KEY_PRESSED);
+        pressed.setCornerRadius(dp(10));
+
+        android.graphics.drawable.StateListDrawable sl =
+                new android.graphics.drawable.StateListDrawable();
         sl.addState(new int[]{android.R.attr.state_pressed}, pressed);
-        sl.addState(new int[]{}, d);
+        sl.addState(new int[]{}, resting);
         return sl;
     }
 
