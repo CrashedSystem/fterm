@@ -25,6 +25,9 @@ public interface TerminalSessionClient {
      */
     String getClipboardText(TerminalSession session);
 
+    /** The clipboard image as PNG bytes for an OSC 52 image read, or null. */
+    byte[] getClipboardImage(TerminalSession session);
+
     void onBell(TerminalSession session);
 
     void onColorsChanged(TerminalSession session);

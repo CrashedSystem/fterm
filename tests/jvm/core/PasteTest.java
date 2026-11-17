@@ -50,6 +50,7 @@ public class PasteTest {
             public void onCopyTextToClipboard(com.termux.terminal.TerminalSession s, String t) {}
             public void onPasteTextFromClipboard(com.termux.terminal.TerminalSession s) {}
             public String getClipboardText(com.termux.terminal.TerminalSession s) { return null; }
+public byte[] getClipboardImage(com.termux.terminal.TerminalSession s) { return null; }
             public void onBell(com.termux.terminal.TerminalSession s) {}
             public void onColorsChanged(com.termux.terminal.TerminalSession s) {}
             public void onNotification(com.termux.terminal.TerminalSession s, String t, String b) {}

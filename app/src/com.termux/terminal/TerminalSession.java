@@ -342,6 +342,11 @@ public final class TerminalSession extends TerminalOutput {
     }
 
     @Override
+    public byte[] getClipboardImage() {
+        return mClient.getClipboardImage(this);
+    }
+
+    @Override
     public void onBell() {
         mClient.onBell(this);
     }

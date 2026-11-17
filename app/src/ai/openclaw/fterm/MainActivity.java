@@ -1302,6 +1302,32 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         return text == null ? null : text.toString();
     }
 
+    /**
+     * OSC 52 image read: opentui asks with preferredTypes ["image/png", "text/plain"], so
+     * an image clipboard must answer with PNG bytes or the paste silently fails. This is
+     * the only path a screenshot has into opencode - the bracketed-paste channel is text
+     * only.
+     */
+    @Override
+    public byte[] getClipboardImage(TerminalSession session) {
+        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (cm == null || !cm.hasPrimaryClip()) return null;
+        ClipData clip = cm.getPrimaryClip();
+        if (clip.getItemAt(0) == null) return null;
+        if (!ClipboardImage.isImage(this, clip)) return null;
+        android.net.Uri uri = ClipboardImage.uriOf(clip);
+        try {
+            android.graphics.Bitmap bmp =
+                    android.graphics.BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));
+            if (bmp == null) return null;
+            java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+            bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bo);
+            return bo.toByteArray();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     @Override
     public void onNotification(TerminalSession session, String title, String body) {
         // Native: the escape sequence was parsed by the terminal, so there is no helper

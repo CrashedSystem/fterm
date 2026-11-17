@@ -36,6 +36,15 @@ public abstract class TerminalOutput {
         return null;
     }
 
+    /**
+     * The current clipboard IMAGE as PNG bytes, for OSC 52 read requests that want an
+     * image (opentui asks with preferredTypes ["image/png", ...]). Return null when the
+     * clipboard holds no image or the caller declines.
+     */
+    public byte[] getClipboardImage() {
+        return null;
+    }
+
     /** Notify the terminal client that a bell character (ASCII 7, bell, BEL, \a, ^G)) has been received. */
     public abstract void onBell();
 

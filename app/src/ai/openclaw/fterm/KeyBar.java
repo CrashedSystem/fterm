@@ -252,6 +252,20 @@ final class KeyBar {
         return b;
     }
 
+    /** A pressed pill: flat pressed colour. The tag carries its resting drawable. */
+    private void bindPressFeedback(TextView t, int restingBg) {
+        t.setOnTouchListener((v, ev) -> {
+            GradientDrawable d = (GradientDrawable) v.getBackground();
+            if (ev.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                d.setColor(KEY_PRESSED);
+            } else if (ev.getAction() == android.view.MotionEvent.ACTION_UP
+                    || ev.getAction() == android.view.MotionEvent.ACTION_CANCEL) {
+                d.setColor(restingBg);
+            }
+            return false;   // click / long-click still fire
+        });
+    }
+
     private TextView pill(String label, int bg) {
         TextView t = new TextView(mContext);
         t.setText(label);
@@ -277,6 +291,7 @@ final class KeyBar {
         t.setMinWidth(dp(38));
         t.setClickable(true);
         t.setFocusable(true);
+        bindPressFeedback(t, bg);
         return t;
     }
 

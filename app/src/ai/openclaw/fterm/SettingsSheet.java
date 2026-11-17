@@ -94,30 +94,6 @@ final class SettingsSheet {
             box.addView(b);
         }
 
-        TextView bellLabel = label("터미널 벨 (BEL)");
-        bellLabel.setPadding(0, dp(12), 0, dp(4));
-        box.addView(bellLabel);
-
-        CheckBox vibrate = new CheckBox(mActivity);
-        vibrate.setText("진동");
-        vibrate.setChecked(mHost.bellVibrate());
-        box.addView(vibrate);
-
-        CheckBox sound = new CheckBox(mActivity);
-        sound.setText("소리 (무음 모드에서는 나지 않음)");
-        sound.setChecked(mHost.bellSound());
-        box.addView(sound);
-
-        vibrate.setOnCheckedChangeListener((v, on) -> mHost.onBell(on, sound.isChecked()));
-        sound.setOnCheckedChangeListener((v, on) -> mHost.onBell(vibrate.isChecked(), on));
-
-        CheckBox keys = new CheckBox(mActivity);
-        keys.setText("키 바 표시");
-        keys.setChecked(mHost.keyBarVisible());
-        keys.setOnCheckedChangeListener((v, on) -> mHost.onKeyBarVisible(on));
-        keys.setPadding(0, dp(12), 0, 0);
-        box.addView(keys);
-
         // ---- key bar editor: chips in one wrap row ----------------------------
         TextView keyEditLabel = label("키 바 편집");
         keyEditLabel.setPadding(0, dp(12), 0, dp(2));
@@ -163,6 +139,30 @@ final class SettingsSheet {
         redrawHolder[0] = redraw;
         redraw.run();
         box.addView(chipRow);
+
+        TextView bellLabel = label("터미널 벨 (BEL)");
+        bellLabel.setPadding(0, dp(12), 0, dp(4));
+        box.addView(bellLabel);
+
+        CheckBox vibrate = new CheckBox(mActivity);
+        vibrate.setText("진동");
+        vibrate.setChecked(mHost.bellVibrate());
+        box.addView(vibrate);
+
+        CheckBox sound = new CheckBox(mActivity);
+        sound.setText("소리 (무음 모드에서는 나지 않음)");
+        sound.setChecked(mHost.bellSound());
+        box.addView(sound);
+
+        vibrate.setOnCheckedChangeListener((v, on) -> mHost.onBell(on, sound.isChecked()));
+        sound.setOnCheckedChangeListener((v, on) -> mHost.onBell(vibrate.isChecked(), on));
+
+        CheckBox keys = new CheckBox(mActivity);
+        keys.setText("키 바 표시");
+        keys.setChecked(mHost.keyBarVisible());
+        keys.setOnCheckedChangeListener((v, on) -> mHost.onKeyBarVisible(on));
+        keys.setPadding(0, dp(12), 0, 0);
+        box.addView(keys);
 
         TextView about = new TextView(mActivity);
         about.setText("\n" + mHost.statusLine()
@@ -239,19 +239,37 @@ final class SettingsSheet {
             android.widget.Toast.makeText(mActivity, "추가할 수 있는 키가 없습니다", android.widget.Toast.LENGTH_SHORT).show();
             return;
         }
-        CharSequence[] names = new CharSequence[available.size()];
-        for (int i = 0; i < available.size(); i++) {
-            names[i] = KeyBar.labelOf(available.get(i));
+        // A 3-column grid: all remaining keys visible at once, no scrolling list.
+        android.widget.GridLayout grid = new android.widget.GridLayout(mActivity);
+        grid.setColumnCount(3);
+        grid.setPadding(dp(8), dp(8), dp(8), dp(8));
+        final java.util.List<android.app.Dialog> holder =
+                new java.util.ArrayList<>(1);
+        for (final String spec : available) {
+            Button add = new Button(mActivity);
+            add.setText(KeyBar.labelOf(spec));
+            add.setAllCaps(false);
+            add.setPadding(dp(2), dp(2), dp(2), dp(2));
+            add.setOnClickListener(v -> {
+                chips.add(spec);
+                mHost.onKeybarKeys(chips);
+                redraw.run();
+                if (!holder.isEmpty()) holder.get(0).dismiss();
+            });
+            android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
+            lp.width = 0;
+            lp.columnSpec = android.widget.GridLayout.spec(
+                    android.widget.GridLayout.UNDEFINED, 1f);
+            add.setLayoutParams(lp);
+            grid.addView(add);
         }
-        new AlertDialog.Builder(mActivity)
+        android.app.Dialog dialog = new AlertDialog.Builder(mActivity)
                 .setTitle("키 추가")
-                .setItems(names, (d, which) -> {
-                    chips.add(available.get(which));
-                    mHost.onKeybarKeys(chips);
-                    redraw.run();
-                })
+                .setView(grid)
                 .setNegativeButton("닫기", null)
-                .show();
+                .create();
+        holder.add(dialog);
+        dialog.show();
     }
 
     private TextView label(String text) {

@@ -2902,6 +2902,15 @@ public final class TerminalEmulator {
                 // A "?" does not decode as base64, so the write path below would just log an
                 // error - answer the read first, and only when the payload is not the query.
                 if (data.equals("?")) {
+                    // An image clipboard answers with PNG: opentui asks for
+                    // ["image/png","text/plain"] and takes what comes. A screenshot is the
+                    // case that matters - "paste my screenshot into the prompt".
+                    byte[] image = mSession.getClipboardImage();
+                    if (image != null) {
+                        String b64 = Base64.encodeToString(image, Base64.NO_WRAP);
+                        mSession.write("\033]52;c;" + b64 + "\007");
+                        break;
+                    }
                     String clip = mSession.getClipboardText();
                     if (clip != null) {
                         String b64 = Base64.encodeToString(clip.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
