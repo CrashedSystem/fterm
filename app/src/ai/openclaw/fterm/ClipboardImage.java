@@ -96,7 +96,9 @@ final class ClipboardImage {
                 if (clip == null) return;
                 ClipDescription description = clip.getDescription();
                 long stamp = description == null ? Long.MIN_VALUE : description.getTimestamp();
-                if (stamp == lastStamp) return;
+                // Only a real timestamp is a safe "already handled" signal. A clip that
+                // reports none must still get through, or its image is skipped forever.
+                if (stamp != Long.MIN_VALUE && stamp == lastStamp) return;
                 Uri uri = uriOf(clip);
                 if (uri == null || !isImage(context, clip)) return;
                 String path = save(context, uri);
