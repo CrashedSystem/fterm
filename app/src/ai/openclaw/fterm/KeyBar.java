@@ -302,7 +302,7 @@ final class KeyBar {
         for (String spec : specs) {
             if (already.contains(spec)) continue;
             addGridCell(mUserRow, KeyBar.labelOf(spec),
-                    () -> KeyBar.apply(spec, mAction), spec, false);
+                    () -> KeyBar.apply(spec, mAction), spec);
         }
     }
 
