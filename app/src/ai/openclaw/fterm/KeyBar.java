@@ -144,32 +144,58 @@ final class KeyBar {
 
     private HorizontalScrollView build() {
         mRow.setOrientation(LinearLayout.HORIZONTAL);
-        mRow.setGravity(android.view.Gravity.CENTER_VERTICAL
-                | android.view.Gravity.CENTER_HORIZONTAL);
+        mRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
         mRow.setBackgroundColor(BG);
         mRow.setPadding(dp(4), dp(6), dp(4), dp(6));
 
-        // Modifiers are NOT added here: setKeys() renders the whole configurable segment
-        // (modifiers included) from prefs, so the editor fully owns the order. Only the
-        // keyboard toggle is fixed, at the end.
-        mUserKeyCount = 0;
-        addKeyboardToggle();
-
+        // Docked layout, no swipe: row 1 is the fixed core (modifiers + the keys you
+        // always need), row 2 is the user's configured keys. A swipe to reach a key was
+        // a mis-tap factory - both rows are always fully visible.
+        mRow.addView(chip2());
+        // The scroll view keeps its API for MainActivity; with fillViewport and no
+        // scrolling content it behaves like a static container.
         HorizontalScrollView hsv = new HorizontalScrollView(mContext);
         hsv.setHorizontalScrollBarEnabled(false);
         hsv.setBackgroundColor(BG);
         hsv.setForeground(null);
-        hsv.setFillViewport(true);   // the row fills the inset-grown height, centred
-        hsv.setClipToPadding(false); // keys stay visible while the bottom padding grows
-        // A 1dp divider on top: the bar and the keyboard are both light greys otherwise.
+        hsv.setFillViewport(true);
+        hsv.setClipToPadding(false);
         hsv.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
                 new android.graphics.drawable.ColorDrawable(DIVIDER),
                 new android.graphics.drawable.ColorDrawable(BG),
         }));
         hsv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(50)));
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         hsv.addView(mRow);
         return hsv;
+    }
+
+    /** The fixed rows: modifiers + core keys (row 1), arrows + paste (row 2). */
+    private View chip2() {
+        LinearLayout fixed = new LinearLayout(mContext);
+        fixed.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout row1 = new LinearLayout(mContext);
+        row1.setOrientation(LinearLayout.HORIZONTAL);
+        row1.setGravity(android.view.Gravity.CENTER);
+        row1.setPadding(dp(4), dp(4), dp(4), dp(2));
+        row1.addView(modifier("CTRL", "ctrl"));
+        row1.addView(modifier("ALT", "alt"));
+        row1.addView(modifier("SHIFT", "shift"));
+        row1.addView(special("TAB", () -> mAction.special("tab")));
+        row1.addView(special("ESC", () -> mAction.special("esc")));
+        row1.addView(special("^C", () -> mAction.raw("\u0003")));
+        mUserRow = new LinearLayout(mContext);
+        mUserRow.setOrientation(LinearLayout.HORIZONTAL);
+        mUserRow.setGravity(android.view.Gravity.CENTER);
+        mUserRow.setPadding(dp(4), dp(2), dp(4), dp(4));
+        mUserRow.addView(special("\u2190", () -> mAction.special("left")));
+        mUserRow.addView(special("\u2193", () -> mAction.special("down")));
+        mUserRow.addView(special("\u2191", () -> mAction.special("up")));
+        mUserRow.addView(special("\u2192", () -> mAction.special("right")));
+        mUserRow.addView(special("PASTE", mAction::paste));
+        fixed.addView(row1);
+        fixed.addView(mUserRow);
+        return fixed;
     }
 
     private TextView modifier(String label, String kind) {
@@ -189,6 +215,7 @@ final class KeyBar {
 
     /** The configured user keys, between the modifiers and the keyboard toggle. */
     private int mUserKeyCount = 0;
+    private LinearLayout mUserRow;
 
     private void addKeyboardToggle() {
         // No tag: refresh() only recolours views tagged with a modifier kind. The toggle
@@ -198,28 +225,21 @@ final class KeyBar {
     }
 
     void setKeys(java.util.List<String> specs) {
-        // Remove exactly the user keys (they sit between the modifiers and the toggle).
-        while (mUserKeyCount > 0) {
-            mRow.removeViewAt(0);   // the segment starts at index 0; toggle is last
-            mUserKeyCount--;
+        // Docked layout: the configured keys render into their own row, appended after
+        // the fixed arrows/paste keys. Removing and re-adding keeps the order stable and
+        // never touches the fixed rows.
+        if (mUserRow == null) return;
+        // Keep the fixed arrow/paste keys: they are the first five children.
+        int fixed = 5;
+        while (mUserRow.getChildCount() > fixed) {
+            mUserRow.removeViewAt(fixed);
         }
-        // Re-insert the new set right after the modifiers, before the toggle. Inserting
-        // at MODIFIERS.length + i keeps the order and pushes the toggle to the end.
-        for (int i = 0; i < specs.size(); i++) {
-            String spec = specs.get(i);
-            TextView b;
-            if (spec.startsWith("mod:")) {
-                // A modifier from the editor: same latching behaviour as the built-ins.
-                // modifier() tags the view with the bare kind - refresh() needs that to
-                // recolour the latched state.
-                b = modifier(KeyBar.labelOf(spec), spec.substring(4));
-            } else {
-                b = special(KeyBar.labelOf(spec), () -> KeyBar.apply(spec, mAction));
-                b.setTag(spec);
-            }
+        for (String spec : specs) {
+            if (spec.startsWith("mod:")) continue;   // modifiers are always in row 1
+            TextView b = special(KeyBar.labelOf(spec), () -> KeyBar.apply(spec, mAction));
+            b.setTag(spec);
             b.setLongClickable(true);
-            mRow.addView(b, i);   // the toggle is the only thing after the segment
-            mUserKeyCount++;
+            mUserRow.addView(b);
         }
     }
 
@@ -275,7 +295,7 @@ final class KeyBar {
         t.setTextSize(12);
         t.setTextColor(KEY_TEXT);
         t.setGravity(Gravity.CENTER);
-        t.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        UiFont.apply(t, false);
         // A raised key: top highlight + bottom shade make it sit above the bar instead of
         // being a flat pill painted onto it.
         t.setBackground(pillBackground());
@@ -293,8 +313,11 @@ final class KeyBar {
     }
 
     private void refresh() {
-        for (int i = 0; i < mRow.getChildCount(); i++) {
-            View v = mRow.getChildAt(i);
+        // Modifiers live in row 1 (inside the fixed vertical container), so scan the
+        // whole hierarchy of the docked layout rather than one row.
+        java.util.ArrayList<View> all = new java.util.ArrayList<>();
+        collectViews(mRow, all);
+        for (View v : all) {
             if (!(v instanceof TextView)) continue;
             Object tag = v.getTag();
             if (tag == null) continue;
@@ -342,6 +365,14 @@ final class KeyBar {
         sl.addState(new int[]{android.R.attr.state_pressed}, pressed);
         sl.addState(new int[]{}, resting);
         return sl;
+    }
+
+    private void collectViews(ViewGroup group, java.util.ArrayList<View> out) {
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View c = group.getChildAt(i);
+            out.add(c);
+            if (c instanceof ViewGroup) collectViews((ViewGroup) c, out);
+        }
     }
 
     private int dp(float v) {

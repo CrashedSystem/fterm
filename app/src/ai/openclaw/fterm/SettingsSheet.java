@@ -196,7 +196,7 @@ final class SettingsSheet {
         t.setText(label);
         t.setTextSize(15);
         t.setTextColor(0xffe6e6e6);
-        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        UiFont.apply(t, false);
         t.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         row.addView(t);
@@ -277,6 +277,7 @@ final class SettingsSheet {
         t.setText(text);
         t.setTextColor(0xffcfcfcf);
         t.setTextSize(13);
+        UiFont.apply(t, true);
         return t;
     }
 

@@ -108,6 +108,13 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1002);
         }
+        // Clipboard images (screenshots) live in the gallery; without this permission the
+        // content:// URI decodes to nothing and "paste my screenshot" silently fails.
+        if (android.os.Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission("android.permission.READ_MEDIA_IMAGES")
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{"android.permission.READ_MEDIA_IMAGES"}, 1003);
+        }
 
         // Nothing is attached yet, so the frame would sit as a blank black area until the
         // live query returns (up to the 2.5s timeout). Say so instead of showing a void -
@@ -211,7 +218,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mRoot.addView(mTermFrame);
         mRoot.addView(mKeyBar.view());
         setContentView(mRoot);
-        EdgeToEdge.applyInsets(mRoot, mTopBar, mKeyBar.view(), dp(38), dp(40));
+        EdgeToEdge.applyInsets(mRoot, mTopBar, mKeyBar.view(), dp(38), dp(88));
 
         loadFonts();
         mMiku = MikuBackground.load(this);
@@ -320,6 +327,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         splash.setText(text);
         splash.setTextColor(0xffcfcfcf);
         splash.setTextSize(13);
+        UiFont.apply(splash, false);
         splash.setPadding(px, px, px, px);
         splash.setGravity(Gravity.CENTER);
         if (mTermFrame != null) {
@@ -546,7 +554,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         icon.setText(">_");
         icon.setTextSize(9);
         icon.setTextColor(0xff8a8a8a);
-        icon.setTypeface(Typeface.MONOSPACE);
+        UiFont.apply(icon, false);
         icon.setGravity(Gravity.CENTER);
         icon.setIncludeFontPadding(false);
         icon.setLayoutParams(new LinearLayout.LayoutParams(dp(18), dp(34)));
