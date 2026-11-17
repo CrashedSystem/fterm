@@ -252,19 +252,6 @@ final class KeyBar {
         return b;
     }
 
-    /** A pressed pill: flat pressed colour. The tag carries its resting drawable. */
-    private void bindPressFeedback(TextView t, int restingBg) {
-        t.setOnTouchListener((v, ev) -> {
-            GradientDrawable d = (GradientDrawable) v.getBackground();
-            if (ev.getAction() == android.view.MotionEvent.ACTION_DOWN) {
-                d.setColor(KEY_PRESSED);
-            } else if (ev.getAction() == android.view.MotionEvent.ACTION_UP
-                    || ev.getAction() == android.view.MotionEvent.ACTION_CANCEL) {
-                d.setColor(restingBg);
-            }
-            return false;   // click / long-click still fire
-        });
-    }
 
     private TextView pill(String label, int bg) {
         TextView t = new TextView(mContext);
@@ -291,7 +278,18 @@ final class KeyBar {
         t.setMinWidth(dp(38));
         t.setClickable(true);
         t.setFocusable(true);
-        bindPressFeedback(t, bg);
+        // Pressed state via a state list: the framework swaps the drawable on touch-down
+        // and restores on release, with no manual invalidation. A touch listener + mutable
+        // gradient worked on some devices and showed nothing on others.
+        android.graphics.drawable.GradientDrawable pressed = new android.graphics.drawable.GradientDrawable();
+        pressed.setColors(new int[]{0xff565b64, KEY_PRESSED, KEY_PRESSED, 0xff33363b});
+        pressed.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TL_BR);
+        pressed.setCornerRadius(dp(8));
+        pressed.setStroke(dp(1), 0xff5b616b);
+        android.graphics.drawable.StateListDrawable sl = new android.graphics.drawable.StateListDrawable();
+        sl.addState(new int[]{android.R.attr.state_pressed}, pressed);
+        sl.addState(new int[]{}, d);
+        t.setBackground(sl);
         return t;
     }
 
@@ -308,7 +306,16 @@ final class KeyBar {
                 case "shift": on = mShift; break;
                 default: continue;
             }
-            ((GradientDrawable) v.getBackground()).setColor(on ? KEY_ON : KEY);
+            // The background is a StateListDrawable (pressed state); the latched colour
+            // belongs to the resting gradient inside it.
+            android.graphics.drawable.Drawable bg = v.getBackground();
+            if (bg instanceof android.graphics.drawable.StateListDrawable) {
+                bg.mutate();
+                ((GradientDrawable) bg.getCurrent()).setColor(on ? KEY_ON : KEY);
+                v.invalidate();
+            } else if (bg instanceof GradientDrawable) {
+                ((GradientDrawable) bg).setColor(on ? KEY_ON : KEY);
+            }
         }
     }
 
