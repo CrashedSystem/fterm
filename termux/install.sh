@@ -23,7 +23,10 @@ if "$DEST/ftermd" status >/dev/null 2>&1; then
   echo "데몬이 이미 실행 중"
 else
   echo "데몬 시작"
-  nohup "$DEST/ftermd" start > "$DEST/daemon.log" 2>&1 &
+  # setsid: detach from the terminal's process group. A plain nohup daemon still dies
+  # with SIGHUP when the Termux shell that launched it closes, which is exactly the
+  # "ftermd died while I was away" report.
+  setsid nohup "$DEST/ftermd" start > "$DEST/daemon.log" 2>&1 < /dev/null &
   sleep 1
 fi
 

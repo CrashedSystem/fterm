@@ -322,6 +322,12 @@ class Daemon:
         signal.signal(signal.SIGTERM, self.stop)
         signal.signal(signal.SIGINT, self.stop)
         signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+        # Survive the terminal that launched us: a daemon started with plain nohup from a
+        # Termux shell still receives SIGHUP when that shell closes, and the default action
+        # for SIGHUP is terminate. That was the measured "ftermd died while I was away"
+        # (process 23510, parent = the closed shell). Ignore it; the keeper's setsid makes
+        # this redundant there, but a hand-started daemon deserves the same immunity.
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
         while True:
             # Drop idle clients BEFORE building the fd set. The previous order put a socket
             # into rfds and then closed it, so select() received -1 and the daemon died with
