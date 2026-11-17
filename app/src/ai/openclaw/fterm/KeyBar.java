@@ -140,7 +140,13 @@ final class KeyBar {
         for (String[] m : MODIFIERS) {
             mRow.addView(modifier(m[0], m[1]));
         }
-        mRow.addView(special("\u2328", mAction::toggleKeyboard));
+        // The keyboard toggle lives at the END of the row, after the user keys that
+        // setKeys() inserts at MODIFIERS.length. Keeping it fixed there is what makes
+        // setKeys()'s "replace everything after the modifiers" logic safe - an earlier
+        // version put it between the modifiers and the user keys, and setKeys deleted it
+        // on the first call, which is why the bar stopped matching the editor.
+        mUserKeyCount = 0;
+        addKeyboardToggle();
 
         HorizontalScrollView hsv = new HorizontalScrollView(mContext);
         hsv.setHorizontalScrollBarEnabled(false);
@@ -173,16 +179,30 @@ final class KeyBar {
     }
 
     /** The configured user keys, between the modifiers and the keyboard toggle. */
+    private int mUserKeyCount = 0;
+
+    private void addKeyboardToggle() {
+        // No tag: refresh() only recolours views tagged with a modifier kind. The toggle
+        // sits AFTER the user-key segment; setKeys() inserts at MODIFIERS.length so the
+        // toggle stays at the end regardless of how many user keys there are.
+        mRow.addView(special("\u2328", mAction::toggleKeyboard));
+    }
+
     void setKeys(java.util.List<String> specs) {
-        // Remove everything after the modifiers and before the keyboard toggle.
-        while (mRow.getChildCount() > MODIFIERS.length + 1) {
+        // Remove exactly the user keys (they sit between the modifiers and the toggle).
+        while (mUserKeyCount > 0) {
             mRow.removeViewAt(MODIFIERS.length);
+            mUserKeyCount--;
         }
-        for (String spec : specs) {
+        // Re-insert the new set right after the modifiers, before the toggle. Inserting
+        // at MODIFIERS.length + i keeps the order and pushes the toggle to the end.
+        for (int i = 0; i < specs.size(); i++) {
+            String spec = specs.get(i);
             TextView b = special(KeyBar.labelOf(spec), () -> KeyBar.apply(spec, mAction));
-            b.setTag(spec);          // keep the spec on the view for the editor
+            b.setTag(spec);
             b.setLongClickable(true);
-            mRow.addView(b, MODIFIERS.length);
+            mRow.addView(b, MODIFIERS.length + i);
+            mUserKeyCount++;
         }
     }
 
