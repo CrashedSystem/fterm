@@ -144,7 +144,8 @@ final class KeyBar {
 
     private HorizontalScrollView build() {
         mRow.setOrientation(LinearLayout.HORIZONTAL);
-        mRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        mRow.setGravity(android.view.Gravity.CENTER_VERTICAL
+                | android.view.Gravity.CENTER_HORIZONTAL);
         mRow.setBackgroundColor(BG);
         mRow.setPadding(dp(4), dp(6), dp(4), dp(6));
 
