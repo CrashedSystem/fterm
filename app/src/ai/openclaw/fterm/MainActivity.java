@@ -109,6 +109,10 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1002);
         }
 
+        // Nothing is attached yet, so the frame would sit as a blank black area until the
+        // live query returns (up to the 2.5s timeout). Say so instead of showing a void -
+        // "the first shell is blank" was this empty frame, not a dead shell.
+        showSplash("셸에 연결하는 중…");
         startSessions();
     }
 
@@ -421,6 +425,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         session.mSessionName = "shell " + tab.id;
 
         if (mActive == tab) {
+            restoreTerminalView();   // remove any "connecting…" splash still in the frame
             mTermView.attachSession(session);
             mTermView.setTextSize(fontPx());
             applySchemeTo(session);
@@ -615,6 +620,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mActive = tab;
         for (Tab t : mTabs) updateChip(t);
         if (tab.session != null) {
+            restoreTerminalView();
             mTermView.attachSession(tab.session);
             mTermView.setTextSize(fontPx());
             applySchemeTo(tab.session);
