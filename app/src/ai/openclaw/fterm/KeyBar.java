@@ -104,7 +104,8 @@ final class KeyBar {
 
     private final Context mContext;
     private final Action mAction;
-    private final LinearLayout mRow;
+    private LinearLayout mRow;
+    private LinearLayout mRoot;
     private final HorizontalScrollView mScroll;
 
     private boolean mCtrl, mAlt, mShift;
@@ -143,65 +144,116 @@ final class KeyBar {
     }
 
     private HorizontalScrollView build() {
-        mRow.setOrientation(LinearLayout.HORIZONTAL);
-        mRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        mRow.setBackgroundColor(BG);
-        mRow.setPadding(dp(4), dp(6), dp(4), dp(6));
+        // Docked, mterm-style: two fixed rows of six text keys on the bar background.
+        // No pills, no bevels - a cell is its whole touch target, pressed cells get a
+        // subtle fill, latched modifiers turn accent. Nothing scrolls, nothing hides.
+        mRoot = new LinearLayout(mContext);
+        mRoot.setOrientation(LinearLayout.VERTICAL);
+        mRoot.setBackgroundColor(BG);
+        mRoot.setPadding(dp(2), dp(4), dp(2), dp(4));
 
-        // Docked layout, no swipe: row 1 is the fixed core (modifiers + the keys you
-        // always need), row 2 is the user's configured keys. A swipe to reach a key was
-        // a mis-tap factory - both rows are always fully visible.
-        mRow.addView(chip2());
-        // The scroll view keeps its API for MainActivity; with fillViewport and no
-        // scrolling content it behaves like a static container.
+        mRow = new LinearLayout(mContext);
+        mUserRow = new LinearLayout(mContext);
+        for (LinearLayout row : new LinearLayout[]{mRow, mUserRow}) {
+            row.setOrientation(LinearLayout.HORIZONTAL);
+        }
+        addGridCell(mRow, "Esc",      () -> mAction.special("esc"),   "esc", false);
+        addGridCell(mRow, "Tab",      () -> mAction.special("tab"),   "tab", false);
+        addGridCell(mRow, "Home",     () -> mAction.special("home"),  "home", false);
+        addGridCell(mRow, "\u2191",   () -> mAction.special("up"),    "up", true);
+        addGridCell(mRow, "End",      () -> mAction.special("end"),   "end", false);
+        addGridCell(mRow, "PgUp",     () -> mAction.special("pgup"),  "pgup", false);
+
+        addGridCell(mUserRow, "Ctrl", () -> toggleMod("ctrl"), "ctrl", false);
+        addGridCell(mUserRow, "Alt",  () -> toggleMod("alt"),  "alt", false);
+        addGridCell(mUserRow, "\u2190", () -> mAction.special("left"),  "left", true);
+        addGridCell(mUserRow, "\u2193", () -> mAction.special("down"),  "down", true);
+        addGridCell(mUserRow, "\u2192", () -> mAction.special("right"), "right", true);
+        addGridCell(mUserRow, "PgDn", () -> mAction.special("pgdn"),  "pgdn", false);
+        addGridCell(mUserRow, "Paste", mAction::paste,                 "paste", false);
+
+        mRoot.addView(mRow, rowParams());
+        mRoot.addView(mUserRow, rowParams());
+
         HorizontalScrollView hsv = new HorizontalScrollView(mContext);
         hsv.setHorizontalScrollBarEnabled(false);
         hsv.setBackgroundColor(BG);
-        hsv.setForeground(null);
         hsv.setFillViewport(true);
         hsv.setClipToPadding(false);
-        hsv.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
-                new android.graphics.drawable.ColorDrawable(DIVIDER),
-                new android.graphics.drawable.ColorDrawable(BG),
-        }));
-        hsv.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        hsv.addView(mRow);
+        hsv.addView(mRoot);
         return hsv;
     }
 
-    /** The fixed rows: modifiers + core keys (row 1), arrows + paste (row 2). */
-    private View chip2() {
-        LinearLayout fixed = new LinearLayout(mContext);
-        fixed.setOrientation(LinearLayout.VERTICAL);
-        fixed.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
-        LinearLayout row1 = new LinearLayout(mContext);
-        row1.setOrientation(LinearLayout.HORIZONTAL);
-        row1.setGravity(android.view.Gravity.CENTER);
-        row1.setPadding(dp(4), dp(4), dp(4), dp(2));
-        row1.addView(modifier("CTRL", "ctrl"));
-        row1.addView(modifier("ALT", "alt"));
-        row1.addView(modifier("SHIFT", "shift"));
-        row1.addView(special("TAB", () -> mAction.special("tab")));
-        row1.addView(special("ESC", () -> mAction.special("esc")));
-        row1.addView(special("^C", () -> mAction.raw("\u0003")));
-        mUserRow = new LinearLayout(mContext);
-        mUserRow.setOrientation(LinearLayout.HORIZONTAL);
-        mUserRow.setGravity(android.view.Gravity.CENTER);
-        mUserRow.setPadding(dp(4), dp(2), dp(4), dp(4));
-        // Hairline between the two docked rows.
-        android.view.View line = new android.view.View(mContext);
-        line.setBackgroundColor(0xff101114);
-        fixed.addView(line, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
-        mUserRow.addView(special("\u2190", () -> mAction.special("left")));
-        mUserRow.addView(special("\u2193", () -> mAction.special("down")));
-        mUserRow.addView(special("\u2191", () -> mAction.special("up")));
-        mUserRow.addView(special("\u2192", () -> mAction.special("right")));
-        mUserRow.addView(special("PASTE", mAction::paste));
-        fixed.addView(row1);
-        fixed.addView(mUserRow);
-        return fixed;
+    private LinearLayout.LayoutParams rowParams() {
+        return new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+    }
+
+    /** Modifier latch - the editor's mod: specs and these built-ins share one state. */
+    private void toggleMod(String kind) {
+        switch (kind) {
+            case "ctrl": mCtrl = !mCtrl; break;
+            case "alt": mAlt = !mAlt; break;
+            case "shift": mShift = !mShift; break;
+            default: break;
+        }
+        refresh();
+    }
+
+
+    /**
+     * One grid cell: the label centred in the cell, the cell is the touch target.
+     * mterm-style - text on the bar, not buttons on the bar. Hold-to-repeat for the
+     * arrow cells (glyph=true).
+     */
+    private void addGridCell(LinearLayout row, String label, Runnable action,
+                             String tag, boolean holdRepeat) {
+        TextView cell = new TextView(mContext);
+        cell.setText(label);
+        cell.setTextSize(13);
+        cell.setTextColor(KEY_TEXT);
+        cell.setGravity(android.view.Gravity.CENTER);
+        cell.setBackground(pillBackground());
+        cell.setClickable(true);
+        cell.setFocusable(true);
+        cell.setTag(tag.startsWith("mod:") ? tag.substring(4) : tag);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+        lp.rightMargin = dp(1);
+        cell.setLayoutParams(lp);
+
+        if (holdRepeat) {
+            cell.setOnTouchListener((v, ev) -> {
+                int actionId = ev.getAction();
+                if (actionId == android.view.MotionEvent.ACTION_DOWN) {
+                    final Handler h = new Handler();
+                    final Runnable[] chain = new Runnable[1];
+                    chain[0] = () -> {
+                        action.run();
+                        h.postDelayed(chain[0], 60);
+                    };
+                    v.setTag(R.id.repeat_tag, new Runnable[]{chain[0]});
+                    v.setTag(R.id.repeat_handler, h);
+                    action.run();
+                    h.postDelayed(() -> {
+                        action.run();
+                        h.postDelayed(chain[0], 60);
+                    }, 350);
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                } else if (actionId == android.view.MotionEvent.ACTION_UP
+                        || actionId == android.view.MotionEvent.ACTION_CANCEL) {
+                    Object tagObj = v.getTag(R.id.repeat_tag);
+                    if (tagObj instanceof Runnable[]) {
+                        for (Runnable r : (Runnable[]) tagObj) v.removeCallbacks(r);
+                    }
+                    v.setTag(R.id.repeat_tag, null);
+                }
+                return false;
+            });
+        } else {
+            cell.setOnClickListener(v -> action.run());
+        }
+        row.addView(cell);
     }
 
     private TextView modifier(String label, String kind) {
@@ -231,19 +283,23 @@ final class KeyBar {
     }
 
     void setKeys(java.util.List<String> specs) {
-        // Docked layout: only keys that are NOT already in the fixed rows are appended.
-        // The default prefs list (TAB/ESC/arrows) duplicates the fixed keys, which is
-        // where the doubled TAB/ESC/arrows came from.
+        // Docked layout: the two fixed rows carry the core keys. Any configured key that
+        // is not already drawn (e.g. ^D, HOME, a paste chip) is appended to row 2 as a
+        // grid cell - the editor adds specs here, the bar renders them like built-ins.
         if (mUserRow == null) return;
-        int fixed = 5;   // arrows x4 + PASTE
-        while (mUserRow.getChildCount() > fixed) mUserRow.removeViewAt(fixed);
+        java.util.ArrayList<String> already = new java.util.ArrayList<>();
+        already.add("special:esc"); already.add("special:tab");
+        already.add("special:home"); already.add("special:end");
+        already.add("special:pgup"); already.add("special:pgdn");
+        already.add("special:left"); already.add("special:right");
+        already.add("special:up"); already.add("special:down");
+        already.add("action:paste");
+        already.add("raw:\u0003");
+        for (String[] m : MODIFIERS) already.add(m[1]);
         for (String spec : specs) {
-            if (spec.startsWith("mod:")) continue;      // row 1
-            if (isFixed(spec)) continue;                // already in a fixed row
-            TextView b = special(KeyBar.labelOf(spec), () -> KeyBar.apply(spec, mAction));
-            b.setTag(spec);
-            b.setLongClickable(true);
-            mUserRow.addView(b);
+            if (already.contains(spec)) continue;
+            addGridCell(mUserRow, KeyBar.labelOf(spec),
+                    () -> KeyBar.apply(spec, mAction), spec, false);
         }
     }
 
@@ -334,7 +390,7 @@ final class KeyBar {
         // Modifiers live in row 1 (inside the fixed vertical container), so scan the
         // whole hierarchy of the docked layout rather than one row.
         java.util.ArrayList<View> all = new java.util.ArrayList<>();
-        collectViews(mRow, all);
+        collectViews(mRoot, all);
         for (View v : all) {
             if (!(v instanceof TextView)) continue;
             Object tag = v.getTag();
