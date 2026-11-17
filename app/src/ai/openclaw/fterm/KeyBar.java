@@ -174,6 +174,7 @@ final class KeyBar {
     private View chip2() {
         LinearLayout fixed = new LinearLayout(mContext);
         fixed.setOrientation(LinearLayout.VERTICAL);
+        fixed.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
         LinearLayout row1 = new LinearLayout(mContext);
         row1.setOrientation(LinearLayout.HORIZONTAL);
         row1.setGravity(android.view.Gravity.CENTER);

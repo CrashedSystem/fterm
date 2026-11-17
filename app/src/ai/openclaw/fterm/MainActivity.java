@@ -1222,10 +1222,17 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 Toast.makeText(this, "이미지 경로 붙여넣음: " + path, Toast.LENGTH_LONG).show();
                 return;
             }
+            Toast.makeText(this, "이미지를 읽지 못했습니다 (권한 확인 필요)", Toast.LENGTH_LONG).show();
+            return;
         }
 
         CharSequence text = item.coerceToText(this);
-        if (text == null || text.length() == 0) return;
+        if (text == null || text.length() == 0) {
+            // A clip that is neither text nor a detected image: tell the user instead of
+            // doing nothing, which read as "image paste is broken".
+            Toast.makeText(this, "붙여넣을 텍스트나 이미지가 없습니다", Toast.LENGTH_SHORT).show();
+            return;
+        }
         pasteText(text.toString());
     }
 

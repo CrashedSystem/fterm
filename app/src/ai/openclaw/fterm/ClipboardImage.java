@@ -19,12 +19,17 @@ final class ClipboardImage {
 
     private ClipboardImage() {}
 
-    /** True when the primary clip is an image (any image/ MIME). */
+    /** True when the primary clip is an image (any image/* MIME). */
     static boolean isImage(Context context, ClipData clip) {
-        if (clip.getDescription() != null && clip.getDescription().hasMimeType("image/")) return true;
+        if (clip.getDescription() != null) {
+            for (String mime : clip.getDescription().filterMimeTypes("image/*")) {
+                if (mime.startsWith("image/")) return true;
+            }
+        }
         if (clip.getItemAt(0) == null || clip.getItemAt(0).getUri() == null) return false;
-        String mime = context.getContentResolver().getType(clip.getItemAt(0).getUri());
-        return mime != null && mime.startsWith("image/");
+        String[] uris = context.getContentResolver().getStreamTypes(
+                clip.getItemAt(0).getUri(), "image/*");
+        return uris != null && uris.length > 0;
     }
 
     static android.net.Uri uriOf(ClipData clip) {
