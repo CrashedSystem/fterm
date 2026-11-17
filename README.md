@@ -180,6 +180,10 @@ opencode 턴 완료 → 폰 알림은 세 단계를 거친다. 전부 다른 이
    권한 요청 시 OSC 9을 출력하고, fterm이 그것을 파싱해 안드로이드 알림을 올린다.
    (fterm 파서 쪽은 dumpsys로 실측 검증: id=2602, "FTERM-NOTIFY-TEST" 도착.)
 
+**2026-11-17 최종 실측 — 체인 전체가 동작한다.** opencode 턴 종료 →
+`strace`로 TUI의 `write(pts, "\x1b]9;fterm · 완료\x07")` 2회 기록 → fterm 파서 →
+사용자 보고: "알림 왔다요". 끝부터 끝까지 실측으로 연결됐다.
+
 플러그인은 windows-notify의 검증된 구조를 따른다: `index.js`(server, 빈 setup) +
 `tui.js`(터미널 소유 프로세스, OSC 출력) + package.json exports에 `./tui` 슬롯.
 subagent 세션은 알림에서 제외. `TERM_PROGRAM=fterm`이 아니면 이스케이프를 쓰지
