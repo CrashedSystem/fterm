@@ -189,6 +189,11 @@ final class KeyBar {
         mUserRow.setOrientation(LinearLayout.HORIZONTAL);
         mUserRow.setGravity(android.view.Gravity.CENTER);
         mUserRow.setPadding(dp(4), dp(2), dp(4), dp(4));
+        // Hairline between the two docked rows.
+        android.view.View line = new android.view.View(mContext);
+        line.setBackgroundColor(0xff101114);
+        fixed.addView(line, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
         mUserRow.addView(special("\u2190", () -> mAction.special("left")));
         mUserRow.addView(special("\u2193", () -> mAction.special("down")));
         mUserRow.addView(special("\u2191", () -> mAction.special("up")));
@@ -304,7 +309,7 @@ final class KeyBar {
     private TextView pill(String label, int bg) {
         TextView t = new TextView(mContext);
         t.setText(label);
-        t.setTextSize(12);
+        t.setTextSize(13);
         t.setTextColor(KEY_TEXT);
         t.setGravity(Gravity.CENTER);
         UiFont.apply(t, false);
@@ -314,11 +319,11 @@ final class KeyBar {
         // 36dp tall inside a 50dp bar: a finger target the platform would accept, with the
         // visual weight of a key rather than a label.
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(36));
-        lp.rightMargin = dp(5);
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(38));
+        lp.rightMargin = dp(6);
         t.setLayoutParams(lp);
-        t.setPadding(dp(10), 0, dp(10), 0);
-        t.setMinWidth(dp(38));
+        t.setPadding(dp(12), 0, dp(12), 0);
+        t.setMinWidth(dp(44));
         t.setClickable(true);
         t.setFocusable(true);
         return t;
