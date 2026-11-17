@@ -214,6 +214,27 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         });
         mKeyBar.setKeys(mPrefs.keybarKeys());
 
+        // Clipboard watcher: when an IMAGE lands on the clipboard while fterm is in the
+        // foreground, save it to a file and insert the path into the prompt. A screenshot
+        // then reaches opencode by just copying it - no paste button needed. The insert
+        // happens only when a session is active, and each image inserts once.
+        try {
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+                cm.addPrimaryClipChangedListener(() -> mUi.post(() -> {
+                    if (mActive == null || mActive.session == null) return;
+                    if (cm.hasPrimaryClip() && ClipboardImage.isImage(this, cm.getPrimaryClip())) {
+                        String path = ClipboardImage.save(this, ClipboardImage.uriOf(cm.getPrimaryClip()));
+                        if (path != null) {
+                            pasteText(path);
+                            Toast.makeText(this, "이미지 첨부: " + path, Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }));
+            }
+        } catch (Throwable ignored) {
+        }
+
         mRoot.addView(top);
         mRoot.addView(mTermFrame);
         mRoot.addView(mKeyBar.view());

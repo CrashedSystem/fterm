@@ -157,20 +157,20 @@ final class KeyBar {
         for (LinearLayout row : new LinearLayout[]{mRow, mUserRow}) {
             row.setOrientation(LinearLayout.HORIZONTAL);
         }
-        addGridCell(mRow, "Esc",      () -> mAction.special("esc"),   "esc", false);
-        addGridCell(mRow, "Tab",      () -> mAction.special("tab"),   "tab", false);
-        addGridCell(mRow, "Home",     () -> mAction.special("home"),  "home", false);
-        addGridCell(mRow, "\u2191",   () -> mAction.special("up"),    "up", true);
-        addGridCell(mRow, "End",      () -> mAction.special("end"),   "end", false);
-        addGridCell(mRow, "PgUp",     () -> mAction.special("pgup"),  "pgup", false);
+        addGridCell(mRow, "Esc",      () -> mAction.special("esc"),   "esc");
+        addGridCell(mRow, "Tab",      () -> mAction.special("tab"),   "tab");
+        addGridCell(mRow, "Home",     () -> mAction.special("home"),  "home");
+        addGridCell(mRow, "\u2191",   () -> mAction.special("up"),    "up");
+        addGridCell(mRow, "End",      () -> mAction.special("end"),   "end");
+        addGridCell(mRow, "PgUp",     () -> mAction.special("pgup"),  "pgup");
 
-        addGridCell(mUserRow, "Ctrl", () -> toggleMod("ctrl"), "ctrl", false);
-        addGridCell(mUserRow, "Alt",  () -> toggleMod("alt"),  "alt", false);
-        addGridCell(mUserRow, "\u2190", () -> mAction.special("left"),  "left", true);
-        addGridCell(mUserRow, "\u2193", () -> mAction.special("down"),  "down", true);
-        addGridCell(mUserRow, "\u2192", () -> mAction.special("right"), "right", true);
-        addGridCell(mUserRow, "PgDn", () -> mAction.special("pgdn"),  "pgdn", false);
-        addGridCell(mUserRow, "Paste", mAction::paste,                 "paste", false);
+        addGridCell(mUserRow, "Ctrl", () -> toggleMod("ctrl"), "ctrl");
+        addGridCell(mUserRow, "Alt",  () -> toggleMod("alt"),  "alt");
+        addGridCell(mUserRow, "\u2190", () -> mAction.special("left"),  "left");
+        addGridCell(mUserRow, "\u2193", () -> mAction.special("down"),  "down");
+        addGridCell(mUserRow, "\u2192", () -> mAction.special("right"), "right");
+        addGridCell(mUserRow, "PgDn", () -> mAction.special("pgdn"),  "pgdn");
+        addGridCell(mUserRow, "Paste", mAction::paste,                 "paste");
 
         mRoot.addView(mRow, rowParams());
         mRoot.addView(mUserRow, rowParams());
@@ -207,7 +207,7 @@ final class KeyBar {
      * arrow cells (glyph=true).
      */
     private void addGridCell(LinearLayout row, String label, Runnable action,
-                             String tag, boolean holdRepeat) {
+                             String tag) {
         TextView cell = new TextView(mContext);
         cell.setText(label);
         cell.setTextSize(13);
@@ -222,7 +222,7 @@ final class KeyBar {
         lp.rightMargin = dp(1);
         cell.setLayoutParams(lp);
 
-        if (holdRepeat) {
+        {
             cell.setOnTouchListener((v, ev) -> {
                 int actionId = ev.getAction();
                 if (actionId == android.view.MotionEvent.ACTION_DOWN) {
@@ -255,8 +255,6 @@ final class KeyBar {
                 }
                 return false;
             });
-        } else {
-            cell.setOnClickListener(v -> action.run());
         }
         row.addView(cell);
     }
