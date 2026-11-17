@@ -46,9 +46,15 @@ aapt2 link -o "$OUT/base.apk" -I "$SDKJAR" \
 
 echo "[3/6] 컴파일"
 find "$ROOT/app/src" "$OUT/gen" -name '*.java' > "$OUT/sources.txt"
+# javac's status must survive the pipe. It used to be `javac ... | grep -v bootstrap || true`,
+# which turned every compile error into a warning: javac still emits classes for the files it
+# did compile, so MainActivity.class existed, the guard below passed, and a broken APK was
+# packaged and signed as "BUILD OK". The bootstrap warning is filtered, the exit code is not.
+set -o pipefail
 javac -nowarn -source 11 -target 11 \
   -classpath "$SDKJAR" \
-  -d "$OUT/obj" @"$OUT/sources.txt" 2>&1 | grep -v 'bootstrap class path' || true
+  -d "$OUT/obj" @"$OUT/sources.txt" 2>&1 | grep -v 'bootstrap class path'
+set +o pipefail
 [ -f "$OUT/obj/ai/openclaw/fterm/MainActivity.class" ] || { echo "컴파일 실패" >&2; exit 1; }
 
 echo "[4/6] dex"

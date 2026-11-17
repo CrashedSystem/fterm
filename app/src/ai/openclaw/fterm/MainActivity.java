@@ -163,13 +163,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // and a coloured emoji gear - three weights, one of them in colour. These are paths,
         // so they are identical at every density and never fall back to an emoji font.
         View plus = Chrome.icon(this, "plus", 30, false, v -> newTab(true));
-        // Long-press "+" still opens the menu: on a bar this small it is the discoverable
-        // gesture, and it survived the change from text glyphs to line art.
+        // Long-press "+" still opens the menu, because it is the gesture that was there before
+        // the hamburger and it costs nothing to keep.
         plus.setOnLongClickListener(v -> {
             showCommandMenu(v);
             return true;
         });
-        View menu = Chrome.icon(this, "chevron", 28, true, v -> showCommandMenu(v));
         View palette = Chrome.icon(this, "terminal", 28, true, v -> showCommandPalette());
         View gear = Chrome.icon(this, "gear", 28, true, v -> showSettings());
 
@@ -177,11 +176,14 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.BOTTOM);
         top.setBackgroundColor(0xff2b2b2b);
-        top.setPadding(0, 0, dp(6), 0);
+        top.setPadding(dp(2), 0, dp(6), 0);
+        // WT's title bar opens with the hamburger, and the dropdown hangs off it. Kept on the
+        // left like WT rather than grouped with the right-hand icons: it is the way into the
+        // menu, not one of the actions.
+        top.addView(Chrome.icon(this, "menu", 28, true, v -> showCommandMenu(v)));
         top.addView(mTabScroll);
         top.addView(plus);
         top.addView(palette);
-        top.addView(menu);
         top.addView(gear);
         top.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
@@ -236,6 +238,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             @Override public void settings() { showSettings(); }
             @Override public void toggleKeyboard() { MainActivity.this.toggleKeyboard(); }
             @Override public void palette() { showCommandPalette(); }
+            @Override public void about() { showAbout(); }
         });
 
         loadFonts();
@@ -803,41 +806,9 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
      * entry names the keyboard shortcut it mirrors, so the menu also teaches the hardware path.
      */
     private void showCommandMenu(View anchor) {
-        final String[] items = {
-                "새 탭                    Ctrl+Shift+T",
-                "이 탭 이름 바꾸기",
-                "이 탭 닫기                Ctrl+Shift+W",
-                "──",
-                "붙여넣기                  Ctrl+Shift+V",
-                "복사                      Ctrl+Shift+C",
-                "──",
-                "설정",
-        };
-
-        android.widget.PopupMenu popup = new android.widget.PopupMenu(this, anchor);
-        for (int i = 0; i < items.length; i++) {
-            if (items[i].equals("──")) continue;
-            final int index = i;
-            android.view.MenuItem item = popup.getMenu().add(items[i]);
-            item.setOnMenuItemClickListener(m -> {
-                handleMenuChoice(index);
-                return true;
-            });
-        }
-        popup.show();
-    }
-
-    private void handleMenuChoice(int index) {
-        switch (index) {
-            case 0: newTab(true); break;
-            case 1: renameActiveTab(); break;
-            case 2: if (mActive != null) confirmClose(mActive); break;
-            case 4: pasteClipboard(); break;
-            case 5: copySelection(); break;
-            case 7: showSettings(); break;
-            default: break;
-        }
-        if (index == 0 || index == 2 || index == 7) { /* nothing else to do */ }
+        // The menu itself lives in Chrome, which is where the glyphs and the plate primitives
+        // are. The activity only says "this is the anchor".
+        if (mChrome != null) mChrome.menu(anchor);
     }
 
     /** WT's "Rename tab": the title is cosmetic and remembered until the shell sets its own. */
@@ -880,13 +851,43 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                     mPrefs.setKeyBarVisible(visible);
                     if (mKeyBar != null) mKeyBar.setVisible(visible);
                 }
+                @Override public boolean keyboardOnStart() { return mPrefs.showKeyboardOnStart(); }
+                @Override public void onKeyboardOnStart(boolean on) {
+                    mPrefs.setShowKeyboardOnStart(on);
+                }
+                @Override public boolean backIsEscape() { return mPrefs.backIsEscape(); }
+                @Override public void onBackIsEscape(boolean on) { mPrefs.setBackIsEscape(on); }
                 @Override public String statusLine() {
-                    return "세션: " + mTabs.size() + " · 서버 "
-                            + mPrefs.host() + ":" + mPrefs.port();
+                    return mTabs.size() + "개 · " + mPrefs.host() + ":" + mPrefs.port();
                 }
             });
         }
         mSettings.show();
+    }
+
+    /**
+     * WT's "정보" row: version, the connection the app is actually using, and the one gesture
+     * worth documenting - long-press to select text, which is otherwise invisible.
+     */
+    private void showAbout() {
+        String version = "?";
+        try {
+            // BuildConfig is not generated by this hand-rolled build (build.sh drives aapt2 and
+            // javac directly), so the version comes from the manifest the same way the system
+            // sees it.
+            version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception ignored) {
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("fterm")
+                .setMessage("버전 " + version + "\n"
+                        + "세션 " + mTabs.size() + "개 · "
+                        + mPrefs.host() + ":" + mPrefs.port() + "\n\n"
+                        + "길게 누르기: 텍스트 선택\n"
+                        + "탭 길게 누르기: 탭 닫기\n"
+                        + "키 바 좌우 가장자리: F1~F12")
+                .setPositiveButton("닫기", null)
+                .show();
     }
 
     // ---------------------------------------------------------------- keys

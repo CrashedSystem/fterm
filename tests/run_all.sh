@@ -6,7 +6,7 @@
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 T=/data/data/com.termux/files/usr/tmp/fterm-jvm
-export FTERM_RUNDIR=${FTERM_RUNDIR:-/data/data/com.termux/files/usr/tmp/ftrund}
+export FTERM_RUNDIR=${FTERM_RUNDIR:-$HOME/.fterm}
 export FTERM_PORT=${FTERM_PORT:-8791}
 PORT=$FTERM_PORT
 
