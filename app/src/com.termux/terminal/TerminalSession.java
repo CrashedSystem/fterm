@@ -412,6 +412,18 @@ public final class TerminalSession extends TerminalOutput {
 
         @Override
         public void handleMessage(Message msg) {
+            // The emulator does not exist until the view is measured (attachSession calls
+            // updateSize, which needs non-zero view dimensions). Before that, requeue the
+            // data instead of dropping it - this is the "first shell is blank" bug: a cold
+            // start lost the ring replay because it arrived before the first layout pass.
+            if (mEmulator == null && msg.what == MSG_NEW_INPUT) {
+                // Wait for the first layout pass (updateSize creates the emulator) and
+                // try again - the replay data stays in the queue untouched. Only NEW_INPUT
+                // waits here: PROCESS_EXITED must not be deferred forever, or a session
+                // that dies before first layout never reports finished.
+                sendEmptyMessageDelayed(msg.what, 50);
+                return;
+            }
             int bytesRead = mProcessToTerminalIOQueue.read(mReceiveBuffer, false);
             if (bytesRead > 0) {
                 mEmulator.append(mReceiveBuffer, bytesRead);
@@ -420,7 +432,7 @@ public final class TerminalSession extends TerminalOutput {
 
             if (msg.what == MSG_PROCESS_EXITED) {
                 int exitCode = (Integer) msg.obj;
-                cleanupResources(exitCode);
+                if (mEmulator != null) cleanupResources(exitCode);
 
                 String exitDescription = "\r\n[Process completed";
                 if (exitCode > 0) {

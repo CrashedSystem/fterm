@@ -304,6 +304,16 @@ public final class TerminalView extends View {
         setTopRow(0, false);
 
         updateSize();
+        if (mEmulator == null) {
+            // Cold start: the view is not measured yet, so updateSize() returned without
+            // creating the emulator - and any ring replay delivered before the first
+            // layout pass had nowhere to go (the "first shell is blank" bug). Create the
+            // emulator at a default size now; updateSize() resizes it after layout.
+            mTermSession.updateSize(80, 24,
+                    (int) mRenderer.getFontWidth(), (int) mRenderer.getFontLineSpacing());
+            mEmulator = mTermSession.getEmulator();
+            mClient.onEmulatorSet();
+        }
 
         // Tell the new program whether the window is focused right now. A fresh TUI starts
         // assuming focus "unknown"; giving it the real state on attach means a TUI opened in
