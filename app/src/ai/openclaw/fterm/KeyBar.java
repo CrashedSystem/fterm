@@ -227,18 +227,23 @@ final class KeyBar {
                 int actionId = ev.getAction();
                 if (actionId == android.view.MotionEvent.ACTION_DOWN) {
                     final Handler h = new Handler();
+                    final Runnable[] starter = new Runnable[1];
                     final Runnable[] chain = new Runnable[1];
                     chain[0] = () -> {
                         action.run();
                         h.postDelayed(chain[0], 60);
                     };
-                    v.setTag(R.id.repeat_tag, new Runnable[]{chain[0]});
-                    v.setTag(R.id.repeat_handler, h);
-                    action.run();
-                    h.postDelayed(() -> {
+                    starter[0] = () -> {
                         action.run();
                         h.postDelayed(chain[0], 60);
-                    }, 350);
+                    };
+                    // BOTH runnables under one tag - cancelling only the chain left the
+                    // starter alive, which re-spawned it after every short press (the
+                    // "one tap, endless buzz" bug).
+                    v.setTag(R.id.repeat_tag, new Runnable[]{starter[0], chain[0]});
+                    v.setTag(R.id.repeat_handler, h);
+                    action.run();
+                    h.postDelayed(starter[0], 350);
                     v.getParent().requestDisallowInterceptTouchEvent(true);
                 } else if (actionId == android.view.MotionEvent.ACTION_UP
                         || actionId == android.view.MotionEvent.ACTION_CANCEL) {
