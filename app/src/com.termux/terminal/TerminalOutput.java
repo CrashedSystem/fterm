@@ -24,6 +24,18 @@ public abstract class TerminalOutput {
     /** Notify the terminal client that text should be pasted from clipboard. */
     public abstract void onPasteTextFromClipboard();
 
+    /**
+     * The current clipboard text, for OSC 52 read requests (`ESC ] 52 ; c ; ?`).
+     *
+     * Return null to decline the read: that is the safe default, because a program can
+     * silently harvest the clipboard. Callers that opt in (fterm's session) return the
+     * clipboard, which is what makes opencode's paste work at all - its TUI cannot read
+     * the Android clipboard itself and asks through this escape.
+     */
+    public String getClipboardText() {
+        return null;
+    }
+
     /** Notify the terminal client that a bell character (ASCII 7, bell, BEL, \a, ^G)) has been received. */
     public abstract void onBell();
 

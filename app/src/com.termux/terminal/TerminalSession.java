@@ -332,6 +332,15 @@ public final class TerminalSession extends TerminalOutput {
         mClient.onPasteTextFromClipboard(this);
     }
 
+    /**
+     * The OSC 52 read path: the client decides whether programs may harvest the clipboard.
+     * The session forwards to its client, which has the Android context to read it.
+     */
+    @Override
+    public String getClipboardText() {
+        return mClient.getClipboardText(this);
+    }
+
     @Override
     public void onBell() {
         mClient.onBell(this);

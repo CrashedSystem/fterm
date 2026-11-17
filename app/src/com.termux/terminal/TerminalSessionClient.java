@@ -18,6 +18,13 @@ public interface TerminalSessionClient {
 
     void onPasteTextFromClipboard(TerminalSession session);
 
+    /**
+     * The clipboard text for an OSC 52 read request, or null to decline the read.
+     * Declining is the safe default: a program can silently harvest the clipboard.
+     * The app opts in when the user would expect a paste to work.
+     */
+    String getClipboardText(TerminalSession session);
+
     void onBell(TerminalSession session);
 
     void onColorsChanged(TerminalSession session);

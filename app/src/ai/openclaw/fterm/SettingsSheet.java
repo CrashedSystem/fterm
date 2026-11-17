@@ -118,47 +118,51 @@ final class SettingsSheet {
         keys.setPadding(0, dp(12), 0, 0);
         box.addView(keys);
 
+        // ---- key bar editor: chips in one wrap row ----------------------------
         TextView keyEditLabel = label("키 바 편집");
-        keyEditLabel.setPadding(0, dp(12), 0, dp(4));
+        keyEditLabel.setPadding(0, dp(12), 0, dp(2));
         box.addView(keyEditLabel);
         TextView keyEditHint = new TextView(mActivity);
-        keyEditHint.setText("아래 목록에서 탭: 추가/삭제. 화살표: 순서 변경. 변경은 즉시 저장됩니다.");
+        keyEditHint.setText("←→: 순서 변경 · 제거: 키를 목록에서 뺌 · + : 키 추가");
         keyEditHint.setTextColor(0xff8a8a8a);
         keyEditHint.setTextSize(11);
+        keyEditHint.setPadding(0, 0, 0, dp(4));
         box.addView(keyEditHint);
 
-        // The catalogue: every key the bar can have. Tapped keys toggle in/out of the bar;
-        // the arrows beside each selected key move it left/right in the bar's order.
-        java.util.LinkedHashMap<String, String> cat = new java.util.LinkedHashMap<>();
-        for (String[] c : KeyBar.CATALOGUE) cat.put(c[1], c[0]);
-        final java.util.ArrayList<String> current = new java.util.ArrayList<>(mHost.keybarKeys());
+        final LinearLayout chipRow = new LinearLayout(mActivity);
+        chipRow.setOrientation(LinearLayout.VERTICAL);
+        // Wrap: chips flow onto as many lines as needed.
+        final java.util.ArrayList<String> chips = new java.util.ArrayList<>(mHost.keybarKeys());
 
-        box.addView(orderRow(current, cat, null));
-        for (int i = 0; i < current.size(); i++) {
-            final int pos = i;
-            box.addView(orderRow(current, cat, pos));
-        }
-
-        TextView addLabel = new TextView(mActivity);
-        addLabel.setText("추가 가능한 키 (탭하여 추가):");
-        addLabel.setTextColor(0xffaaaaaa);
-        addLabel.setTextSize(12);
-        addLabel.setPadding(0, dp(10), 0, dp(2));
-        box.addView(addLabel);
-        boolean any = false;
-        for (String spec : cat.keySet()) {
-            if (!current.contains(spec)) {
-                box.addView(addRow(current, cat, spec));
-                any = true;
+        final Runnable[] redrawHolder = new Runnable[1];
+        Runnable redraw = () -> {
+            chipRow.removeAllViews();
+            for (int i = 0; i < chips.size(); i++) {
+                final int pos = i;
+                String spec = chips.get(pos);
+                chipRow.addView(chip(KeyBar.labelOf(spec), () -> {
+                    chips.remove(pos);
+                    mHost.onKeybarKeys(chips);
+                    redrawHolder[0].run();
+                }, pos > 0 ? () -> {
+                    chips.add(pos - 1, chips.remove(pos));
+                    mHost.onKeybarKeys(chips);
+                    redrawHolder[0].run();
+                } : null, pos < chips.size() - 1 ? () -> {
+                    chips.add(pos + 1, chips.remove(pos));
+                    mHost.onKeybarKeys(chips);
+                    redrawHolder[0].run();
+                } : null));
             }
-        }
-        if (!any) {
-            TextView none = new TextView(mActivity);
-            none.setText("모두 추가됨");
-            none.setTextColor(0xff666666);
-            none.setTextSize(12);
-            box.addView(none);
-        }
+            Button addAll = new Button(mActivity);
+            addAll.setText("+ 키 추가");
+            addAll.setAllCaps(false);
+            addAll.setOnClickListener(v -> showAddDialog(chips, redrawHolder[0]));
+            chipRow.addView(addAll);
+        };
+        redrawHolder[0] = redraw;
+        redraw.run();
+        box.addView(chipRow);
 
         TextView about = new TextView(mActivity);
         about.setText("\n" + mHost.statusLine()
@@ -173,93 +177,77 @@ final class SettingsSheet {
                 .setPositiveButton("닫기", null)
                 .show();
     }
-    /** One row of the key editor: the key label, order arrows, and a delete button. */
-    private android.view.View orderRow(java.util.ArrayList<String> current,
-                                       java.util.LinkedHashMap<String, String> cat,
-                                       Integer position) {
+    /**
+     * One key editor row: the key name on the left, then order arrows and remove - all
+     * full-height touch targets (44dp buttons in a 52dp row). Vertical list, not chips:
+     * the chip row was too small to hit reliably on a phone.
+     */
+    private android.view.View chip(String label, Runnable remove,
+                                   Runnable moveLeft, Runnable moveRight) {
         LinearLayout row = new LinearLayout(mActivity);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        row.setPadding(0, dp(3), 0, dp(3));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rowLp.bottomMargin = dp(2);
+        row.setLayoutParams(rowLp);
 
-        if (position == null) {
-            TextView head = new TextView(mActivity);
-            head.setText("키 바에 있는 키:");
-            head.setTextColor(0xffaaaaaa);
-            head.setTextSize(12);
-            head.setLayoutParams(new LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            row.addView(head);
-            return row;
-        }
-
-        final String spec = current.get(position);
-        final String label = cat.containsKey(spec) ? cat.get(spec) : KeyBar.labelOf(spec);
-
-        TextView name = new TextView(mActivity);
-        name.setText(label);
-        name.setTextSize(14);
-        name.setTextColor(0xffe6e6e6);
-        name.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        name.setLayoutParams(new LinearLayout.LayoutParams(0,
+        TextView t = new TextView(mActivity);
+        t.setText(label);
+        t.setTextSize(15);
+        t.setTextColor(0xffe6e6e6);
+        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        t.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        row.addView(name);
+        row.addView(t);
 
-        Button left = new Button(mActivity);
-        left.setText("\u2190");
-        left.setAllCaps(false);
-        left.setPadding(dp(8), 0, dp(8), 0);
-        left.setEnabled(position > 0);
-        left.setOnClickListener(v -> {
-            if (position > 0) {
-                String moved = current.remove((int) position);
-                current.add(position - 1, moved);
-                mHost.onKeybarKeys(current);
-                show();
-            }
-        });
-        row.addView(left);
+        Button l = new Button(mActivity);
+        l.setText("\u2190");
+        l.setAllCaps(false);
+        l.setPadding(dp(14), 0, dp(14), 0);
+        l.setEnabled(moveLeft != null);
+        l.setOnClickListener(v -> { if (moveLeft != null) moveLeft.run(); });
+        row.addView(l);
 
-        Button right = new Button(mActivity);
-        right.setText("\u2192");
-        right.setAllCaps(false);
-        right.setPadding(dp(8), 0, dp(8), 0);
-        right.setEnabled(position < current.size() - 1);
-        right.setOnClickListener(v -> {
-            if (position < current.size() - 1) {
-                String moved = current.remove((int) position);
-                current.add(position + 1, moved);
-                mHost.onKeybarKeys(current);
-                show();
-            }
-        });
-        row.addView(right);
+        Button r = new Button(mActivity);
+        r.setText("\u2192");
+        r.setAllCaps(false);
+        r.setPadding(dp(14), 0, dp(14), 0);
+        r.setEnabled(moveRight != null);
+        r.setOnClickListener(v -> { if (moveRight != null) moveRight.run(); });
+        row.addView(r);
 
-        Button del = new Button(mActivity);
-        del.setText("삭제");
-        del.setAllCaps(false);
-        del.setOnClickListener(v -> {
-            current.remove(position);
-            mHost.onKeybarKeys(current);
-            show();
-        });
-        row.addView(del);
+        Button x = new Button(mActivity);
+        x.setText("제거");
+        x.setAllCaps(false);
+        x.setOnClickListener(v -> remove.run());
+        row.addView(x);
         return row;
     }
 
-    /** A selectable row for a catalogue key not currently on the bar: tap to add. */
-    private android.view.View addRow(java.util.ArrayList<String> current,
-                                     java.util.LinkedHashMap<String, String> cat,
-                                     String spec) {
-        Button add = new Button(mActivity);
-        add.setText("+ " + (cat.containsKey(spec) ? cat.get(spec) : KeyBar.labelOf(spec)));
-        add.setAllCaps(false);
-        add.setOnClickListener(v -> {
-            current.add(spec);
-            mHost.onKeybarKeys(current);
-            show();
-        });
-        return add;
+    /** The catalogue as a picker: one dialog, tap a key to add it, stays open. */
+    private void showAddDialog(java.util.ArrayList<String> chips, Runnable redraw) {
+        java.util.ArrayList<String> available = new java.util.ArrayList<>();
+        for (String[] c : KeyBar.CATALOGUE) {
+            if (!chips.contains(c[1])) available.add(c[1]);
+        }
+        if (available.isEmpty()) {
+            android.widget.Toast.makeText(mActivity, "추가할 수 있는 키가 없습니다", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        CharSequence[] names = new CharSequence[available.size()];
+        for (int i = 0; i < available.size(); i++) {
+            names[i] = KeyBar.labelOf(available.get(i));
+        }
+        new AlertDialog.Builder(mActivity)
+                .setTitle("키 추가")
+                .setItems(names, (d, which) -> {
+                    chips.add(available.get(which));
+                    mHost.onKeybarKeys(chips);
+                    redraw.run();
+                })
+                .setNegativeButton("닫기", null)
+                .show();
     }
 
     private TextView label(String text) {

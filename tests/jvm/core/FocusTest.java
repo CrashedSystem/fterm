@@ -27,6 +27,7 @@ public class FocusTest {
       public void onSessionFinished(com.termux.terminal.TerminalSession s) {}
       public void onCopyTextToClipboard(com.termux.terminal.TerminalSession s, String t) {}
       public void onPasteTextFromClipboard(com.termux.terminal.TerminalSession s) {}
+      public String getClipboardText(com.termux.terminal.TerminalSession s) { return null; }
       public void onTerminalCursorStateChange(boolean state) {}
       public void setTerminalShellPid(com.termux.terminal.TerminalSession s, int pid) {}
       public Integer getTerminalCursorStyle() { return 0; }

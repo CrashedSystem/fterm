@@ -477,6 +477,11 @@ public final class TerminalView extends View {
             /** Clipboard state for {@link #trackClipboardTyping}. */
     private String mClipText = "";
     private int mClipProgress = 0;
+    private long mClipLastAt = 0;
+    /** Manual typing rarely lands under 60ms/char; a keyboard-internal paste does. */
+    private static final long CLIPBOARD_TYPING_GAP_MS = 60;
+    /** A paste worth rewriting must be at least this long - short clips collide with words. */
+    private static final int CLIPBOARD_MIN_LENGTH = 8;
 
     /**
      * Recognise a clipboard paste that the keyboard delivers character by character.
@@ -489,17 +494,26 @@ public final class TerminalView extends View {
      */
     private boolean trackClipboardTyping(CharSequence text) {
         String clip = getClipboardText();
-        if (clip == null || clip.isEmpty() || clip.length() < 3) {
+        if (clip == null || clip.isEmpty() || clip.length() < CLIPBOARD_MIN_LENGTH) {
             resetClipboardTracking();
             return false;
         }
         String t = text.toString();
         int pos = mClipProgress;
+        // Too long since the last matching commit: this is the user typing words that
+        // happen to match the clip, not a paste. (The original trigger for this whole
+        // feature - typing "ls" while "ls" sat in the clipboard - must stay typing.)
+        long now = System.currentTimeMillis();
+        if (pos > 0 && now - mClipLastAt > CLIPBOARD_TYPING_GAP_MS) {
+            resetClipboardTracking();
+            return false;
+        }
         if (pos >= clip.length() || !clip.startsWith(t, pos)) {
             resetClipboardTracking();
             return false;
         }
         pos += t.length();
+        mClipLastAt = now;
         if (pos < clip.length()) {
             // Mid-paste: the characters are already on screen (and in the shell's input).
             // Remember how far we are; the completion step below rewinds and re-sends.

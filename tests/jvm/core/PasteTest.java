@@ -49,6 +49,7 @@ public class PasteTest {
             public void onSessionFinished(com.termux.terminal.TerminalSession s) {}
             public void onCopyTextToClipboard(com.termux.terminal.TerminalSession s, String t) {}
             public void onPasteTextFromClipboard(com.termux.terminal.TerminalSession s) {}
+            public String getClipboardText(com.termux.terminal.TerminalSession s) { return null; }
             public void onBell(com.termux.terminal.TerminalSession s) {}
             public void onColorsChanged(com.termux.terminal.TerminalSession s) {}
             public void onNotification(com.termux.terminal.TerminalSession s, String t, String b) {}
@@ -120,8 +121,11 @@ public class PasteTest {
         int at = src.indexOf("private void pasteClipboard()");
         check(at > 0, "pasteClipboard() exists");
         String body = src.substring(at, Math.min(src.length(), at + 1400));
-        check(body.contains("emulator.paste("), "pasteClipboard() calls emulator.paste()");
-        check(body.contains("DECSET 2004") || body.contains("bracketed paste"),
+        check(body.contains("pasteText("), "pasteClipboard() routes through pasteText()");
+        // The why-comment moved with the paste path into pasteText().
+        int pt = src.indexOf("private void pasteText(");
+        String ptBody = src.substring(pt, Math.min(src.length(), pt + 1400));
+        check(ptBody.contains("DECSET 2004") || ptBody.contains("bracketed paste"),
                 "and says why");
 
         System.out.println("ok  " + pass + " paste assertions");

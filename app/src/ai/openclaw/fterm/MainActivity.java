@@ -1192,11 +1192,30 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private void pasteClipboard() {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null || !cm.hasPrimaryClip()) return;
-        ClipData.Item item = cm.getPrimaryClip().getItemAt(0);
+        ClipData clip = cm.getPrimaryClip();
+        ClipData.Item item = clip.getItemAt(0);
         if (item == null) return;
+
+        // An image clipboard has no text: coerceToText would give null or a bare "res/..."
+        // URI string. ClipboardImage saves the bitmap and this pastes the PATH - opencode
+        // attaches file:// URIs in the prompt, so a pasted screenshot becomes an image the
+        // model can see.
+        if (ClipboardImage.isImage(this, clip)) {
+            String path = ClipboardImage.save(this, ClipboardImage.uriOf(clip));
+            if (path != null) {
+                pasteText(path);
+                Toast.makeText(this, "이미지 경로 붙여넣음: " + path, Toast.LENGTH_LONG).show();
+                return;
+            }
+        }
+
         CharSequence text = item.coerceToText(this);
         if (text == null || text.length() == 0) return;
+        pasteText(text.toString());
+    }
 
+    /** Send text through the emulator as a paste (bracketed when the program asked). */
+    private void pasteText(String text) {
         // Through the emulator, not the session: Emulator.paste() strips escapes, turns
         // newlines into CR, and - the part that matters here - wraps the text in
         // \e[200~ .. \e[201~ when the running program asked for bracketed paste
@@ -1206,11 +1225,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         TerminalEmulator emulator = mActive == null || mActive.session == null
                 ? null : mActive.session.getEmulator();
         if (emulator != null) {
-            emulator.paste(text.toString());
+            emulator.paste(text);
         } else if (mActive != null && mActive.session != null) {
-            mActive.session.write(text.toString());
+            mActive.session.write(text);
         }
     }
+
 
     // logging, routed nowhere in release
     @Override public void logError(String t, String m) { android.util.Log.e(t, m); }
@@ -1264,6 +1284,21 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     @Override
     public void onPasteTextFromClipboard(TerminalSession session) {
         pasteClipboard();
+    }
+
+    /**
+     * OSC 52 read: the program in the terminal asked for the clipboard (opencode's TUI
+     * pastes this way). Returning the text is what makes its paste work; the alternative
+     * is a paste that silently does nothing.
+     */
+    @Override
+    public String getClipboardText(TerminalSession session) {
+        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (cm == null || !cm.hasPrimaryClip()) return null;
+        ClipData.Item item = cm.getPrimaryClip().getItemAt(0);
+        if (item == null) return null;
+        CharSequence text = item.coerceToText(this);
+        return text == null ? null : text.toString();
     }
 
     @Override

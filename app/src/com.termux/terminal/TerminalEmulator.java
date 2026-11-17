@@ -2894,16 +2894,32 @@ public final class TerminalEmulator {
                     }
                 }
                 break;
-            case 52: // Manipulate Selection Data. Skip the optional first selection parameter(s).
+            case 52: { // Manipulate Selection Data. Skip the optional first selection parameter(s).
                 int startIndex = textParameter.indexOf(";") + 1;
+                String data = textParameter.substring(startIndex);
+                // "52;c;?" is a READ request: the program asks for the clipboard. opencode's
+                // TUI pastes this way because it cannot reach the Android clipboard itself.
+                // A "?" does not decode as base64, so the write path below would just log an
+                // error - answer the read first, and only when the payload is not the query.
+                if (data.equals("?")) {
+                    String clip = mSession.getClipboardText();
+                    if (clip != null) {
+                        String b64 = Base64.encodeToString(clip.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
+                        mSession.write("\033]52;c;" + b64 + "\007");
+                    } else {
+                        // Declined: answer with an empty payload so the program does not wait.
+                        mSession.write("\033]52;c;\007");
+                    }
+                    break;
+                }
                 try {
-                    String clipboardText = new String(Base64.decode(textParameter.substring(startIndex), Base64.DEFAULT), StandardCharsets.UTF_8);
+                    String clipboardText = new String(Base64.decode(data, Base64.DEFAULT), StandardCharsets.UTF_8);
                     mSession.onCopyTextToClipboard(clipboardText);
                 } catch (Exception e) {
                     Logger.logError(mClient, LOG_TAG, "OSC Manipulate selection, invalid string '" + textParameter + "'");
                 }
                 break;
-            case 104:
+            }            case 104:
                 // "104;$c" → Reset Color Number $c. It is reset to the color specified by the corresponding X
                 // resource. Any number of c parameters may be given. These parameters correspond to the ANSI colors 0-7,
                 // their bright versions 8-15, and if supported, the remainder of the 88-color or 256-color table. If no
