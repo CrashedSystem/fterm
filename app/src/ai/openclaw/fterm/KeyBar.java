@@ -277,12 +277,7 @@ final class KeyBar {
         t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         // A raised key: top highlight + bottom shade make it sit above the bar instead of
         // being a flat pill painted onto it.
-        GradientDrawable d = new GradientDrawable();
-        d.setColors(new int[]{KEY_EDGE, bg, bg, 0xff202329});
-        d.setOrientation(GradientDrawable.Orientation.TL_BR);
-        d.setCornerRadius(dp(9));
-        d.setStroke(dp(1), 0xff626a75);
-        t.setBackground(d);
+        t.setBackground(pillBackground());
         // 36dp tall inside a 50dp bar: a finger target the platform would accept, with the
         // visual weight of a key rather than a label.
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -293,18 +288,6 @@ final class KeyBar {
         t.setMinWidth(dp(38));
         t.setClickable(true);
         t.setFocusable(true);
-        // Pressed state via a state list: the framework swaps the drawable on touch-down
-        // and restores on release, with no manual invalidation. A touch listener + mutable
-        // gradient worked on some devices and showed nothing on others.
-        android.graphics.drawable.GradientDrawable pressed = new android.graphics.drawable.GradientDrawable();
-        pressed.setColors(new int[]{0xff565b64, KEY_PRESSED, KEY_PRESSED, 0xff33363b});
-        pressed.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TL_BR);
-        pressed.setCornerRadius(dp(8));
-        pressed.setStroke(dp(1), 0xff5b616b);
-        android.graphics.drawable.StateListDrawable sl = new android.graphics.drawable.StateListDrawable();
-        sl.addState(new int[]{android.R.attr.state_pressed}, pressed);
-        sl.addState(new int[]{}, d);
-        t.setBackground(sl);
         return t;
     }
 
@@ -321,17 +304,37 @@ final class KeyBar {
                 case "shift": on = mShift; break;
                 default: continue;
             }
-            // The background is a StateListDrawable (pressed state); the latched colour
-            // belongs to the resting gradient inside it.
-            android.graphics.drawable.Drawable bg = v.getBackground();
-            if (bg instanceof android.graphics.drawable.StateListDrawable) {
-                bg.mutate();
-                ((GradientDrawable) bg.getCurrent()).setColor(on ? KEY_ON : KEY);
-                v.invalidate();
-            } else if (bg instanceof GradientDrawable) {
-                ((GradientDrawable) bg).setColor(on ? KEY_ON : KEY);
+            // Latched = a SOLID blue background replaces the state list entirely. Toggling
+            // through a StateListDrawable's inner gradient was unreliable: getCurrent()
+            // returns whichever state drawable is active, so the recolour sometimes landed
+            // on the pressed copy and the latch looked like it did nothing.
+            if (on) {
+                GradientDrawable onBg = new GradientDrawable();
+                onBg.setColor(KEY_ON);
+                onBg.setCornerRadius(dp(9));
+                v.setBackground(onBg);
+            } else if (!(v.getBackground() instanceof android.graphics.drawable.StateListDrawable)) {
+                v.setBackground(pillBackground());
             }
         }
+    }
+
+    /** The resting key background: the gradient + hairline a fresh pill gets. */
+    private android.graphics.drawable.Drawable pillBackground() {
+        GradientDrawable d = new GradientDrawable();
+        d.setColors(new int[]{KEY_EDGE, KEY, KEY, 0xff202329});
+        d.setOrientation(GradientDrawable.Orientation.TL_BR);
+        d.setCornerRadius(dp(9));
+        d.setStroke(dp(1), 0xff626a75);
+        android.graphics.drawable.StateListDrawable sl = new android.graphics.drawable.StateListDrawable();
+        GradientDrawable pressed = new GradientDrawable();
+        pressed.setColors(new int[]{0xff565b64, KEY_PRESSED, KEY_PRESSED, 0xff33363b});
+        pressed.setOrientation(GradientDrawable.Orientation.TL_BR);
+        pressed.setCornerRadius(dp(9));
+        pressed.setStroke(dp(1), 0xff5b616b);
+        sl.addState(new int[]{android.R.attr.state_pressed}, pressed);
+        sl.addState(new int[]{}, d);
+        return sl;
     }
 
     private int dp(float v) {

@@ -253,11 +253,30 @@ public final class SocketTransport implements SessionTransport {
         if (s != null) {
             byte[] text = ("\r\n[fterm] " + reason + "\r\n").getBytes(StandardCharsets.UTF_8);
             s.transportDeliver(text, text.length);
-            // transportExit() clears the pid on the session, so isRunning() becomes false and
-            // the UI's "press Enter to close" works even when the socket died on its own.
-            s.transportExit(-1);
         }
+        // Try to reconnect instead of declaring the shell dead. A backgrounded app loses
+        // its socket to a doze kill; the shell itself is alive on the daemon, so killing
+        // the session here is what made "back out of the app" kill the shell. Three quick
+        // attempts; if they all fail the transport reports dead and the UI's Enter-to-close
+        // path takes over as before.
         closeQuietly();
+        new Thread(() -> {
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                try { Thread.sleep(1000); } catch (InterruptedException ignored) { return; }
+                TerminalSession sess = mSession;
+                if (sess == null) return;
+                mRunning.set(true);
+                try {
+                    run();   // reconnects, re-opens the session, feeds the ring replay
+                    return;  // connected and running again
+                } catch (Throwable t) {
+                    mRunning.set(false);
+                }
+            }
+            // All attempts failed: the shell is effectively unreachable for this session.
+            TerminalSession sess = mSession;
+            if (sess != null) sess.transportExit(-1);
+        }, "fterm-reconnect[" + mSessionId + "]").start();
     }
 
     private void closeQuietly() {
