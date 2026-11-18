@@ -608,7 +608,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     private void addTabChip(Tab tab) {
-        TabStrip.Chip chip = new TabStrip(this).create(tab.title,
+        TabStrip.Chip chip = new TabStrip(this, mPrefs.tabIcon()).create(tab.title,
                 () -> activate(tab), () -> confirmClose(tab));
         tab.plate = chip.plate;
         tab.chip = chip.title;
@@ -618,11 +618,16 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         updateChip(tab);
     }
 
+    /** Re-tint and re-build every tab's mark after the tab icon preference changes. */
+    void refreshTabIcons() {
+        for (Tab t : mTabs) updateChip(t);
+    }
+
     /** Repaint one tab; the strip owns the shapes and the activity owns which tab is active. */
     private void updateChip(Tab tab) {
         if (tab.chipView == null) return;
         int[] palette = Schemes.colors(mScheme, mCustom);
-        new TabStrip(this).paint(tab.chipView, tab.title, tab == mActive,
+        new TabStrip(this, mPrefs.tabIcon()).paint(tab.chipView, tab.title, tab == mActive,
                 palette[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND],
                 Schemes.isOled(mScheme, mCustom));
     }

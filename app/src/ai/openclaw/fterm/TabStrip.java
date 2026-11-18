@@ -28,12 +28,27 @@ final class TabStrip {
         LinearLayout plate;
         TextView title;
         TextView close;
+        /** The icon slot, replaced rather than re-tinted when the setting changes. */
+        View icon;
+        /** What {@link #icon} was built from, so a repaint knows whether to rebuild it. */
+        String iconTag;
+        int iconTint;
     }
 
-    private final Activity mActivity;
+    /** The inactive tab's icon tint: present, but not competing with the title. */
+    private static final int ICON_DIM = 0xff8a8a8a;
 
-    TabStrip(Activity activity) {
+    private final Activity mActivity;
+    private final String mIcon;
+
+    /**
+     * @param iconId the tab icon preference; null means {@link TabIcons#DEFAULT_ID}. Chips
+     *               already on screen keep the icon they were built with, so the caller
+     *               rebuilds the strip when this changes.
+     */
+    TabStrip(Activity activity, String iconId) {
         mActivity = activity;
+        mIcon = iconId;
     }
 
     /**
@@ -59,15 +74,9 @@ final class TabStrip {
             return true;
         });
 
-        TextView icon = new TextView(mActivity);
-        icon.setText(">_");
-        icon.setTextSize(9);
-        icon.setTextColor(0xff8a8a8a);
-        UiFont.apply(icon, false);
-        icon.setGravity(Gravity.CENTER);
-        icon.setIncludeFontPadding(false);
-        icon.setLayoutParams(new LinearLayout.LayoutParams(dp(18), dp(34)));
-        plate.addView(icon);
+        // The icon is added by paint(), not here: paint is the one place that knows the
+        // active state, and building it twice would show the dim glyph on the active tab
+        // for the frame between create and the first paint.
 
         TextView label = new TextView(mActivity);
         label.setTextSize(12);
@@ -134,6 +143,26 @@ final class TabStrip {
         if (active) d.setStroke(dp(2), 0xff4a7fc1);
         chip.plate.setBackground(d);
 
+        // The icon follows the title's weight: a bright title beside a dim mark reads as a
+        // broken image, and the active tab is the one the eye is on. A plain tint is not
+        // enough - Glyph bakes its colour in at construction, and the preference itself can
+        // change between paints - so the view is rebuilt whenever either input changed.
+        int tint = active ? 0xffcfd6e4 : ICON_DIM;
+        if (chip.icon == null || !mIcon.equals(chip.iconTag) || chip.iconTint != tint) {
+            int at = chip.plate.indexOfChild(chip.icon);
+            View fresh = TabIcons.build(mActivity, mIcon, tint);
+            if (chip.icon == null) {
+                // First paint: the icon belongs before the title, which is the only other
+                // child until the close box is added below.
+                chip.plate.addView(fresh, 0);
+            } else {
+                chip.plate.removeView(chip.icon);
+                chip.plate.addView(fresh, Math.max(0, at));
+            }
+            chip.icon = fresh;
+            chip.iconTag = mIcon;
+            chip.iconTint = tint;
+        }
         chip.title.setTextColor(active ? 0xffffffff : 0xff9a9a9a);
         chip.close.setTextColor(active ? 0xffcfcfcf : 0x00000000);
         chip.close.setVisibility(active ? View.VISIBLE : View.INVISIBLE);

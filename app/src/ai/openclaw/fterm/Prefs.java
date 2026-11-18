@@ -103,6 +103,18 @@ public final class Prefs {
     public String startShell() { return sp().getString("start_shell", ""); }
     public void setStartShell(String v) { sp().edit().putString("start_shell", v == null ? "" : v).apply(); }
 
+    /**
+     * The mark at the left of every tab: a glyph id, or literal text.
+     *
+     * <p>Stored as whatever the user entered. {@link TabIcons} is what decides whether that
+     * is one of its paths or a string to print, so adding a glyph later does not need a
+     * migration - only a longer switch in one place.
+     */
+    public String tabIcon() { return sp().getString("tab_icon", TabIcons.DEFAULT_ID); }
+    public void setTabIcon(String v) {
+        sp().edit().putString("tab_icon", v == null ? "" : v).apply();
+    }
+
     /** Some IMEs (Samsung in particular) mangle a TYPE_NULL input connection. */
     /**
      * Some IMEs mangle a TYPE_NULL connection: the Samsung keyboard commits each jamo of a

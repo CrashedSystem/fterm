@@ -41,6 +41,41 @@ ICONS = {
     "keyboard":  ("Keyboard", 24),
     "split":     ("Arrow Split", 24),
     "code":      ("Code", 24),
+
+    # Tab mark candidates. A tab icon is the one glyph a user looks at all day, so the
+    # set is broad on purpose: a terminal is used for ssh, for code, for a database
+    # console, for a log tail, and the mark is how a glance tells those tabs apart.
+    "prompt":    ("Prompt", 24),
+    "server":    ("Server", 24),
+    "database":  ("Database", 24),
+    "cloud":     ("Cloud", 24),
+    "globe":     ("Globe", 24),
+    "folder":    ("Folder", 24),
+    "document":  ("Document", 24),
+    "star":      ("Star", 24),
+    "heart":     ("Heart", 24),
+    "shield":    ("Shield", 24),
+    "flash":     ("Flash", 24),
+    "cube":      ("Cube", 24),
+    "puzzle":    ("Puzzle Piece", 24),
+    "wrench":    ("Wrench", 24),
+    "brush":     ("Paint Brush", 24),
+    "eye":       ("Eye", 24),
+    "fire":      ("Fire", 24),
+    "camera":    ("Camera", 24),
+    "gift":      ("Gift", 24),
+    "rocket":    ("Rocket", 24),
+    "bug":       ("Bug", 24),
+    "beaker":    ("Beaker", 24),
+    "flashlight": ("Flashlight", 24),
+    "home":      ("Home", 24),
+    "chat":      ("Chat", 24),
+    "mail":      ("Mail", 24),
+    "phone":     ("Phone", 24),
+    "print":     ("Print", 24),
+    "ruler":     ("Ruler", 24),
+    "scan":      ("Scan", 24),
+    "keyboard2": ("Keyboard", 24),
 }
 
 BASE = ("https://raw.githubusercontent.com/microsoft/fluentui-system-icons/main/"

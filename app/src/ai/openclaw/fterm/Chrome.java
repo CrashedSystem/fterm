@@ -527,11 +527,12 @@ final class Chrome {
      * the difference between an icon set that belongs next to Windows Terminal and one that
      * merely resembles it.
      */
-    private static final class Glyph extends android.graphics.drawable.Drawable {
+    static final class Glyph extends android.graphics.drawable.Drawable {
         private final android.graphics.Path p = new android.graphics.Path();
         private final android.graphics.Paint paint = new android.graphics.Paint(
                 android.graphics.Paint.ANTI_ALIAS_FLAG);
 
+        /** Package-private so the tab chip can draw the same glyph set at its own tint. */
         Glyph(String name, int color) {
             paint.setColor(color);
             paint.setStyle(android.graphics.Paint.Style.FILL);

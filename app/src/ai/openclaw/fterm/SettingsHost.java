@@ -42,6 +42,12 @@ final class SettingsHost implements SettingsSheet.Host {
         a.applyRetro();
     }
 
+    @Override public String tabIcon() { return a.mPrefs.tabIcon(); }
+    @Override public void onTabIcon(String id) {
+        a.mPrefs.setTabIcon(id);
+        a.refreshTabIcons();   // existing chips were built with the old mark
+    }
+
     @Override public String fontFamily() { return a.mPrefs.fontFamily(); }
     @Override public void onFontFamily(String id) { a.applyFontFamily(id); }
 

@@ -70,6 +70,31 @@ public class TabTitleTest {
         check(src.contains("if (t.userTitled) return;"),
                 "a renamed tab still ignores the shell's title");
 
+        // 5. The tab's mark is a preference, and it is not hard-coded in the chip.
+        //
+        //    ">_" was a literal in TabStrip, so there was no way to change it short of
+        //    editing the source. It is a preference now, and the two things that make that
+        //    real are: the value reaches the chip builder, and the chip knows how to rebuild
+        //    the mark when the value changes (Glyph bakes its colour in at construction, so
+        //    a changed tint is a new drawable, and a changed kind is a new view).
+        check(!strip.contains("setText(\">_\")"),
+                "the default mark is no longer a literal in the chip");
+        check(src.contains("mPrefs.tabIcon()"),
+                "the chip is built from the tab icon preference");
+        check(src.contains("refreshTabIcons()"),
+                "and existing tabs are repainted when it changes");
+        check(strip.contains("chip.iconTag"),
+                "the chip remembers what the mark was built from");
+        check(strip.contains("TabIcons.build("),
+                "and rebuilds it through the one place that knows both forms");
+
+        String icons = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get("app/src/ai/openclaw/fterm/TabIcons.java")), "UTF-8");
+        check(icons.contains("DEFAULT_ID = \">_\""), "the default is the prompt >_");
+        check(icons.contains("isGlyph("), "a value is either a glyph id or text");
+        // Unknown input must not be a blank slot: a tab with no mark reads as a bug.
+        check(icons.contains("DEFAULT_ID : id"), "an empty preference falls back to the default");
+
         System.out.println("TabTitleTest: " + pass + " assertions OK");
     }
 }

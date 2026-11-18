@@ -57,6 +57,11 @@ final class SettingsSheet {
 
         void onRetroEffect(boolean on);
 
+        /** The mark at the left of every tab: a glyph id or literal text. */
+        String tabIcon();
+
+        void onTabIcon(String id);
+
         /** The cursor shape: 0 block, 1 underline, 2 bar. */
         int cursorStyle();
 
@@ -673,6 +678,11 @@ final class SettingsSheet {
                 this::chooseCursor, false));
         card.addView(toggleCardRow("커서 깜빡임", "끄면 항상 보입니다",
                 mHost.cursorBlink(), mHost::onCursorBlink, true));
+        card.addView(valueRow("탭 아이콘", "탭 제목 앞의 작은 표시",
+                TabIcons.isGlyph(mHost.tabIcon())
+                        ? TabIcons.GLYPH_NAMES[glyphIndexOf(mHost.tabIcon())]
+                        : mHost.tabIcon(),
+                this::chooseTabIcon, false));
         card.addView(toggleCardRow("레트로 효과", "형광 글로우와 주사선 (Windows Terminal)",
                 mHost.retroEffect(), mHost::onRetroEffect, true));
     }
@@ -689,6 +699,126 @@ final class SettingsSheet {
                 })
                 .setNegativeButton("취소", null)
                 .show();
+    }
+
+    private static int glyphIndexOf(String id) {
+        for (int i = 0; i < TabIcons.GLYPHS.length; i++) {
+            if (TabIcons.GLYPHS[i].equals(id)) return i;
+        }
+        return 0;
+    }
+
+    /**
+     * The tab icon picker: a grid of every glyph, then whatever the user types.
+     *
+     * <p>A grid, not a list. The set grew to thirty-five because a tab mark is how a glance
+     * tells an ssh session from a database console, and a list that long is a scroll with no
+     * overview - the whole point of choosing an icon is seeing the candidates at once. Each
+     * cell draws the real mark with the same {@link TabIcons#build} the tab strip uses, so
+     * nothing here can promise a size the tab will not deliver.
+     */
+    private void chooseTabIcon() {
+        final int columns = 5;
+        // 5 columns at 62dp: wide enough for "데이터베이스" on two lines, narrow enough that
+        // the grid still fits a phone dialog without overflowing it.
+        final int CELL_DP = 62;
+        final java.util.List<String> ids = new java.util.ArrayList<>();
+        final java.util.List<String> names = new java.util.ArrayList<>();
+        for (int i = 0; i < TabIcons.GLYPHS.length; i++) {
+            ids.add(TabIcons.GLYPHS[i]);
+            names.add(TabIcons.GLYPH_NAMES[i]);
+        }
+        // The text default is a cell like any other, at the end. Its label is not the mark
+        // itself - the cell already draws ">_" above the label, and printing it twice reads
+        // as a duplicated row rather than as a name.
+        ids.add(TabIcons.DEFAULT_ID);
+        names.add("기본");
+
+        LinearLayout grid = new LinearLayout(mActivity);
+        grid.setOrientation(LinearLayout.VERTICAL);
+        grid.setPadding(0, dp(6), 0, dp(6));
+        // MATCH_PARENT so each row is as wide as the dialog. The rows are centred, and a
+        // wrap_content row has no width to centre inside: the final row holds one cell, so it
+        // would sit against the left edge while every other row is centred.
+        grid.setLayoutParams(new android.widget.ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
+        LinearLayout line = null;
+        for (int i = 0; i < ids.size(); i++) {
+            if (i % columns == 0) {
+                line = new LinearLayout(mActivity);
+                line.setOrientation(LinearLayout.HORIZONTAL);
+                line.setGravity(Gravity.CENTER);
+                line.setLayoutParams(new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                grid.addView(line);
+            }
+            final String id = ids.get(i);
+            boolean chosen = id.equals(mHost.tabIcon())
+                    || (i == ids.size() - 1 && !TabIcons.isGlyph(mHost.tabIcon()));
+
+            LinearLayout cell = new LinearLayout(mActivity);
+            cell.setOrientation(LinearLayout.VERTICAL);
+            cell.setGravity(Gravity.CENTER);
+            cell.setPadding(dp(4), dp(6), dp(4), dp(5));
+            cell.setBackground(chosen ? touchableSelected() : touchable());
+            // A fixed width, not weight. The dialog wraps this view in its own container, and
+            // weight inside a container whose width is resolved later collapses: the last
+            // row's lone cell came out half-size with its label hanging outside the fill.
+            // A dp width is the same on every row and needs no filler views.
+            cell.setLayoutParams(new LinearLayout.LayoutParams(dp(CELL_DP),
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+            cell.setOnClickListener(v -> {
+                mHost.onTabIcon(id);
+                holder[0].dismiss();
+                render();
+            });
+
+            // The mark sits in a tab-sized slot, so a cell is the tab at a glance.
+            LinearLayout slot = new LinearLayout(mActivity);
+            slot.setGravity(Gravity.CENTER);
+            slot.setLayoutParams(new LinearLayout.LayoutParams(dp(34), dp(34)));
+            slot.addView(TabIcons.build(mActivity, id, chosen ? TEXT : HINT));
+            cell.addView(slot);
+
+            TextView label = new TextView(mActivity);
+            label.setText(names.get(i));
+            label.setTextColor(chosen ? ACCENT : HINT);
+            label.setTextSize(9.5f);
+            // Two lines: a name like "데이터베이스" is one word and cannot wrap, so a
+            // single-line label truncates it to "데이터베…" and the name stops being a name.
+            label.setSingleLine(false);
+            label.setMaxLines(2);
+            label.setGravity(Gravity.CENTER);
+            label.setMaxWidth(dp(CELL_DP - 4));
+            cell.addView(label);
+
+            line.addView(cell);
+        }
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(mActivity);
+        scroll.setFillViewport(true);
+        scroll.addView(grid);
+
+        holder[0] = new android.app.AlertDialog.Builder(mActivity)
+                .setTitle("탭 아이콘")
+                .setView(scroll)
+                .setPositiveButton("직접 입력", (d, w) -> editTabIcon())
+                .setNegativeButton("취소", null)
+                .create();
+        holder[0].show();
+    }
+
+    /** A one-line prompt for a custom mark; the slot clips long text, so the note says so. */
+    private void editTabIcon() {
+        String current = mHost.tabIcon();
+        prompt("탭 아이콘", TabIcons.isGlyph(current) ? "" : current, ">_",
+                "한두 글자가 가장 잘 맞습니다. 길면 작게 그려집니다.",
+                v -> {
+                    mHost.onTabIcon(v.trim());
+                    render();
+                });
     }
 
     /**
@@ -1125,6 +1255,17 @@ final class SettingsSheet {
             return mActivity.getDrawable(tv.resourceId);
         }
         return null;
+    }
+
+    /** The ripple, plus a quiet fill so the chosen cell is visible before it is touched. */
+    private android.graphics.drawable.Drawable touchableSelected() {
+        android.graphics.drawable.Drawable base = touchable();
+        android.graphics.drawable.GradientDrawable fill = new android.graphics.drawable.GradientDrawable();
+        fill.setColor(0x224a9eff);
+        fill.setCornerRadius(dp(8));
+        if (base == null) return fill;
+        return new android.graphics.drawable.LayerDrawable(
+                new android.graphics.drawable.Drawable[]{fill, base});
     }
 
     private int dp(float v) {
