@@ -4,7 +4,7 @@
 앱과 Termux 셸 사이에 선다. 앱 샌드박스는 /data/data/com.termux/files/usr(0700)에
 들어갈 수 없으므로, Termux 안에서 이 프로세스가 셸을 소유하고 TCP로 중계한다.
 
-  ftermd start            포그라운드 데몬 (MTERM_PORT 기본 8791)
+  ftermd start            포그라운드 데몬 (FTERM_PORT 기본 8791)
   ftermd stop             pidfile + SIGTERM
   ftermd status           소켓/pid 확인
   ftermd token            토큰 출력(없으면 생성)
@@ -160,17 +160,33 @@ SHELL_PREFIXES = (
     "/data/data/com.termux/files/usr/local/bin/",
     "/system/bin/sh",
     "/bin/",
+    # On Debian and Ubuntu /bin is a symlink to /usr/bin, so every real path underneath one of
+    # them starts with the other's name. Both are listed because the allowlist is checked
+    # against the path that was asked for *and* the file it resolves to.
+    "/usr/bin/",
 )
 
 
 def resolve_shell(requested):
-    """The shell to exec: the requested one if it is an allowed absolute path, else None."""
+    """The shell to exec: the requested one if it is an allowed absolute path, else None.
+
+    Both the path the app asked for and the file it resolves to are tested against the
+    allowlist, because they are not the same path on every system: /bin/sh is a script on
+    Termux and a symlink to /usr/bin/dash on Debian. Checking only the resolved path refused
+    /bin/sh on a runner and quietly fell back to bash - a profile that names a shell got a
+    different one, and nothing said so.
+    """
     if not requested:
         return None
     path = os.path.realpath(requested)
     if not os.path.isabs(path):
         return None
-    if not any(path == pre or path.startswith(pre) for pre in SHELL_PREFIXES):
+    asked = os.path.abspath(requested)
+
+    def allowed(p):
+        return any(p == pre or p.startswith(pre) for pre in SHELL_PREFIXES)
+
+    if not (allowed(path) or allowed(asked)):
         return None
     if not (os.path.isfile(path) and os.access(path, os.X_OK)):
         return None

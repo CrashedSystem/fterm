@@ -16,6 +16,7 @@ import os
 import socket
 import struct
 import sys
+import tempfile
 import time
 
 HOST = "127.0.0.1"
@@ -248,13 +249,52 @@ def run(c, sid, command, seconds=1.5):
     return read_output(c, seconds)
 
 
+def open_strings_paths():
+    """A shell and a starting directory to put in OPEN, on this machine.
+
+    The daemon's allowlist is a property of Termux (PREFIX/bin) plus /bin and /system/bin/sh,
+    so the same test runs on a phone and on a Linux runner by following what exists here.
+    """
+    prefix = os.environ.get("PREFIX", "/data/data/com.termux/files/usr")
+    shell = None
+    for cand in (prefix + "/bin/sh", "/bin/sh", "/bin/bash"):
+        if os.path.isfile(cand) and os.access(cand, os.X_OK):
+            shell = cand
+            break
+    assert shell, "no shell to ask for"
+    if os.path.isdir(prefix):
+        cwd = prefix
+    else:
+        cwd = tempfile.mkdtemp(prefix="fterm-cwd-")
+    return shell, cwd
+
+
+def disallowed_shell():
+    """An executable whose realpath is outside every prefix the daemon will exec.
+
+    `/usr/bin/env` used to serve here and no longer does: /usr/bin is on the allowlist now
+    (Debian's /bin is a symlink into it), which is exactly the kind of drift this candidate
+    list has to follow.
+    """
+    prefix = os.environ.get("PREFIX", "/data/data/com.termux/files/usr")
+    allowed = (prefix + "/bin/", prefix + "/local/bin/", "/bin/", "/usr/bin/")
+    for cand in ("/system/bin/toybox", "/usr/local/bin/python3", "/usr/local/bin/python3.12",
+                 "/etc/hostname"):
+        if not (os.path.isfile(cand) and os.access(cand, os.X_OK)):
+            continue
+        real = os.path.realpath(cand)
+        if real == "/system/bin/sh" or any(real.startswith(a) for a in allowed):
+            continue
+        return cand
+    return None
+
+
 def test_open_strings():
     """OPEN may carry a shell and a directory; both are optional and both validated."""
     c = Conn()
     c.hello()
     s1, s2, s3 = free_sid(c), None, None
-    shell = "/data/data/com.termux/files/usr/bin/sh"
-    cwd = "/data/data/com.termux/files/usr"
+    shell, cwd = open_strings_paths()
     payload = struct.pack("<HHH", s1, 80, 24)
     for text in (shell, cwd):
         raw = text.encode()
@@ -265,28 +305,38 @@ def test_open_strings():
     # $0 is the realpath of what was asked for - sh is a symlink to dash here - so the
     # assertion is the directory it runs from plus "not the daemon's own bash".
     out = run(c, s1, "echo CWD-$(pwd); echo ZERO-$0\n")
-    assert b"CWD-/data/data/com.termux/files/usr" in out, out[-300:]
+    assert ("CWD-" + cwd).encode() in out, out[-300:]
     zero = [ln for ln in out.replace(b"\r", b"").split(b"\n") if ln.startswith(b"ZERO-")]
-    assert zero and b"bash" not in zero[0], (zero, out[-300:])
-    print("ok  OPEN carries a starting directory and a shell")
+    # $0 is the realpath of what was asked for - sh is a symlink to dash here - so this checks
+    # the shell that actually ran, not just that something did.
+    assert zero and zero[0] == ("ZERO-" + os.path.realpath(shell)).encode(), (zero, out[-300:])
+    print("ok  OPEN carries a starting directory and a shell (%s in %s)" % (shell, cwd))
 
-    # A shell outside the allowlist must fall back, not run. /system/bin/sh is allowed, so
-    # the check uses something the daemon has no business execing.
-    c2 = Conn()
-    c2.hello()
-    s2 = free_sid(c2)
-    bad = b"/data/data/com.termux/files/usr/bin/../bin/../../../../system/bin/toybox"
-    payload = struct.pack("<HHH", s2, 80, 24) + struct.pack("<H", len(bad)) + bad
-    payload += struct.pack("<H", 0)
-    c2.frame(C_OPEN, payload)
-    frames = c2.collect(1.5)
-    assert any(t == S_OPENED for t, _ in frames), [t for t, _ in frames]
-    out = run(c2, s2, "echo SH-$(basename $0)\n")
-    assert b"SH-toybox" not in out, ("disallowed shell must not run", out[-300:])
-    print("ok  OPEN ignores a shell outside the allowlist")
-    c2.frame(C_CLOSE, struct.pack("<H", s2))
-    time.sleep(0.3)
-    c2.close()
+    # A shell outside the allowlist must fall back, not run. The candidate is picked so that
+    # its realpath is outside every allowed prefix on this machine, which is not the same
+    # path on a phone and on a Linux runner.
+    bad = disallowed_shell()
+    if bad is None:
+        print("skip  no disallowed-but-executable shell to try on this machine")
+    else:
+        c2 = Conn()
+        c2.hello()
+        s2 = free_sid(c2)
+        raw = bad.encode()
+        payload = struct.pack("<HHH", s2, 80, 24) + struct.pack("<H", len(raw)) + raw
+        payload += struct.pack("<H", 0)
+        c2.frame(C_OPEN, payload)
+        frames = c2.collect(1.5)
+        assert any(t == S_OPENED for t, _ in frames), [t for t, _ in frames]
+        out = run(c2, s2, "echo SH-$(basename $0)\n")
+        forbidden = ("SH-" + os.path.basename(bad)).encode()
+        assert forbidden not in out, ("disallowed shell must not run", out[-300:])
+        # ... and the session it fell back to is a working shell, not a dead one.
+        assert b"SH-" in out, ("the fallback shell must still run", out[-300:])
+        print("ok  OPEN ignores a shell outside the allowlist (%s)" % bad)
+        c2.frame(C_CLOSE, struct.pack("<H", s2))
+        time.sleep(0.3)
+        c2.close()
 
     # Six-byte OPEN (no strings) is what an older client sends and must still work.
     c.frame(C_CLOSE, struct.pack("<H", s1))
