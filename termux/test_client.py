@@ -270,11 +270,16 @@ def open_strings_paths():
 
 
 def disallowed_shell():
-    """An executable whose realpath is outside every prefix the daemon will exec."""
+    """An executable whose realpath is outside every prefix the daemon will exec.
+
+    `/usr/bin/env` used to serve here and no longer does: /usr/bin is on the allowlist now
+    (Debian's /bin is a symlink into it), which is exactly the kind of drift this candidate
+    list has to follow.
+    """
     prefix = os.environ.get("PREFIX", "/data/data/com.termux/files/usr")
-    allowed = (prefix + "/bin/", prefix + "/local/bin/", "/bin/")
-    for cand in ("/system/bin/toybox", "/usr/bin/env", "/usr/bin/uname",
-                 "/usr/local/bin/python3"):
+    allowed = (prefix + "/bin/", prefix + "/local/bin/", "/bin/", "/usr/bin/")
+    for cand in ("/system/bin/toybox", "/usr/local/bin/python3", "/usr/local/bin/python3.12",
+                 "/etc/hostname"):
         if not (os.path.isfile(cand) and os.access(cand, os.X_OK)):
             continue
         real = os.path.realpath(cand)
@@ -302,8 +307,9 @@ def test_open_strings():
     out = run(c, s1, "echo CWD-$(pwd); echo ZERO-$0\n")
     assert ("CWD-" + cwd).encode() in out, out[-300:]
     zero = [ln for ln in out.replace(b"\r", b"").split(b"\n") if ln.startswith(b"ZERO-")]
-    if os.path.basename(shell) != "bash":
-        assert zero and b"bash" not in zero[0], (zero, out[-300:])
+    # $0 is the realpath of what was asked for - sh is a symlink to dash here - so this checks
+    # the shell that actually ran, not just that something did.
+    assert zero and zero[0] == ("ZERO-" + os.path.realpath(shell)).encode(), (zero, out[-300:])
     print("ok  OPEN carries a starting directory and a shell (%s in %s)" % (shell, cwd))
 
     # A shell outside the allowlist must fall back, not run. The candidate is picked so that
@@ -325,6 +331,8 @@ def test_open_strings():
         out = run(c2, s2, "echo SH-$(basename $0)\n")
         forbidden = ("SH-" + os.path.basename(bad)).encode()
         assert forbidden not in out, ("disallowed shell must not run", out[-300:])
+        # ... and the session it fell back to is a working shell, not a dead one.
+        assert b"SH-" in out, ("the fallback shell must still run", out[-300:])
         print("ok  OPEN ignores a shell outside the allowlist (%s)" % bad)
         c2.frame(C_CLOSE, struct.pack("<H", s2))
         time.sleep(0.3)

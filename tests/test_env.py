@@ -65,7 +65,7 @@ TMP = tempfile.mkdtemp(prefix="fterm-env-")
 g = load(["ANDROID_ENV", "TERMUX_ENV", "NEVER_INHERIT", "_read_environ",
           "_bootclasspath_valid", "_read_cache", "write_cache", "shell_env",
           "_discover_android_env", "env_cache_path", "ensure_rundir", "default_shell",
-          "SHELL"])
+          "resolve_shell", "SHELL_PREFIXES", "SHELL"])
 
 # 1. The ART variables are on the list at all. This is the whole bug in one assertion: if
 #    BOOTCLASSPATH is not named here, no amount of curation elsewhere can pass it through.
@@ -157,6 +157,33 @@ os.environ["TERMUX_APP_PID"] = str(os.getpid())
 env = g["shell_env"]()
 check("shell_env keeps a live TERMUX_APP_PID", env.get("TERMUX_APP_PID") == str(os.getpid()))
 os.environ.pop("TERMUX_APP_PID", None)
+
+# 8. The shell allowlist. The rule that matters is the one a runner found: /bin/sh is a symlink
+#    to /usr/bin/dash on Debian, so a check that only looks at the resolved path refuses a path
+#    the app is allowed to name and silently runs bash instead.
+check("an empty request is refused", g["resolve_shell"]("") is None)
+check("a bare name is refused", g["resolve_shell"]("sh") is None)
+check("a file outside the allowlist is refused", g["resolve_shell"]("/etc/hostname") is None)
+check("a traversal out of an allowed prefix is refused",
+      g["resolve_shell"]("/bin/../../etc/hostname") is None)
+if os.path.exists("/bin/sh"):
+    check("the shell this machine has at /bin/sh is allowed",
+          g["resolve_shell"]("/bin/sh") is not None,
+          repr(g["resolve_shell"]("/bin/sh")))
+
+# A requested path inside the allowlist whose real file lives outside it: the case that was
+# broken. Built here rather than assumed, so the check runs on Termux and on a runner alike.
+LINKROOT = tempfile.mkdtemp(prefix="fterm-shelllink-")
+os.makedirs(os.path.join(LINKROOT, "bin"), exist_ok=True)
+TARGET = "/bin/dash" if os.path.exists("/bin/dash") else ("/bin/bash" if os.path.exists("/bin/bash") else "/bin/sh")
+os.symlink(TARGET, os.path.join(LINKROOT, "bin", "sh"))
+real_prefixes = g["SHELL_PREFIXES"]
+g["SHELL_PREFIXES"] = (LINKROOT + "/",)
+resolved = g["resolve_shell"](os.path.join(LINKROOT, "bin", "sh"))
+g["SHELL_PREFIXES"] = real_prefixes
+check("a requested path in the allowlist is accepted even when it resolves outside it",
+      resolved == os.path.realpath(os.path.join(LINKROOT, "bin", "sh")),
+      repr(resolved))
 
 print()
 if fails:
