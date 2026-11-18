@@ -17,15 +17,26 @@ cp "$HERE/fterm-keeper" "$DEST/fterm-keeper"
 chmod 700 "$DEST/fterm-keeper"
 
 echo "설치: $DEST/ftermd"
-"$DEST/ftermd" status >/dev/null 2>&1 || true
 
+# The daemon is a long-running process: replacing the file on disk does not change the
+# process already in memory. Start it if it is not running, and restart it if it is, so fixes
+# (and TERM_PROGRAM) actually take effect. This is why the script restarts rather than
+# printing "already running".
+#
+# The restart runs in its own session. This script is usually run from a fterm tab, and that
+# tab's shell is a child of the daemon: `stop` closes the PTY, the shell gets SIGHUP, and the
+# script dies halfway through - leaving no daemon at all. setsid keeps the restart alive past
+# the shell that asked for it.
 if "$DEST/ftermd" status >/dev/null 2>&1; then
-  echo "데몬이 이미 실행 중"
+  echo "데몬 재시작 (실행 중인 프로세스는 옛 코드를 들고 있다)"
+  setsid nohup sh -c "'$DEST/ftermd' stop >/dev/null 2>&1; sleep 1; \
+    exec '$DEST/ftermd' start" > "$DEST/daemon.log" 2>&1 < /dev/null &
+  sleep 3
 else
   echo "데몬 시작"
-  # setsid: detach from the terminal's process group. A plain nohup daemon still dies
-  # with SIGHUP when the Termux shell that launched it closes, which is exactly the
-  # "ftermd died while I was away" report.
+  # setsid: detach from the terminal's process group. A plain nohup daemon still dies with
+  # SIGHUP when the Termux shell that launched it closes, which is exactly the "ftermd died
+  # while I was away" report.
   setsid nohup "$DEST/ftermd" start > "$DEST/daemon.log" 2>&1 < /dev/null &
   sleep 1
 fi
@@ -43,16 +54,6 @@ fi
 "$DEST/fterm-keeper" status
 
 echo
-# The daemon is a long-running process: replacing the file on disk does not change the
-# process already in memory. Restart it so fixes (and TERM_PROGRAM) actually take effect.
-if "$DEST/ftermd" status >/dev/null 2>&1; then
-  echo "데몬 재시작 (실행 중인 프로세스는 옛 코드를 들고 있다)"
-  "$DEST/ftermd" stop >/dev/null 2>&1 || true
-  sleep 1
-  setsid nohup "$DEST/ftermd" start > "$DEST/daemon.log" 2>&1 < /dev/null &
-  sleep 2
-fi
-
 # Re-arm the keeper on every Termux start: it is the app's only handle for starting the
 # daemon, so a keeper that died quietly must come back without the user remembering this
 # script. Idempotent - the status check skips the spawn when it is already running.
