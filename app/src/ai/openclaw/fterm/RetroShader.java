@@ -31,8 +31,17 @@ public final class RetroShader {
     /** WT's SCANLINE_FACTOR: odd rows keep half their brightness. */
     public static final float SCANLINE_FACTOR = 0.5f;
 
-    /** WT's glow term, {@code color += Blur(...) * 0.3f}. */
-    public static final float GLOW_STRENGTH = 0.3f;
+    /**
+     * WT's glow term is {@code 0.3f}. This is deliberately lower.
+     *
+     * <p>0.3 is tuned for a desktop monitor at arm's length with subpixel-antialiased text;
+     * on a phone held 25 cm away with the same glyphs it reads as a haze over every line and
+     * turns a terminal into something you squint through. Measured on device, 0.3 smeared the
+     * background from 12 to 16 at the base of every glyph. 0.1 keeps the phosphor edge without
+     * the bloom. The scanline multiply stays at WT's exact 0.5 - that one is texture, not
+     * brightness, and it is what actually reads as "CRT".
+     */
+    public static final float GLOW_STRENGTH = 0.1f;
 
     /** The AGSL text. {@code resolution} is needed only to clamp edge samples. */
     public static final String SOURCE =

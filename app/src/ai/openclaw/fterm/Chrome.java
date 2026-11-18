@@ -273,12 +273,13 @@ final class Chrome {
             // terminal stays readable behind it.
             w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
             w.setLayout(dp(mActivity, 260), ViewGroup.LayoutParams.WRAP_CONTENT);
-            // Just under the bar, right-aligned with the glyph that opened it, like a dropdown
-            // hangs off its button rather than appearing in the middle of the screen.
+            // Just under the chevron that opened it, right-aligned like a dropdown hangs off
+            // its button. WT's flyout opens below the split button's arrow, not at the screen
+            // edge, so the sheet stays where the finger already is.
             android.view.WindowManager.LayoutParams lp = w.getAttributes();
             lp.gravity = Gravity.TOP | Gravity.END;
-            lp.x = dp(mActivity, 8);
-            lp.y = dp(mActivity, 44);
+            lp.x = dp(mActivity, 4);
+            lp.y = dp(mActivity, 42);
             w.setAttributes(lp);
         }
     }
@@ -517,7 +518,14 @@ final class Chrome {
         return v;
     }
 
-    /** The path set. One stroke width, one cap style, 24x24 viewport, like WT's icon font. */
+    /**
+     * A chrome icon: a filled Fluent path, tinted, scaled from a 24-unit grid.
+     *
+     * <p>The paths live in {@link GlyphPaths}, generated from microsoft/fluentui-system-icons -
+     * the family WT's own toolbar uses. They are filled outlines rather than strokes, which is
+     * the difference between an icon set that belongs next to Windows Terminal and one that
+     * merely resembles it.
+     */
     private static final class Glyph extends android.graphics.drawable.Drawable {
         private final android.graphics.Path p = new android.graphics.Path();
         private final android.graphics.Paint paint = new android.graphics.Paint(
@@ -525,167 +533,20 @@ final class Chrome {
 
         Glyph(String name, int color) {
             paint.setColor(color);
-            paint.setStyle(android.graphics.Paint.Style.STROKE);
-            paint.setStrokeWidth(1.9f);
-            paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
-            paint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
-            build(name);
-        }
-
-        private void build(String name) {
-            switch (name) {
-                case "plus":
-                    p.moveTo(12, 5); p.lineTo(12, 19);
-                    p.moveTo(5, 12); p.lineTo(19, 12);
-                    break;
-                case "chevron":
-                    p.moveTo(8, 10); p.lineTo(12, 14); p.lineTo(16, 10);
-                    break;
-                case "left":
-                    p.moveTo(14, 7); p.lineTo(9, 12); p.lineTo(14, 17);
-                    break;
-                case "menu":
-                    // WT's hamburger: three rules, widening downward, at the same weight as
-                    // every other glyph so it does not read as a different icon set.
-                    p.moveTo(4, 7); p.lineTo(20, 7);
-                    p.moveTo(4, 12); p.lineTo(20, 12);
-                    p.moveTo(4, 17); p.lineTo(20, 17);
-                    break;
-                case "swatch":
-                    // The colour-scheme icon in WT's sidebar: a wheel split into quadrants.
-                    p.addCircle(12, 12, 8.2f, android.graphics.Path.Direction.CW);
-                    p.moveTo(12, 3.8f); p.lineTo(12, 20.2f);
-                    p.moveTo(3.8f, 12); p.lineTo(20.2f, 12);
-                    break;
-                case "right":
-                    p.moveTo(10, 7); p.lineTo(15, 12); p.lineTo(10, 17);
-                    break;
-                case "check":
-                    p.moveTo(6, 12.5f); p.lineTo(10, 16.5f); p.lineTo(18, 7.5f);
-                    break;
-                case "palette":
-                    // Three overlapping wells: a colour wheel reduced to what survives at
-                    // 20dp. WT's sidebar icon for colour schemes is a wheel; a full wheel is
-                    // mud at this size, three circles still read as "colours".
-                    p.addCircle(9.2f, 9.8f, 4.6f, android.graphics.Path.Direction.CW);
-                    p.addCircle(14.8f, 9.8f, 4.6f, android.graphics.Path.Direction.CW);
-                    p.addCircle(12f, 14.9f, 4.6f, android.graphics.Path.Direction.CW);
-                    break;
-                case "close":
-                    p.moveTo(7, 7); p.lineTo(17, 17);
-                    p.moveTo(17, 7); p.lineTo(7, 17);
-                    break;
-                case "gear":
-                    // A real gear outline: eight trapezoidal teeth around a ring, as one closed
-                    // path. The previous version was a small circle with eight spokes, which
-                    // at phone size read as a sun - and "gear" is the one glyph whose whole job
-                    // is to be recognised without a label.
-                    buildGear(8, 9.2f, 6.5f, 12f, 12f);
-                    p.addCircle(12, 12, 2.6f, android.graphics.Path.Direction.CW);
-                    break;
-                case "terminal":
-                    // ">_" - the prompt, the one glyph every terminal shares.
-                    p.moveTo(5, 7); p.lineTo(10, 12); p.lineTo(5, 17);
-                    p.moveTo(12, 17); p.lineTo(19, 17);
-                    break;
-                case "keyboard":
-                    p.addRoundRect(new android.graphics.RectF(3, 7, 21, 17), 2.2f, 2.2f,
-                            android.graphics.Path.Direction.CW);
-                    p.moveTo(7, 11); p.lineTo(7, 11.01f);
-                    p.moveTo(11, 11); p.lineTo(11, 11.01f);
-                    p.moveTo(15, 11); p.lineTo(15, 11.01f);
-                    p.moveTo(17, 11); p.lineTo(17, 11.01f);
-                    p.moveTo(8, 14); p.lineTo(16, 14);
-                    break;
-                case "split":
-                    p.addRoundRect(new android.graphics.RectF(3, 5, 21, 19), 2f, 2f,
-                            android.graphics.Path.Direction.CW);
-                    p.moveTo(12, 5); p.lineTo(12, 19);
-                    break;
-                case "pencil":
-                    // A pen at 45°: barrel, tip, and the nib line.
-                    p.moveTo(4, 20); p.lineTo(4.6f, 16.2f);
-                    p.lineTo(15.6f, 5.2f); p.lineTo(18.8f, 8.4f);
-                    p.lineTo(7.8f, 19.4f); p.close();
-                    p.moveTo(14.2f, 6.6f); p.lineTo(17.4f, 9.8f);
-                    break;
-                case "clipboard":
-                    // Paste: a board with the tab that a clipboard hangs from.
-                    p.addRoundRect(new android.graphics.RectF(5, 4, 19, 20), 2f, 2f,
-                            android.graphics.Path.Direction.CW);
-                    p.addRoundRect(new android.graphics.RectF(9, 2.4f, 15, 6), 1.2f, 1.2f,
-                            android.graphics.Path.Direction.CW);
-                    break;
-                case "copy":
-                    // Two offset sheets: the back one open, the front one closed.
-                    p.addRoundRect(new android.graphics.RectF(8, 3, 19, 14), 1.8f, 1.8f,
-                            android.graphics.Path.Direction.CW);
-                    p.addRoundRect(new android.graphics.RectF(4, 8, 15, 21), 1.8f, 1.8f,
-                            android.graphics.Path.Direction.CW);
-                    break;
-                case "search":
-                    // A magnifier: a circle and the handle at 45 degrees.
-                    p.addCircle(10.5f, 10.5f, 6.5f, android.graphics.Path.Direction.CW);
-                    p.moveTo(15.4f, 15.4f); p.lineTo(20, 20);
-                    break;
-                case "ssh":
-                    // A terminal pane with a key inside it: a remote session, not a local one.
-                    p.addRoundRect(new android.graphics.RectF(3, 5, 21, 19), 2f, 2f,
-                            android.graphics.Path.Direction.CW);
-                    p.moveTo(7, 10.4f); p.lineTo(10, 12.6f); p.lineTo(7, 14.8f);
-                    p.moveTo(12.4f, 15.4f); p.lineTo(17, 15.4f);
-                    break;
-                case "info":
-                    p.addCircle(12, 12, 8.4f, android.graphics.Path.Direction.CW);
-                    p.moveTo(12, 11); p.lineTo(12, 16.4f);
-                    p.moveTo(12, 7.6f); p.lineTo(12, 7.61f);
-                    break;
-                default:
-                    p.addCircle(12, 12, 7, android.graphics.Path.Direction.CW);
-                    break;
-            }
-        }
-
-        /**
-         * A cog outline as one closed path: a ring of trapezoidal teeth.
-         *
-         * <p>Drawn as an outline rather than a circle plus spokes because the spokes were what
-         * made it look like a sun. Each tooth is a quad whose inner edge is narrower than its
-         * outer edge, which is what gives a cog its shape; a rectangle on a ring reads as a
-         * sprocket, and lines out from a circle read as rays.
-         */
-        private void buildGear(int teeth, float outerR, float innerR, float cx, float cy) {
-            final float halfOuter = 0.30f;   // angular half-width at the tip, radians
-            final float halfInner = 0.18f;   // and at the root: the taper is the tooth
-            for (int i = 0; i < teeth; i++) {
-                float mid = (float) (2 * Math.PI * i / teeth - Math.PI / 2);
-                float a0 = mid - halfInner, a1 = mid - halfOuter;
-                float a2 = mid + halfOuter, a3 = mid + halfInner;
-                float x0 = cx + (float) Math.cos(a0) * innerR, y0 = cy + (float) Math.sin(a0) * innerR;
-                float x1 = cx + (float) Math.cos(a1) * outerR, y1 = cy + (float) Math.sin(a1) * outerR;
-                float x2 = cx + (float) Math.cos(a2) * outerR, y2 = cy + (float) Math.sin(a2) * outerR;
-                float x3 = cx + (float) Math.cos(a3) * innerR, y3 = cy + (float) Math.sin(a3) * innerR;
-                if (i == 0) p.moveTo(x0, y0);
-                else p.lineTo(x0, y0);
-                p.lineTo(x1, y1);
-                p.lineTo(x2, y2);
-                p.lineTo(x3, y3);
-                // Connect to the next tooth's root along the inner circle, so the outline is
-                // continuous instead of eight floating shapes.
-                float next = (float) (2 * Math.PI * (i + 1) / teeth - Math.PI / 2) - halfInner;
-                p.lineTo(cx + (float) Math.cos(next) * innerR,
-                        cy + (float) Math.sin(next) * innerR);
-            }
-            p.close();
+            paint.setStyle(android.graphics.Paint.Style.FILL);
+            GlyphPaths.build(name, p);
+            if (p.isEmpty()) p.addCircle(12, 12, 7, android.graphics.Path.Direction.CW);
         }
 
         @Override public void draw(android.graphics.Canvas c) {
-            // Scale the 24-unit viewport onto whatever the ImageView gives us.
-            int w = getBounds().width(), h = getBounds().height();
-            float s = Math.min(w, h) / 24f;
+            android.graphics.Rect b = getBounds();
+            if (b.width() <= 0 || b.height() <= 0) return;
+            // Centre a square: an icon in a wider box must not be stretched.
+            float s = Math.min(b.width(), b.height()) / GlyphPaths.GRID;
+            float dx = b.left + (b.width() - GlyphPaths.GRID * s) / 2f;
+            float dy = b.top + (b.height() - GlyphPaths.GRID * s) / 2f;
             c.save();
-            c.translate(getBounds().left + (w - 24 * s) / 2f,
-                    getBounds().top + (h - 24 * s) / 2f);
+            c.translate(dx, dy);
             c.scale(s, s);
             c.drawPath(p, paint);
             c.restore();

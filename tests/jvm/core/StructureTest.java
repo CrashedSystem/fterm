@@ -83,6 +83,37 @@ public class StructureTest {
         check(!main.contains("addPrimaryClipChangedListener"),
                 "no clipboard polling: the tap is the trigger");
 
+        // 7. The chrome icons are Fluent, and the tab row is WT's.
+        //
+        //    Both were wrong in the same way: plausible-looking but invented. The icons were
+        //    hand-drawn strokes standing in for an icon font, and the row had a hamburger and
+        //    a gear that WT has never had. A screenshot cannot tell either apart from the real
+        //    thing, so these assertions pin the source and the layout.
+        String glyphs = read(dir + "GlyphPaths.java");
+        check(glyphs.contains("microsoft/fluentui-system-icons"),
+                "icons are generated from the Fluent set WT uses");
+        check(glyphs.contains("Path.Style") || glyphs.contains("p.cubicTo("),
+                "and are filled outlines, not constant-width strokes");
+        check(!glyphs.contains("setStrokeWidth"),
+                "no stroke width: a stroke is what made them look foreign");
+        for (String needed : new String[]{"plus", "chevron", "settings", "search", "copy",
+                "clipboard", "pencil", "close", "info", "terminal"}) {
+            check(glyphs.contains("case \"" + needed + "\""),
+                    "the set has the \"" + needed + "\" glyph the toolbar asks for");
+        }
+        // WT's TabRowControl: tabs, then a SplitButton (plus + chevron). Nothing else.
+        check(main.contains("Chrome.icon(this, \"chevron\""),
+                "the dropdown hangs off a chevron, like WT's split button");
+        check(!main.contains("Chrome.icon(this, \"menu\""),
+                "no hamburger: WT's tab row does not have one");
+        check(!main.contains("Chrome.icon(this, \"gear\""),
+                "no gear in the tab row: settings is a row in the dropdown");
+        check(main.contains("top.addView(plus);") && main.contains("top.addView(drop);"),
+                "the plus and the chevron are both in the row");
+        int iPlus = main.indexOf("top.addView(plus);");
+        int iDrop = main.indexOf("top.addView(drop);");
+        check(iPlus >= 0 && iDrop > iPlus, "and the chevron sits after the plus");
+
         System.out.println("ok  " + pass + " structure assertions");
         System.out.println("ALL OK");
     }

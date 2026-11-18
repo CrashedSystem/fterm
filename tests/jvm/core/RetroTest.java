@@ -22,12 +22,14 @@ public class RetroTest {
         // 1. WT's two constants, unchanged.
         check(ai.openclaw.fterm.RetroShader.SCANLINE_FACTOR == 0.5f,
                 "SCANLINE_FACTOR is WT's 0.5");
-        check(ai.openclaw.fterm.RetroShader.GLOW_STRENGTH == 0.3f,
-                "GLOW_STRENGTH is WT's 0.3");
+        // Deliberately below WT's 0.3: see the comment on the constant. The test pins the
+        // value that was actually chosen on device so it cannot drift back silently.
+        check(ai.openclaw.fterm.RetroShader.GLOW_STRENGTH == 0.1f,
+                "glow is the tuned-down 0.1, not WT's 0.3");
 
         // 2. Both constants reach the shader text; a constant nobody uses is a lie.
         check(src.contains("const float SCANLINE_FACTOR = 0.5"), "scanline constant is in the shader");
-        check(src.contains("const float GLOW_STRENGTH = 0.3"), "glow constant is in the shader");
+        check(src.contains("const float GLOW_STRENGTH = 0.1"), "glow constant is in the shader");
 
         // 3. The glow is ADDED to the frame - that is what makes it a glow.
         check(src.contains("color += (sum / weightSum) * GLOW_STRENGTH"),

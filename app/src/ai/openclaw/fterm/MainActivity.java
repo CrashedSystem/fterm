@@ -164,33 +164,34 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mTabScroll.setLayoutParams(new LinearLayout.LayoutParams(0, dp(38), 1f));
         mTabScroll.addView(mTabStrip);
 
-        // WT's title bar: line-art glyphs at one stroke weight, not text characters. The old
-        // strip used "＋" "▾" "⚙", which rendered as a full-width CJK plus, a solid triangle
-        // and a coloured emoji gear - three weights, one of them in colour. These are paths,
-        // so they are identical at every density and never fall back to an emoji font.
-        View plus = Chrome.icon(this, "plus", 30, false, v -> newTab(true));
-        // Long-press "+" still opens the menu, because it is the gesture that was there before
-        // the hamburger and it costs nothing to keep.
+        // WT's tab row, and nothing else.
+        //
+        // TitlebarControl.xaml is a ContentPresenter (the tabs) and then the window buttons;
+        // the only control in the row itself is TabRowControl's NewTabButton, which is a
+        // SplitButton: a plus that opens a tab, and a chevron that opens the dropdown. There is
+        // no hamburger anywhere in WT, and no gear - settings is a row inside that dropdown.
+        //
+        // This app had both, so the bar was three invented buttons wide and the tab strip lost
+        // the space. Removing them is not a simplification, it is the layout WT actually has.
+        View plus = Chrome.icon(this, "plus", 28, false, v -> newTab(true));
+        View drop = Chrome.icon(this, "chevron", 22, true, v -> showCommandMenu(v));
+        // Long-press "+" still opens the dropdown: it is the gesture that was here before, and
+        // it costs nothing to keep for a hand that has already learned it.
         plus.setOnLongClickListener(v -> {
             showCommandMenu(v);
             return true;
         });
-        View palette = Chrome.icon(this, "terminal", 28, true, v -> showCommandPalette());
-        View gear = Chrome.icon(this, "gear", 28, true, v -> showSettings());
 
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.BOTTOM);
         top.setBackgroundColor(0xff2b2b2b);
-        top.setPadding(dp(2), 0, dp(6), 0);
-        // WT's title bar opens with the hamburger, and the dropdown hangs off it. Kept on the
-        // left like WT rather than grouped with the right-hand icons: it is the way into the
-        // menu, not one of the actions.
-        top.addView(Chrome.icon(this, "menu", 28, true, v -> showCommandMenu(v)));
+        top.setPadding(dp(2), 0, dp(2), 0);
         top.addView(mTabScroll);
         top.addView(plus);
-        top.addView(palette);
-        top.addView(gear);
+        // The chevron sits tight against the plus with no gap: the two halves read as one
+        // split button, which is what they are.
+        top.addView(drop);
         top.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
         mTopBar = top;

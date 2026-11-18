@@ -20,10 +20,12 @@ public class UiTest {
                 java.nio.file.Paths.get(System.getProperty("main.src",
                         "app/src/ai/openclaw/fterm/MainActivity.java"))), "UTF-8");
 
-        // Dropdown: WT's hamburger at the left of the title bar, and long-press on "+".
+        // Dropdown: WT's tab row has no hamburger. What it has is a SplitButton - a plus that
+        // opens a tab, and a chevron beside it that opens the dropdown.
         check(src.contains("showCommandMenu(v)"), "the tab bar has a dropdown trigger");
         check(src.contains("plus.setOnLongClickListener"), "long-press on + opens it");
-        check(src.contains("Chrome.icon(this, \"menu\""), "the trigger is the hamburger glyph");
+        check(src.contains("Chrome.icon(this, \"chevron\""), "the trigger is the split button's chevron");
+        check(!src.contains("Chrome.icon(this, \"menu\""), "and not an invented hamburger");
 
         // A phone has no Ctrl+Shift+P, so the same commands must be on the menu. The menu
         // itself moved to Chrome.java, so the labels are checked where they live now.
