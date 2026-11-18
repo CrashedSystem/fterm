@@ -62,6 +62,14 @@ final class SettingsHost implements SettingsSheet.Host {
         a.applyScheme(Schemes.CUSTOM_INDEX);
     }
 
+    @Override public java.util.List<Profiles.Profile> profiles() {
+        return Profiles.decode(a.mPrefs.profiles());
+    }
+
+    @Override public void onProfiles(java.util.List<Profiles.Profile> list) {
+        a.mPrefs.setProfiles(Profiles.encode(list));
+    }
+
     @Override public boolean bellVibrate() { return a.mPrefs.bellVibrate(); }
     @Override public boolean bellSound() { return a.mPrefs.bellSound(); }
     @Override public void onBell(boolean vibrate, boolean sound) {

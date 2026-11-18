@@ -45,6 +45,9 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/FocusTest.java" \
   "$ROOT/tests/jvm/core/KeyBarPrefsTest.java" \
   "$ROOT/app/src/ai/openclaw/fterm/Schemes.java" \
+  "$ROOT/app/src/ai/openclaw/fterm/Profiles.java" \
+  "$ROOT/tests/jvm/core/ProfilesTest.java" \
+  "$ROOT/tests/jvm/core/ProfileTabTest.java"
 
 
 echo "[2/2] 실행"
@@ -64,3 +67,5 @@ java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
   -Dnotifier.src="$ROOT/app/src/ai/openclaw/fterm/Notifier.java" -cp "$OUT" NotifyTest
 java -Droot="$ROOT" -cp "$OUT" com.termux.terminal.FocusTest
 java -Droot="$ROOT" -cp "$OUT" KeyBarPrefsTest
+java -cp "$OUT" ProfilesTest
+java -cp "$OUT" ProfileTabTest

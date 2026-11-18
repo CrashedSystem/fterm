@@ -81,6 +81,11 @@ final class SettingsSheet {
 
         void onStartShell(String shell);
 
+        /** The user's profiles, in menu order. Never null. */
+        java.util.List<Profiles.Profile> profiles();
+
+        void onProfiles(java.util.List<Profiles.Profile> list);
+
         boolean bellVibrate();
 
         boolean bellSound();
@@ -126,6 +131,12 @@ final class SettingsSheet {
 
     void show() {
         mPage = null;
+        render();
+    }
+
+    /** Open directly on a page, which is what the menu's "프로필 관리" does. */
+    void show(String page) {
+        mPage = page;
         render();
     }
 
@@ -225,6 +236,7 @@ final class SettingsSheet {
     private static String titleOf(String page) {
         switch (page) {
             case "start": return "시작";
+            case "profiles": return "프로필";
             case "appearance": return "모양";
             case "schemes": return "색 구성표";
             case "interaction": return "상호 작용";
@@ -241,6 +253,8 @@ final class SettingsSheet {
             nav(col);
         } else if ("start".equals(mPage)) {
             startPage(col);
+        } else if ("profiles".equals(mPage)) {
+            profilesPage(col);
         } else if ("appearance".equals(mPage)) {
             appearancePage(col);
         } else if ("schemes".equals(mPage)) {
@@ -261,6 +275,7 @@ final class SettingsSheet {
      */
     private void nav(LinearLayout col) {
         col.addView(navRow("terminal", "시작", "기본 프로필, 셸, 시작 동작", "start"));
+        col.addView(navRow("ssh", "프로필", "ssh처럼 명령으로 시작하는 탭", "profiles"));
         col.addView(navRow("pencil", "모양", "글자 크기, 키 바", "appearance"));
         col.addView(navRow("swatch", "색 구성표", "16색 팔레트와 미리보기", "schemes"));
         col.addView(navRow("keyboard", "상호 작용", "벨, 뒤로 가기 키", "interaction"));
@@ -316,6 +331,130 @@ final class SettingsSheet {
     // ------------------------------------------------------------------ pages
 
     /** WT's 시작 page: rows that mostly name a default and show its value on the right. */
+    /**
+     * WT's profiles page: a list of them, and an editor per profile.
+     *
+     * <p>A profile here is the four things a tab can differ in. The command is the field that
+     * makes an "ssh profile" possible, and it is typed into the shell rather than replacing
+     * it - see {@link Profiles}.
+     */
+    private void profilesPage(LinearLayout col) {
+        LinearLayout card = card(col);
+        java.util.List<Profiles.Profile> list = mHost.profiles();
+        if (list.isEmpty()) {
+            LinearLayout empty = new LinearLayout(mActivity);
+            empty.setOrientation(LinearLayout.VERTICAL);
+            empty.setPadding(dp(14), dp(14), dp(14), dp(14));
+            TextView t = new TextView(mActivity);
+            t.setText("프로필이 없습니다");
+            t.setTextColor(TEXT);
+            t.setTextSize(13);
+            empty.addView(t);
+            TextView sub = new TextView(mActivity);
+            sub.setText("아래에서 추가하면 메뉴 첫 블록에 나타납니다.");
+            sub.setTextColor(HINT);
+            sub.setTextSize(10.5f);
+            sub.setPadding(0, dp(3), 0, 0);
+            empty.addView(sub);
+            card.addView(empty);
+        } else {
+            for (int i = 0; i < list.size(); i++) {
+                final Profiles.Profile p = list.get(i);
+                card.addView(valueRow(p.name.isEmpty() ? "(이름 없음)" : p.name, p.subtitle(),
+                        null, () -> editProfile(p, false), i == list.size() - 1));
+            }
+        }
+
+        card.addView(valueRow("프로필 추가", "예: ssh 서버 이름과 명령", "+",
+                () -> editProfile(new Profiles.Profile("", "", "", ""), true), true));
+
+        hint(col, "줄을 누르면 편집합니다. 탭을 열 때는 왼쪽 위 메뉴 첫 블록에서 "
+                + "프로필을 고르세요. 명령은 셸이 뜬 뒤에 입력되므로 ssh가 로그인 셸의 키와 "
+                + "설정을 그대로 씁니다.");
+    }
+
+    /** The four fields, edited as one dialog: they are one thing. */
+    private void editProfile(final Profiles.Profile existing, final boolean isNew) {
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(4), dp(20), 0);
+
+        final android.widget.EditText name = field(existing.name, "예: 서버");
+        final android.widget.EditText dir = field(existing.dir, "/data/data/com.termux/files/home");
+        final android.widget.EditText shell = field(existing.shell, "/data/data/com.termux/files/usr/bin/bash");
+        final android.widget.EditText command = field(existing.command, "ssh myhost");
+
+        box.addView(label("이름"));
+        box.addView(name);
+        box.addView(label("시작 디렉터리 (선택)"));
+        box.addView(dir);
+        box.addView(label("셸 (선택)"));
+        box.addView(shell);
+        box.addView(label("시작 명령 (선택)"));
+        box.addView(command);
+        TextView note = new TextView(mActivity);
+        note.setText("명령은 한 줄이어야 합니다. 비우면 그냥 셸이 뜹니다.");
+        note.setTextColor(HINT);
+        note.setTextSize(10.5f);
+        note.setPadding(0, dp(6), 0, 0);
+        box.addView(note);
+
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(mActivity)
+                .setTitle(isNew ? "프로필 추가" : "프로필 편집")
+                .setView(box)
+                .setPositiveButton("저장", (d, w) -> {
+                    Profiles.Profile p = new Profiles.Profile(
+                            name.getText().toString().trim(),
+                            dir.getText().toString().trim(),
+                            shell.getText().toString().trim(),
+                            command.getText().toString().trim());
+                    java.util.List<Profiles.Profile> list = mHost.profiles();
+                    if (isNew) {
+                        list.add(p);
+                    } else {
+                        // Editing in place keeps the menu order the user built.
+                        for (int i = 0; i < list.size(); i++) {
+                            if (list.get(i) == existing) { list.set(i, p); break; }
+                        }
+                    }
+                    mHost.onProfiles(list);
+                    render();
+                })
+                .setNegativeButton("취소", null);
+        if (!isNew) {
+            b.setNeutralButton("삭제", (d, w) -> {
+                java.util.List<Profiles.Profile> list = mHost.profiles();
+                for (int i = 0; i < list.size(); i++) {
+                    if (list.get(i) == existing) { list.remove(i); break; }
+                }
+                mHost.onProfiles(list);
+                render();
+            });
+        }
+        b.show();
+    }
+
+    private android.widget.EditText field(String value, String hint) {
+        android.widget.EditText f = new android.widget.EditText(mActivity);
+        f.setText(value);
+        f.setSingleLine(true);
+        f.setTextSize(13);
+        f.setTypeface(Typeface.MONOSPACE);
+        f.setTextColor(TEXT);
+        f.setHintTextColor(HINT);
+        f.setHint(hint);
+        return f;
+    }
+
+    private TextView label(String text) {
+        TextView t = new TextView(mActivity);
+        t.setText(text);
+        t.setTextColor(HINT);
+        t.setTextSize(10.5f);
+        t.setPadding(0, dp(8), 0, dp(2));
+        return t;
+    }
+
     private void startPage(LinearLayout col) {
         LinearLayout card = card(col);
 

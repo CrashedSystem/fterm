@@ -139,6 +139,17 @@ public final class Prefs {
     public int cursorStyle() { return sp().getInt("cursor_style", 0); }
     public void setCursorStyle(int style) { sp().edit().putInt("cursor_style", style).apply(); }
 
+    /**
+     * The user's profiles, encoded by {@link Profiles#encode}.
+     *
+     * <p>One string rather than a set of keys: a profile is added and removed as a unit, and
+     * a shared-preference key per profile would leave orphans behind on delete.
+     */
+    public String profiles() { return sp().getString("profiles", ""); }
+    public void setProfiles(String v) {
+        sp().edit().putString("profiles", v == null ? "" : v).apply();
+    }
+
     /** WT's experimental.retroTerminalEffect: scanlines and a vignette over the text. */
     public boolean retroEffect() { return sp().getBoolean("retro_effect", false); }
     public void setRetroEffect(boolean v) { sp().edit().putBoolean("retro_effect", v).apply(); }

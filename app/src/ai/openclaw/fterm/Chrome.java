@@ -38,6 +38,15 @@ final class Chrome {
         void toggleKeyboard();
         void palette();
         void about();
+
+        /** The user's profiles, in menu order. Never null. */
+        java.util.List<Profiles.Profile> profiles();
+
+        /** Open a tab from a profile. */
+        void openProfile(Profiles.Profile profile);
+
+        /** The settings page that edits profiles. */
+        void manageProfiles();
     }
 
     /** One palette entry: the label shown, and the action it carries. */
@@ -216,9 +225,13 @@ final class Chrome {
         dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
 
         // WT's dropdown starts with the profile, not with commands: the first thing under the
-        // tab bar is the thing a tab IS. On the phone build there is one profile, so it is one
-        // row - the block is still there because it is what makes the menu read as WT's.
-        list.addView(profileRow(dialog));
+        // tab bar is the thing a tab IS. The default profile is always first; the user's own
+        // follow, which is what makes an ssh profile one tap from the tab bar.
+        list.addView(profileRow(dialog, null));
+        java.util.List<Profiles.Profile> profiles = mCommands.profiles();
+        for (Profiles.Profile p : profiles) list.addView(profileRow(dialog, p));
+        list.addView(profileRow(dialog, MANAGE));
+
         View firstRule = new View(mActivity);
         firstRule.setBackgroundColor(HAIRLINE);
         LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(
@@ -272,17 +285,26 @@ final class Chrome {
      * I tabbing into" - so it is drawn with a filled plate rather than a row ripple, and it
      * closes the menu without doing anything.
      */
-    private View profileRow(final android.app.Dialog dialog) {
+    /** A sentinel profile that opens the editor instead of a tab. */
+    private static final Profiles.Profile MANAGE =
+            new Profiles.Profile("프로필 관리", "", "", "");
+
+    private View profileRow(final android.app.Dialog dialog, final Profiles.Profile profile) {
         LinearLayout row = new LinearLayout(mActivity);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(mActivity, 12), dp(mActivity, 8), dp(mActivity, 12),
                 dp(mActivity, 8));
         row.setClickable(true);
-        row.setOnClickListener(v -> dialog.dismiss());
+        row.setOnClickListener(v -> {
+            dialog.dismiss();
+            if (profile == MANAGE) mCommands.manageProfiles();
+            else mCommands.openProfile(profile);
+        });
 
         android.widget.ImageView plate = new android.widget.ImageView(mActivity);
-        plate.setImageDrawable(new Glyph("terminal", ICON));
+        plate.setImageDrawable(new Glyph(
+                profile == MANAGE ? "pencil" : profile == null ? "terminal" : "ssh", ICON));
         plate.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
         plate.setBackground(plate(CARD_HI, 6));
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
@@ -298,13 +320,15 @@ final class Chrome {
         text.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView name = new TextView(mActivity);
-        name.setText("shell");
+        name.setText(profile == null ? "shell" : profile.name.isEmpty() ? "(이름 없음)" : profile.name);
         name.setTextColor(TEXT);
         name.setTextSize(13.5f);
         UiFont.apply(name, true);
         text.addView(name);
         TextView sub = new TextView(mActivity);
-        sub.setText("Termux · bash -l");
+        sub.setText(profile == null ? "Termux · bash -l"
+                : profile == MANAGE ? "탭을 열 때 쓰는 프로필 편집"
+                : profile.subtitle().isEmpty() ? "기본 셸" : profile.subtitle());
         sub.setTextColor(HINT);
         sub.setTextSize(10.5f);
         text.addView(sub);
@@ -593,6 +617,13 @@ final class Chrome {
                             android.graphics.Path.Direction.CW);
                     p.addRoundRect(new android.graphics.RectF(4, 8, 15, 21), 1.8f, 1.8f,
                             android.graphics.Path.Direction.CW);
+                    break;
+                case "ssh":
+                    // A terminal pane with a key inside it: a remote session, not a local one.
+                    p.addRoundRect(new android.graphics.RectF(3, 5, 21, 19), 2f, 2f,
+                            android.graphics.Path.Direction.CW);
+                    p.moveTo(7, 10.4f); p.lineTo(10, 12.6f); p.lineTo(7, 14.8f);
+                    p.moveTo(12.4f, 15.4f); p.lineTo(17, 15.4f);
                     break;
                 case "info":
                     p.addCircle(12, 12, 8.4f, android.graphics.Path.Direction.CW);

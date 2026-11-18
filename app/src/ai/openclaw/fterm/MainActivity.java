@@ -244,6 +244,13 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             @Override public void toggleKeyboard() { MainActivity.this.toggleKeyboard(); }
             @Override public void palette() { showCommandPalette(); }
             @Override public void about() { showAbout(); }
+            @Override public java.util.List<Profiles.Profile> profiles() {
+                return Profiles.decode(mPrefs.profiles());
+            }
+            @Override public void openProfile(Profiles.Profile p) {
+                MainActivity.this.newTab(p, true);
+            }
+            @Override public void manageProfiles() { showSettings("profiles"); }
         });
 
         loadFonts();
@@ -272,9 +279,15 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         TextView chip;
         LinearLayout plate;
         TextView closeBox;
+        /** The plate, title and close box as one object; see TabStrip. */
+        TabStrip.Chip chipView;
         String title = "shell";
         /** Set once the user renames the tab; the shell's OSC title stops winning. */
         boolean userTitled;
+        /** The profile this tab was opened from, or null for the default profile. */
+        Profiles.Profile profile;
+        /** Typed into the shell once it has printed something; see openSession(). */
+        String pendingCommand;
         int id;
         boolean running;
     }
@@ -394,28 +407,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     private void showKeeperMissing() {
-        mUi.post(() -> new AlertDialog.Builder(this)
-                .setTitle("Termux 준비가 필요합니다")
-                .setMessage(DaemonLauncher.keeperInstructions())
-                .setPositiveButton("명령 복사", (d, w) -> {
-                    copyToClipboard("cd ~/projects/fterm && bash termux/install.sh");
-                    Toast.makeText(this, "복사됨 — Termux에 붙여넣고 실행하세요",
-                            Toast.LENGTH_LONG).show();
-                })
-                .setNegativeButton("닫기", (d, w) -> openManualTokenDialog())
-                .show());
+        mUi.post(() -> DaemonDialogs.keeperMissing(this, this::openManualTokenDialog));
     }
 
     private void showDaemonSlow() {
-        mUi.post(() -> new AlertDialog.Builder(this)
-                .setTitle("데몬이 응답하지 않습니다")
-                .setMessage("keeper는 살아있지만 데몬이 뜨지 않았습니다.\n\n"
-                        + "Termux에서 확인:\n"
-                        + "  ~/fterm/ftermd status\n"
-                        + "  tail ~/fterm/daemon.log")
-                .setPositiveButton("다시 시도", (d, w) -> beginProvisioning())
-                .setNegativeButton("닫기", (d, w) -> openManualTokenDialog())
-                .show());
+        mUi.post(() -> DaemonDialogs.daemonSlow(this, this::beginProvisioning,
+                this::openManualTokenDialog));
     }
 
     /** Last resort: let the user paste a token they obtained themselves. */
@@ -429,8 +426,27 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     private void newTab(boolean showKeyboard) {
+        newTab(null, showKeyboard);
+    }
+
+    /**
+     * Open a tab from a profile.
+     *
+     * <p>The profile's directory and shell go into the OPEN frame, so the session starts
+     * there rather than being moved there afterwards - a shell that reads its cwd at startup
+     * would otherwise disagree with the prompt it prints. The command is different: it has to
+     * run inside the started shell, so it is typed in after the first byte comes back.
+     */
+    void newTab(Profiles.Profile profile, boolean showKeyboard) {
         Tab tab = new Tab();
+        tab.profile = profile;
         tab.id = nextSessionId();
+        // The profile names the tab before the chip is built, not after: the chip is drawn
+        // once from tab.title, and a title set later would leave the tab reading "shell".
+        if (profile != null && !profile.name.isEmpty()) {
+            tab.title = profile.name;
+            tab.userTitled = true;   // the profile names the tab; OSC must not rename it
+        }
         mTabs.add(tab);
         addTabChip(tab);
         activate(tab);
@@ -451,15 +467,23 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             return;
         }
 
+        Profiles.Profile profile = tab.profile;
+        String shell = profile != null && !profile.shell.isEmpty()
+                ? profile.shell : mPrefs.startShell();
+        String dir = profile != null && !profile.dir.isEmpty()
+                ? profile.dir : mPrefs.startDir();
+
         TerminalSession session = new TerminalSession("", null, null, null, 8000, this);
         SocketTransport transport = new SocketTransport(
-                mPrefs.host(), mPrefs.port(), token, tab.id,
-                mPrefs.startShell(), mPrefs.startDir());
+                mPrefs.host(), mPrefs.port(), token, tab.id, shell, dir);
         session.setTransport(transport);
         tab.session = session;
         tab.transport = transport;
         tab.running = true;
-        session.mSessionName = "shell " + tab.id;
+        tab.pendingCommand = profile != null && Profiles.commandIsOneLine(profile.command)
+                && !profile.command.isEmpty() ? profile.command : null;
+        session.mSessionName = profile != null && !profile.name.isEmpty()
+                ? profile.name : "shell " + tab.id;
 
         if (mActive == tab) {
             restoreTerminalView();   // remove any "connecting…" splash still in the frame
@@ -473,11 +497,31 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             // The transport connects on its own thread; the keyboard follows the window,
             // not the socket. Showing it immediately is right: the shell is one round trip away.
             showKeyboardSoon();
-        } else {
-            // A reattached session gets its ring replay, but the prompt arrives asynchronously.
-            // Poll the delivered byte count and show the keyboard once the screen has content.
-            pollForPrompt(tab);
         }
+        // A profile's command has to wait for the shell either way - a fresh session has not
+        // printed its prompt yet, and a reattached one replays its ring asynchronously. The
+        // poll is what tells those apart, so it runs in both cases.
+        pollForPrompt(tab);
+    }
+
+    /**
+     * Type the profile's command into the shell that is now running.
+     *
+     * <p>Sent as bytes to the PTY, not executed by the daemon: an ssh profile has to inherit
+     * the login shell's environment to find its keys and its config, and the daemon's
+     * allowlist stays the only thing that decides what binary a session may run.
+     */
+    private void runPendingCommand(Tab tab) {
+        String command = tab.pendingCommand;
+        if (command == null) return;
+        tab.pendingCommand = null;
+        TerminalSession s = tab.session;
+        if (s == null) return;
+        // A short pause so the shell has finished printing its prompt; a command written
+        // mid-prompt is not lost by bash, but it reads as if the user typed over it.
+        mUi.postDelayed(() -> {
+            if (tab.session != null && tab.running) tab.session.write(command + "\r");
+        }, 120);
     }
 
     private void pollForPrompt(Tab tab) {
@@ -491,6 +535,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                     // Clear whatever the reattach left typed, so the shell prompt is not
                     // prefixed with a stale line.
                     if (mActive == tab) showKeyboardSoon();
+                    runPendingCommand(tab);
                     return;
                 }
                 if (System.currentTimeMillis() < deadline) mUi.postDelayed(this, 120);
@@ -557,124 +602,37 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         });
     }
 
-    /**
-     * One tab, shaped like Windows Terminal's.
-     *
-     * WT's tab is a rounded-top plate whose fill matches the terminal it belongs to, so the
-     * active tab reads as continuous with the pane below it and the inactive ones recede into
-     * the bar. Inside it: a 16dp icon slot (the shell glyph), the title, and a close box that
-     * only appears on the active tab - the same "the tab you are looking at is the one you can
-     * close" rule WT uses, and the reason a stray X cannot kill a background build.
-     */
     private void addTabChip(Tab tab) {
-        LinearLayout plate = new LinearLayout(this);
-        plate.setOrientation(LinearLayout.HORIZONTAL);
-        plate.setGravity(Gravity.CENTER_VERTICAL);
-        plate.setPadding(dp(8), 0, dp(4), 0);
-        plate.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)));
-        plate.setOnClickListener(v -> activate(tab));
-        plate.setOnLongClickListener(v -> {
-            confirmClose(tab);
-            return true;
-        });
-
-        TextView icon = new TextView(this);
-        icon.setText(">_");
-        icon.setTextSize(9);
-        icon.setTextColor(0xff8a8a8a);
-        UiFont.apply(icon, false);
-        icon.setGravity(Gravity.CENTER);
-        icon.setIncludeFontPadding(false);
-        icon.setLayoutParams(new LinearLayout.LayoutParams(dp(18), dp(34)));
-        plate.addView(icon);
-
-        TextView title = new TextView(this);
-        title.setTextSize(12);
-        title.setSingleLine(true);
-        // Scrolling text needs all four of these, and getting any one wrong silently leaves
-        // the title clipped instead: MARQUEE as the ellipsizer, horizontally scrolling on,
-        // selected (the platform's marquee is driven by the selected state, not by focus),
-        // and a bounded width - a wrap_content TextView always has room for its text, so it
-        // has nothing to scroll and the marquee never starts.
-        title.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);
-        title.setHorizontallyScrolling(true);
-        title.setMarqueeRepeatLimit(-1);
-        title.setFocusable(false);
-        // The cap is what gives the marquee something to scroll: with wrap_content and no
-        // limit the view is always exactly as wide as the text.
-        title.setMaxWidth(dp(150));
-        // A TextView inside a taller row draws its text at the TOP unless told otherwise.
-        // The tab title was doing exactly that - the row is 34dp and the text sat on its
-        // upper edge, which reads as "글자가 위로 붙었다".
-        title.setGravity(Gravity.CENTER_VERTICAL);
-        title.setIncludeFontPadding(false);
-        title.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)));
-        title.setPadding(dp(2), 0, dp(6), 0);
-        plate.addView(title);
-        TextView close = new TextView(this);
-        close.setText("\u00d7");
-        close.setTextSize(15);
-        close.setGravity(Gravity.CENTER);
-        close.setIncludeFontPadding(false);
-        // Right next to the title, not at the far edge: the X belongs to the tab, and a wide
-        // gap makes it look like it belongs to the next one.
-        close.setLayoutParams(new LinearLayout.LayoutParams(dp(22), dp(34)));
-        close.setOnClickListener(v -> confirmClose(tab));
-        plate.addView(close);
-
-        tab.chip = title;
-        tab.plate = plate;
-        tab.closeBox = close;
-        mTabStrip.addView(plate);
+        TabStrip.Chip chip = new TabStrip(this).create(tab.title,
+                () -> activate(tab), () -> confirmClose(tab));
+        tab.plate = chip.plate;
+        tab.chip = chip.title;
+        tab.closeBox = chip.close;
+        tab.chipView = chip;
+        mTabStrip.addView(chip.plate);
         updateChip(tab);
     }
 
-    /**
-     * Active tab: the terminal's own background, so the plate and the pane are one surface.
-     * Inactive: the bar's colour, dimmed text, and no close box.
-     */
+    /** Repaint one tab; the strip owns the shapes and the activity owns which tab is active. */
     private void updateChip(Tab tab) {
-        if (tab.chip == null || tab.plate == null) return;
-        boolean active = tab == mActive;
-        tab.chip.setText(tab.title);
-        // The marquee runs only on the active tab. The platform drives a marquee from the
-        // selected state, and leaving it set on inactive tabs would have every long title in
-        // the strip scrolling at once, which is noise rather than information.
-        //
-        // Cleared first so a title change restarts the scroll at column zero. setSelected(true)
-        // on a view that is already selected is a no-op, so without the toggle a shell that
-        // updates its title mid-scroll leaves the new text halfway across the tab.
-        tab.chip.setSelected(false);
-        tab.chip.setSelected(active);
-
+        if (tab.chipView == null) return;
         int[] palette = Schemes.colors(mScheme, mCustom);
-        int termBg = palette[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND];
-
-        GradientDrawable d = new GradientDrawable();
-        // Inactive tabs are a slightly lighter gray than the bar so they read as tabs; the
-        // active one takes the terminal's own background and grows into the pane.
-        d.setColor(active ? termBg
-                : (Schemes.isOled(mScheme, mCustom) ? 0xff0a0a0a : 0xff303338));
-        d.setCornerRadii(new float[]{dp(7), dp(7), dp(7), dp(7), 0, 0, 0, 0});
-        // A 2dp accent at the bottom of the active tab is the cue that survives a dark theme,
-        // where the tab fill and the pane are the same colour by design.
-        if (active) {
-            d.setStroke(dp(2), 0xff4a7fc1);
-        }
-        tab.plate.setBackground(d);
-
-        tab.chip.setTextColor(active ? 0xffffffff : 0xff9a9a9a);
-        tab.closeBox.setTextColor(active ? 0xffcfcfcf : 0x00000000);
-        tab.closeBox.setVisibility(active ? View.VISIBLE : View.INVISIBLE);
-        tab.plate.setPadding(dp(8), 0, dp(4), 0);
+        new TabStrip(this).paint(tab.chipView, tab.title, tab == mActive,
+                palette[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND],
+                Schemes.isOled(mScheme, mCustom));
     }
 
 
     private void activate(Tab tab) {
         mActive = tab;
         for (Tab t : mTabs) updateChip(t);
+        // Scroll the strip so the newly active tab is on screen. Opening a profile from the
+        // menu is exactly the case where it is not: the strip is already full, so the new
+        // plate lands past the right edge and the user sees a tab that appears not to exist.
+        if (tab.plate != null) {
+            mUi.post(() -> mTabScroll.smoothScrollTo(
+                    Math.max(0, tab.plate.getLeft() - dp(8)), 0));
+        }
         if (tab.session != null) {
             restoreTerminalView();
             mTermView.attachSession(tab.session);
@@ -702,6 +660,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         }
         tab.chip = null;
         tab.closeBox = null;
+        tab.chipView = null;
 
         if (tab.session != null) {
             tab.session.finishIfRunning();
@@ -876,29 +835,14 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mSettings.show();
     }
 
-    /**
-     * WT's "정보" row: version, the connection the app is actually using, and the one gesture
-     * worth documenting - long-press to select text, which is otherwise invisible.
-     */
+    /** Open settings on a specific page; the menu's profile block ends with this. */
+    private void showSettings(String page) {
+        if (mSettings == null) mSettings = new SettingsSheet(this, new SettingsHost(this));
+        mSettings.show(page);
+    }
+
     private void showAbout() {
-        String version = "?";
-        try {
-            // BuildConfig is not generated by this hand-rolled build (build.sh drives aapt2 and
-            // javac directly), so the version comes from the manifest the same way the system
-            // sees it.
-            version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-        } catch (Exception ignored) {
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("fterm")
-                .setMessage("버전 " + version + "\n"
-                        + "세션 " + mTabs.size() + "개 · "
-                        + mPrefs.host() + ":" + mPrefs.port() + "\n\n"
-                        + "길게 누르기: 텍스트 선택\n"
-                        + "탭 길게 누르기: 탭 닫기\n"
-                        + "키 바 좌우 가장자리: F1~F12")
-                .setPositiveButton("닫기", null)
-                .show();
+        About.show(this, mTabs.size() + "개 세션 · " + mPrefs.host() + ":" + mPrefs.port());
     }
 
     // ---------------------------------------------------------------- keys

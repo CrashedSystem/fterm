@@ -34,6 +34,8 @@ public class TabCloseTest {
         check(body.contains("finishIfRunning()"),
                 "and signals the shell as before");
 
+        check(body.contains("tab.chipView = null"), "and drops the chip object with it");
+
         // A dead tab must be closable from Enter on either keyboard type.
         int kd = src.indexOf("public boolean onKeyDown(int keyCode, KeyEvent e, TerminalSession session)");
         String keyBody = src.substring(kd, Math.min(src.length(), kd + 1600));

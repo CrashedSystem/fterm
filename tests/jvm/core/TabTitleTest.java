@@ -30,8 +30,11 @@ public class TabTitleTest {
                 java.nio.file.Paths.get(System.getProperty("main.src",
                         "app/src/ai/openclaw/fterm/MainActivity.java"))), "UTF-8");
 
-        String chip = src.substring(src.indexOf("private void addTabChip(Tab tab)"),
-                src.indexOf("private void updateChip(Tab tab)"));
+        // The chip is built by TabStrip, so that is where the marquee settings live now.
+        String strip = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get(System.getProperty("strip.src",
+                        "app/src/ai/openclaw/fterm/TabStrip.java"))), "UTF-8");
+        String chip = strip;
 
         // 1. The four things a marquee needs, and it silently degrades if any is missing.
         check(chip.contains("TruncateAt.MARQUEE"), "the title uses the marquee ellipsizer");
@@ -46,8 +49,8 @@ public class TabTitleTest {
         // 2. Only the active tab scrolls. setSelected is what the platform's marquee watches,
         //    so this is the switch, not a decoration. Comments are stripped first: the source
         //    explains the API by name in prose, and matching that would pass regardless of code.
-        String update = src.substring(src.indexOf("private void updateChip(Tab tab)"));
-        update = update.substring(0, Math.min(update.length(), 1400));
+        String update = strip.substring(strip.indexOf("void paint(Chip chip"));
+        update = update.substring(0, Math.min(update.length(), 1800));
         StringBuilder code = new StringBuilder();
         for (String line : update.split("\n", -1)) {
             String trimmed = line.trim();
