@@ -139,6 +139,10 @@ public final class Prefs {
     public int cursorStyle() { return sp().getInt("cursor_style", 0); }
     public void setCursorStyle(int style) { sp().edit().putInt("cursor_style", style).apply(); }
 
+    /** WT's experimental.retroTerminalEffect: scanlines and a vignette over the text. */
+    public boolean retroEffect() { return sp().getBoolean("retro_effect", false); }
+    public void setRetroEffect(boolean v) { sp().edit().putBoolean("retro_effect", v).apply(); }
+
     /** Whether the cursor blinks at all. WT calls this cursorBlink. */
     public boolean cursorBlink() { return sp().getBoolean("cursor_blink_on", true); }
     public void setCursorBlink(boolean v) { sp().edit().putBoolean("cursor_blink_on", v).apply(); }

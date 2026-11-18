@@ -52,6 +52,11 @@ final class SettingsSheet {
 
         void onCustomSlot(int slot, int color);
 
+        /** WT's retro effect: scanlines and a vignette. */
+        boolean retroEffect();
+
+        void onRetroEffect(boolean on);
+
         /** The cursor shape: 0 block, 1 underline, 2 bar. */
         int cursorStyle();
 
@@ -519,6 +524,8 @@ final class SettingsSheet {
                 this::chooseCursor, false));
         card.addView(toggleCardRow("커서 깜빡임", "끄면 항상 보입니다",
                 mHost.cursorBlink(), mHost::onCursorBlink, true));
+        card.addView(toggleCardRow("레트로 효과", "주사선과 가장자리 어둡게",
+                mHost.retroEffect(), mHost::onRetroEffect, true));
     }
 
     private static final String[] CURSOR_NAMES = {"블록", "밑줄", "세로 막대"};

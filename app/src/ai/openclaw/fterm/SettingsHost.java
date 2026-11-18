@@ -36,6 +36,12 @@ final class SettingsHost implements SettingsSheet.Host {
         a.applyCursor();
     }
 
+    @Override public boolean retroEffect() { return a.mPrefs.retroEffect(); }
+    @Override public void onRetroEffect(boolean on) {
+        a.mPrefs.setRetroEffect(on);
+        a.applyRetro();
+    }
+
     @Override public String fontFamily() { return a.mPrefs.fontFamily(); }
     @Override public void onFontFamily(String id) { a.applyFontFamily(id); }
 

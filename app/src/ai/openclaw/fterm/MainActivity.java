@@ -77,6 +77,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     int mFontDp;
     /** Iosevka / Nerd Symbols / Pretendard, with the Hangul size-adjust derived per size. */
     private Fonts mFonts;
+    /** The scanline overlay, or null when the effect is off. */
+    private RetroOverlay mRetro;
     /** Loaded once; null when the asset is missing, in which case the theme is palette-only. */
     private MikuBackground mMiku;
     private Bell mBell;
@@ -253,6 +255,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         applyFontSize(mFontDp);
         applyScheme(mScheme);
         applyCursor();
+        applyRetro();
         mKeyBar.setVisible(mPrefs.keyBarVisible());
     }
 
@@ -786,6 +789,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             TerminalEmulator em = mActive.session.getEmulator();
             if (em != null) em.setCursorStyle();
         }
+    }
+
+    /** Install or remove the scanline pass; the overlay caches per size on its own. */
+    void applyRetro() {
+        mRetro = mPrefs.retroEffect() ? new RetroOverlay() : null;
+        mTermView.setRetroOverlay(mRetro);
     }
 
     void applyScheme(int index) {

@@ -1277,6 +1277,17 @@ public final class TerminalView extends View {
 
     /** Optional picture drawn behind the terminal (the Miku theme). */
     private Drawable mBackgroundImage;
+    /** Optional scanline/vignette pass drawn over the finished frame. */
+    private ai.openclaw.fterm.RetroOverlay mRetroOverlay;
+
+    /**
+     * Turn the retro overlay on or off. It is drawn after the text and the selection, so it
+     * dims them uniformly instead of being hidden by the next repaint.
+     */
+    public void setRetroOverlay(ai.openclaw.fterm.RetroOverlay overlay) {
+        mRetroOverlay = overlay;
+        invalidate();
+    }
 
     public void setBackgroundImage(Drawable image) {
         mBackgroundImage = image;
@@ -1304,6 +1315,8 @@ public final class TerminalView extends View {
 
             // render the text selection handles
             renderTextSelection();
+
+            if (mRetroOverlay != null) mRetroOverlay.draw(canvas, getWidth(), getHeight());
         }
     }
 
