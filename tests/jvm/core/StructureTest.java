@@ -36,6 +36,8 @@ public class StructureTest {
         check(main.contains("new KeyBar("), "the key bar lives in KeyBar");
         check(!main.contains("private TextView keyPill("), "and is not duplicated here");
         check(main.contains("new SettingsSheet("), "settings live in SettingsSheet");
+        check(main.contains("new SettingsHost(this)"), "the Host glue lives in SettingsHost");
+        check(!main.contains("new SettingsSheet.Host()"), "and is not inlined in the activity");
         check(!main.contains("SeekBar size = new SeekBar(this)"), "and are not built here");
 
         // 3. The foreground service is what stops the freezer, so it must exist and be started.

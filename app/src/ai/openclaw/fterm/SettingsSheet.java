@@ -52,6 +52,15 @@ final class SettingsSheet {
 
         void onCustomSlot(int slot, int color);
 
+        /** The cursor shape: 0 block, 1 underline, 2 bar. */
+        int cursorStyle();
+
+        void onCursorStyle(int style);
+
+        boolean cursorBlink();
+
+        void onCursorBlink(boolean on);
+
         /** The Latin face id; see Fonts.LATIN_IDS. */
         String fontFamily();
 
@@ -502,7 +511,28 @@ final class SettingsSheet {
                         mHost.scheme()))],
                 () -> open("schemes"), false));
         card.addView(toggleCardRow("키 바 표시", "화면 아래 두 줄짜리 키 바",
-                mHost.keyBarVisible(), mHost::onKeyBarVisible, true));
+                mHost.keyBarVisible(), mHost::onKeyBarVisible, false));
+
+        // WT's cursor page, folded into this one: three shapes and a blink switch.
+        card.addView(valueRow("커서 모양", "블록 · 밑줄 · 세로 막대",
+                CURSOR_NAMES[Math.max(0, Math.min(CURSOR_NAMES.length - 1, mHost.cursorStyle()))],
+                this::chooseCursor, false));
+        card.addView(toggleCardRow("커서 깜빡임", "끄면 항상 보입니다",
+                mHost.cursorBlink(), mHost::onCursorBlink, true));
+    }
+
+    private static final String[] CURSOR_NAMES = {"블록", "밑줄", "세로 막대"};
+
+    private void chooseCursor() {
+        new android.app.AlertDialog.Builder(mActivity)
+                .setTitle("커서 모양")
+                .setSingleChoiceItems(CURSOR_NAMES, mHost.cursorStyle(), (d, which) -> {
+                    mHost.onCursorStyle(which);
+                    d.dismiss();
+                    render();
+                })
+                .setNegativeButton("취소", null)
+                .show();
     }
 
     /**

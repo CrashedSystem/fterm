@@ -61,20 +61,20 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     private static final String TAG = "fterm";
 
-    private Prefs mPrefs;
+    Prefs mPrefs;
     private LinearLayout mRoot;
     private LinearLayout mTopBar;
     private LinearLayout mTabStrip;
     private HorizontalScrollView mTabScroll;
     private FrameLayout mTermFrame;
-    private KeyBar mKeyBar;
+    KeyBar mKeyBar;
     private TerminalView mTermView;
 
-    private final List<Tab> mTabs = new ArrayList<>();
+    final List<Tab> mTabs = new ArrayList<>();
     private Tab mActive;
 
     /** Font size in dp; the view wants px, so {@link #fontPx()} converts. */
-    private int mFontDp;
+    int mFontDp;
     /** Iosevka / Nerd Symbols / Pretendard, with the Hangul size-adjust derived per size. */
     private Fonts mFonts;
     /** Loaded once; null when the asset is missing, in which case the theme is palette-only. */
@@ -84,9 +84,9 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     /** Windows Terminal chrome: the command palette and the icon strip. */
     private Chrome mChrome;
     private Notifier mNotifier;
-    private int mScheme;
+    int mScheme;
     /** The custom scheme's 19 editable slots, loaded once and kept in step with Prefs. */
-    private int[] mCustom;
+    int[] mCustom;
     private float mScale = 1f;
 
     private boolean mFn;
@@ -252,6 +252,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         registerBackHandler();
         applyFontSize(mFontDp);
         applyScheme(mScheme);
+        applyCursor();
         mKeyBar.setVisible(mPrefs.keyBarVisible());
     }
 
@@ -757,7 +758,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         return Math.max(8, Math.round(mFontDp * getResources().getDisplayMetrics().density));
     }
 
-    private void applyFontSize(int dp) {
+    void applyFontSize(int dp) {
         mFontDp = Math.max(6, Math.min(28, dp));
         mPrefs.setFontSizeDp(mFontDp);
         if (mTermView.getCurrentSession() != null) {
@@ -766,12 +767,28 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     /** Switch the Latin face; loadFonts() recomputes the cell width the face implies. */
-    private void applyFontFamily(String id) {
+    void applyFontFamily(String id) {
         mPrefs.setFontFamily(id);
         loadFonts();
     }
 
-    private void applyScheme(int index) {
+    /**
+     * Install the cursor's shape and blink rate.
+     *
+     * <p>The shape lives in the emulator (which is also where DECSCUSR writes it), so a
+     * running session has to be told; the rate lives in the view. Zero disables blinking,
+     * which is the view's own encoding for "off" - not a special case invented here.
+     */
+    void applyCursor() {
+        mTermView.setTerminalCursorBlinkerRate(mPrefs.cursorBlink() ? 500 : 0);
+        mTermView.setTerminalCursorBlinkerState(true, true);
+        if (mActive != null && mActive.session != null) {
+            TerminalEmulator em = mActive.session.getEmulator();
+            if (em != null) em.setCursorStyle();
+        }
+    }
+
+    void applyScheme(int index) {
         mScheme = index;
         mPrefs.setScheme(index);
         // On the OLED scheme every surface goes to true black; a #1e1e1e strip next to a
@@ -846,49 +863,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     private void showSettings() {
-        if (mSettings == null) {
-            mSettings = new SettingsSheet(this, new SettingsSheet.Host() {
-                @Override public int fontSizeDp() { return mFontDp; }
-                @Override public void onFontSize(int dp) { applyFontSize(dp); }
-                @Override public int scheme() { return mScheme; }
-                @Override public void onScheme(int index) { applyScheme(index); }
-                @Override public String fontFamily() { return mPrefs.fontFamily(); }
-                @Override public void onFontFamily(String id) { applyFontFamily(id); }
-                @Override public String startDir() { return mPrefs.startDir(); }
-                @Override public void onStartDir(String dir) { mPrefs.setStartDir(dir); }
-                @Override public String startShell() { return mPrefs.startShell(); }
-                @Override public void onStartShell(String shell) { mPrefs.setStartShell(shell); }
-                @Override public int[] customSlots() { return mCustom; }
-                @Override public void onCustomSlot(int slot, int color) {
-                    if (slot < 0 || slot >= Schemes.CUSTOM_SLOTS) return;
-                    mCustom[slot] = color;
-                    mPrefs.setCustomSlot(slot, color);
-                    // Editing a slot is only visible if the custom scheme is the one in use,
-                    // so the edit also selects it - that is what the user clicked into.
-                    applyScheme(Schemes.CUSTOM_INDEX);
-                }
-                @Override public boolean bellVibrate() { return mPrefs.bellVibrate(); }
-                @Override public boolean bellSound() { return mPrefs.bellSound(); }
-                @Override public void onBell(boolean vibrate, boolean sound) {
-                    mPrefs.setBellVibrate(vibrate);
-                    mPrefs.setBellSound(sound);
-                }
-                @Override public boolean keyBarVisible() { return mPrefs.keyBarVisible(); }
-                @Override public void onKeyBarVisible(boolean visible) {
-                    mPrefs.setKeyBarVisible(visible);
-                    if (mKeyBar != null) mKeyBar.setVisible(visible);
-                }
-                @Override public boolean keyboardOnStart() { return mPrefs.showKeyboardOnStart(); }
-                @Override public void onKeyboardOnStart(boolean on) {
-                    mPrefs.setShowKeyboardOnStart(on);
-                }
-                @Override public boolean backIsEscape() { return mPrefs.backIsEscape(); }
-                @Override public void onBackIsEscape(boolean on) { mPrefs.setBackIsEscape(on); }
-                @Override public String statusLine() {
-                    return mTabs.size() + "개 · " + mPrefs.host() + ":" + mPrefs.port();
-                }
-            });
-        }
+        if (mSettings == null) mSettings = new SettingsSheet(this, new SettingsHost(this));
         mSettings.show();
     }
 
@@ -1412,6 +1387,11 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     @Override
     public Integer getTerminalCursorStyle() {
-        return TerminalEmulator.TERMINAL_CURSOR_STYLE_BLOCK;
+        int s = mPrefs.cursorStyle();
+        // The emulator validates against its own list, but an out-of-range int from a prefs
+        // file is cheap to reject here and the fallback is the shape everyone expects.
+        return s == TerminalEmulator.TERMINAL_CURSOR_STYLE_UNDERLINE
+                || s == TerminalEmulator.TERMINAL_CURSOR_STYLE_BAR
+                ? s : TerminalEmulator.TERMINAL_CURSOR_STYLE_BLOCK;
     }
 }

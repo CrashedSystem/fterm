@@ -132,6 +132,17 @@ public final class Prefs {
 
     public int cursorBlinkMs() { return sp().getInt("cursor_blink", 500); }
 
+    /**
+     * The cursor shape: 0 block, 1 underline, 2 bar. Stored as the emulator's own constants
+     * so the only translation is the one that has to exist (an unknown value -> block).
+     */
+    public int cursorStyle() { return sp().getInt("cursor_style", 0); }
+    public void setCursorStyle(int style) { sp().edit().putInt("cursor_style", style).apply(); }
+
+    /** Whether the cursor blinks at all. WT calls this cursorBlink. */
+    public boolean cursorBlink() { return sp().getBoolean("cursor_blink_on", true); }
+    public void setCursorBlink(boolean v) { sp().edit().putBoolean("cursor_blink_on", v).apply(); }
+
     public boolean showKeyboardOnStart() { return sp().getBoolean("kb_on_start", true); }
     public void setShowKeyboardOnStart(boolean v) { sp().edit().putBoolean("kb_on_start", v).apply(); }
 }
