@@ -1,0 +1,67 @@
+# 제3자 고지
+
+fterm은 다음 제3자 코드·글꼴·아이콘을 포함한다. 각 항목의 원문 라이선스는
+`licenses/` 에 있다.
+
+## Termux terminal-emulator / terminal-view (Apache-2.0)
+
+`app/src/com/termux/` 아래의 터미널 엔진·뷰는 [termux/termux-app] 의
+`terminal-emulator` 와 `terminal-view` 라이브러리에서 가져왔다.
+
+- 원본: https://github.com/termux/termux-app
+- 라이선스: Apache License 2.0 (`licenses/Apache-2.0.txt`)
+
+termux-app 저장소 전체는 GPLv3이지만, 위 두 라이브러리는 저장소의
+`LICENSE.md` 에서 Apache-2.0 예외로 명시되어 있다. fterm이 가져온 것은 그 두
+라이브러리뿐이고, `termux-shared` 등 GPLv3 부분은 포함하지 않는다.
+
+Apache-2.0은 다음을 요구한다(4조): 저작권 고지와 라이선스 사본을 배포물에 포함할
+것, 수정한 파일에 수정 사실을 밝힐 것. 이 저장소의 해당 파일들은 수정되었으며,
+수정 내역은 git 이력에 있다.
+
+    Copyright (C) 2012-2024 Termux contributors
+    Copyright (C) 2012 Jack Palevich (Android Terminal Emulator)
+
+## 글꼴 (SIL Open Font License 1.1)
+
+`assets/fonts/` 의 세 글꼴은 모두 OFL-1.1 로 배포된다
+(`licenses/OFL-1.1.txt`). 세 글꼴 모두 Reserved Font Name 을 선언하지 않으므로,
+파일명을 바꾸지 않은 채 그대로 재배포한다.
+
+| 파일 | 글꼴 | 저작권 |
+|---|---|---|
+| `Iosevka.ttf` | Iosevka | Copyright 2015-2025 Renzhi Li (Belleve Invis) |
+| `PretendardHangul.ttf` | Pretendard | Copyright © 2023 길형진 (Kil Hyung-jin). Inter © Rasmus Andersson, Noto Sans CJK © Adobe, M PLUS 1p © Coji Morishita |
+| `NerdSymbols.ttf` | Noto Emoji | Copyright 2013 Google LLC |
+
+## Fluent UI System Icons (MIT)
+
+`app/src/ai/openclaw/fterm/GlyphPaths.java` 는 Microsoft의
+[fluentui-system-icons] 에서 24px regular 경로를 추출해 생성한 것이다
+(생성 스크립트: `tests/tools/icons.py`).
+
+- 원본: https://github.com/microsoft/fluentui-system-icons
+- 라이선스: MIT
+
+    Copyright (c) Microsoft Corporation.
+
+## Windows Terminal Retro 셰이더 (MIT)
+
+`app/src/ai/openclaw/fterm/RetroShader.java` 는 Windows Terminal 저장소의
+`samples/PixelShaders/Retro.hlsl` 을 AGSL 로 옮긴 것이다. 셰이더 상수와 순서는
+원본 그대로이고, 블러 커널만 모바일 GPU에 맞게 줄였다(파일 주석에 근거 기록).
+
+- 원본: https://github.com/microsoft/terminal
+- 라이선스: MIT
+
+    Copyright (c) Microsoft Corporation.
+
+[termux/termux-app]: https://github.com/termux/termux-app
+[fluentui-system-icons]: https://github.com/microsoft/fluentui-system-icons
+
+## 포함하지 않은 것
+
+Miku 테마의 배경 그림은 CC BY-NC(비영리) 라이선스라 이 저장소에서 제외했다.
+색 구성표(`Schemes.miku()`)는 One Half Dark 팔레트를 옮긴 것이고 그림과 무관하게
+동작한다. `MikuBackground` 는 그림이 없으면 `null` 을 돌려주고 테마는 팔레트만으로
+그려진다.

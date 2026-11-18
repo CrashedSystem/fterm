@@ -80,9 +80,14 @@ bash termux/install.sh
 |---|---|---|
 | 폰트 스택 | `mterm/public/js/core/appearance.js` `FONT_STACK` = Iosevka → Nerd Symbols → Pretendard | `Fonts.java` — 코드포인트별 `Typeface` 선택. 얼굴마다 em 크기는 같고, 두 칸을 넘는 글리프만 줄여 상자에 맞춘다 (Windows Terminal AtlasEngine 방식) |
 | Miku 팔레트 | 같은 파일의 `ONE_HALF_DARK` | `Schemes.miku()` — 16개 ANSI 값을 그대로 옮김 (`SchemesTest`가 대조) |
-| Miku 그림 | `mterm/public/img/miku.png` (CC BY-NC) | `assets/img/miku-dusk.png` — `#282c34`와 **미리 multiply**한 것. mterm의 `background-blend-mode: multiply`와 같은 결과이고, 런타임 블렌드가 필요 없다 |
+| Miku 그림 | `mterm/public/img/miku.png` (CC BY-NC) | **저장소에 넣지 않는다.** 비영리 라이선스라 공개 배포물에 실을 수 없다. `MikuBackground` 는 `assets/img/miku-dusk.png` 가 있으면 그리고, 없으면 `null` 을 돌려줘 테마가 팔레트만으로 그려진다 |
 
 `backgroundOpacity: 0.55`는 mterm에 **선언만 있고 소비처가 없다**(CSS·JS 어디서도 읽지 않는다). 실제 렌더는 불투명 multiply이므로 여기서도 그렇게 했다.
+
+## 제3자 코드와 라이선스
+
+Termux 엔진(Apache-2.0), 세 글꼴(OFL-1.1), Fluent 아이콘(MIT), Retro 셰이더(MIT)를
+포함한다. 저작권 고지와 라이선스 전문은 `NOTICE.md` 와 `licenses/` 에 있다.
 
 ## 앱이 데몬을 스스로 띄운다 (keeper)
 
