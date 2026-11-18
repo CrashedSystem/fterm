@@ -43,7 +43,11 @@
 **검증**: PR의 체크가 초록인 것 자체가 검증입니다. CI가 초록이 아니면 PR은 열린 채로 둡니다.
 
 **한계**: `install.sh`, 진짜 Android PTY, `termux-api`, 폰트 선택 UI는 러너에서 재현할 수
-없습니다. 그 목록은 `docs/ROADMAP.md`의 "기기에서만 확인되는 것"에 남깁니다.
+없습니다. 그 목록은 아래 "기기에서만 확인되는 것"에 남깁니다. 그리고 `java` 잡은
+`tests/run_core.sh`(터미널 코어·전송 계층)만 돌립니다 — `app/` 전체를 컴파일하려면
+`android.jar` 와 `aapt2` 가 필요한데, 러너에 그걸 받아 오는 단계를 넣으면 CI 가 "의존성 없는
+검사"라는 성질을 잃습니다. 대신 앱 코드는 API 35 `android.jar` 로 로컬 타입체크를 했고,
+APK 빌드 자체는 지금도 기기에서만 확인됩니다.
 
 ## 2. Rust `ftermd-rs` — 데몬을 Rust로
 
@@ -187,6 +191,9 @@ CI 러너는 리눅스이고 폰이 아닙니다. 아래는 **초록불이어도
 | 폰트 목록·내려받기 | `/sdcard`, Termux 저장소 | 앱 `모양 → 글꼴` |
 | `fterm-keeper` | `/sdcard/Download` 요청 파일 | `pm clear` 후 앱 실행 |
 | idle 생존(도즈) | 화면·배터리 최적화가 없음 | 실기기 방치 |
+| APK 빌드(`build.sh`)와 앱 모듈 컴파일 | 러너에 `android.jar`·`aapt2` 없음 | `bash build.sh` |
+| FGS 가 실제로 6시간 상한을 피하는지 | 시간이 지나야 드러남 | `dumpsys activity services` |
+| 무음 모드에서 진동하지 않는지 | 러너에 무음 모드가 없음 | 기기 설정에서 무음 후 `printf '\a'` |
 
 ## 이 문서를 고치는 규칙
 
