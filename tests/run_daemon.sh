@@ -14,6 +14,8 @@
 # The daemon runs on its own FTERM_RUNDIR and port so this never touches the phone's tabs.
 set -uo pipefail
 
+rc=0
+
 if [ $# -eq 0 ]; then
   echo "usage: $0 <daemon command...>" >&2
   exit 2
@@ -45,6 +47,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
+echo "=== protocol spec (one table, four implementations)"
+# Static, and independent of which daemon this run is for: it reads the constant tables out of
+# the Python daemon, the Rust daemon and the app's Protocol class and fails on any difference.
+# It lives here because this script is what CI calls.
+python3 "$ROOT/tests/test_protocol.py" || rc=1
+echo
 echo "=== daemon: ${DAEMON[*]}"
 echo "=== port $PORT, rundir $RUNDIR"
 "${DAEMON[@]}" start >"$LOG" 2>&1 &
@@ -66,8 +74,6 @@ if [ -z "$ready" ]; then
   exit 1
 fi
 sed -n '1p' "$LOG" 2>/dev/null
-
-rc=0
 
 echo
 echo "=== protocol (termux/test_client.py)"

@@ -58,7 +58,8 @@ javac -nowarn -d "$OUT" \
   "$ROOT/app/src/ai/openclaw/fterm/FontZoom.java" \
   "$ROOT/tests/jvm/core/FontCoverageTest.java" \
   "$ROOT/tests/jvm/core/FontZoomTest.java" \
-  "$ROOT/tests/jvm/core/ModeRestoreTest.java"
+  "$ROOT/tests/jvm/core/ModeRestoreTest.java" \
+  "$ROOT/tests/jvm/core/ScrollbackTest.java"
 
 
 echo "[2/3] 실행"
@@ -92,6 +93,7 @@ java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
      -Drenderer.src="$ROOT/app/src/com.termux/view/TerminalRenderer.java" \
      -cp "$OUT" FontZoomTest
 java -cp "$OUT" com.termux.terminal.ModeRestoreTest
+java -cp "$OUT" com.termux.terminal.ScrollbackTest
 
 echo
 echo "[3/3] 전송 계층 (데몬 없이, 가짜 데몬으로)"

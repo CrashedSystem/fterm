@@ -1,5 +1,18 @@
 package com.termux.terminal;
 
+import static com.termux.terminal.Protocol.C_FONT_FETCH;
+import static com.termux.terminal.Protocol.C_FONT_GET;
+import static com.termux.terminal.Protocol.C_FONT_LIST;
+import static com.termux.terminal.Protocol.C_HELLO;
+import static com.termux.terminal.Protocol.C_SYNC;
+import static com.termux.terminal.Protocol.MAX_FRAME;
+import static com.termux.terminal.Protocol.S_ERROR;
+import static com.termux.terminal.Protocol.S_FONT_DATA;
+import static com.termux.terminal.Protocol.S_FONT_FETCHED;
+import static com.termux.terminal.Protocol.S_FONT_LIST;
+import static com.termux.terminal.Protocol.S_HELLO_OK;
+import static com.termux.terminal.Protocol.S_SYNCED;
+
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -19,17 +32,6 @@ import java.util.List;
  */
 public final class DaemonClient {
 
-    private static final int C_HELLO = 0x01;
-    private static final int C_SYNC = 0x09;
-    private static final int C_FONT_LIST = 0x1A;
-    private static final int C_FONT_GET = 0x1B;
-    private static final int C_FONT_FETCH = 0x1C;
-    private static final int S_HELLO_OK = 0x80;
-    private static final int S_FONT_LIST = 0x9A;
-    private static final int S_FONT_DATA = 0x9B;
-    private static final int S_FONT_FETCHED = 0x9C;
-    private static final int S_SYNCED = 0x9E;
-    private static final int S_ERROR = 0x9F;
 
     private DaemonClient() {}
 
@@ -60,7 +62,7 @@ public final class DaemonClient {
 
             while (true) {
                 int type = in.readUnsignedByte();
-                int len = readIntLE(in);
+                int len = Protocol.readInt(in);
                 if (len < 0 || len > (1 << 20)) throw new Failure("데몬 프레임 오류");
                 byte[] p = new byte[len];
                 in.readFully(p);
@@ -135,7 +137,7 @@ public final class DaemonClient {
             send(out, C_FONT_LIST, new byte[0]);
             while (true) {
                 int type = in.readUnsignedByte();
-                int len = readIntLE(in);
+                int len = Protocol.readInt(in);
                 if (len < 0 || len > (1 << 20)) throw new Failure("데몬 프레임 오류");
                 byte[] p = new byte[len];
                 in.readFully(p);
@@ -180,7 +182,7 @@ public final class DaemonClient {
             int got = 0;
             while (true) {
                 int type = in.readUnsignedByte();
-                int len = readIntLE(in);
+                int len = Protocol.readInt(in);
                 if (len < 0 || len > (1 << 20)) throw new Failure("데몬 프레임 오류");
                 byte[] p = new byte[len];
                 in.readFully(p);
@@ -239,7 +241,7 @@ public final class DaemonClient {
             send(out, C_FONT_FETCH, req.toByteArray());
             while (true) {
                 int type = in.readUnsignedByte();
-                int len = readIntLE(in);
+                int len = Protocol.readInt(in);
                 if (len < 0 || len > (1 << 20)) throw new Failure("데몬 프레임 오류");
                 byte[] p = new byte[len];
                 in.readFully(p);
@@ -267,15 +269,9 @@ public final class DaemonClient {
 
     private static void hello(OutputStream out, DataInputStream in, String token)
             throws IOException, Failure {
-        byte[] tok = token.getBytes(StandardCharsets.UTF_8);
-        java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
-        b.write(1);
-        b.write(tok.length & 0xff);
-        b.write((tok.length >> 8) & 0xff);
-        b.write(tok, 0, tok.length);
-        send(out, C_HELLO, b.toByteArray());
+        send(out, C_HELLO, Protocol.hello(token));
         int type = in.readUnsignedByte();
-        int len = readIntLE(in);
+        int len = Protocol.readInt(in);
         if (len < 0 || len > (1 << 20)) throw new Failure("데몬 프레임 오류");
         byte[] p = new byte[len];
         in.readFully(p);
@@ -330,7 +326,7 @@ public final class DaemonClient {
     private static void send(OutputStream out, int type, byte[] payload) throws IOException {
         byte[] head = new byte[5];
         head[0] = (byte) type;
-        putInt(head, 1, payload.length);
+        Protocol.putInt(head, 1, payload.length);
         out.write(head);
         out.write(payload);
         out.flush();

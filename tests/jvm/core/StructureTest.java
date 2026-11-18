@@ -93,6 +93,39 @@ public class StructureTest {
         check(!code.toString().contains("RUN_COMMAND"),
                 "RUN_COMMAND is not called (it is ignored on this device)");
 
+        // 5b. Vendored upstream code keeps a pinned baseline. Without one, taking an upstream
+        //     fix means rediscovering what we changed, which is how a 3-way merge quietly
+        //     deletes the reasons this app exists.
+        String upstream = read("docs/UPSTREAM.md");
+        check(upstream.matches("(?s).*\\b[0-9a-f]{40}\\b.*"),
+                "docs/UPSTREAM.md pins an upstream commit");
+        check(upstream.contains("TerminalEmulator.java") && upstream.contains("TerminalView.java"),
+                "and lists the vendored files");
+        check(read("tools/upstream-diff.sh").contains("raw.githubusercontent.com/termux/termux-app"),
+                "with a script that reproduces the comparison");
+
+        // 5c. The wire protocol has one Java home. The four-way agreement is checked by
+        //     tests/test_protocol.py; what is checked here is that the app has one table and not
+        //     the two it used to.
+        String proto = read(dir + "../../../com.termux/terminal/Protocol.java");
+        check(proto.contains("C_HELLO") && proto.contains("S_ERROR") && proto.contains("E_TOO_MANY"),
+                "the protocol constants live in Protocol");
+        check(!read(dir + "../../../com.termux/terminal/SocketTransport.java")
+                        .contains("private static final int C_HELLO"),
+                "the transport does not keep a second copy");
+        check(!read(dir + "../../../com.termux/terminal/DaemonClient.java")
+                        .contains("private static final int C_HELLO"),
+                "and neither does the one-shot client");
+
+        // 5d. Memory pressure has a policy of its own, and it is what Android's onTrimMemory
+        //     calls: background tabs give history back, the visible screen is untouched.
+        String memory = read(dir + "TabMemory.java");
+        check(memory.contains("TRIM_MEMORY_COMPLETE"), "the trim policy has two steps");
+        check(main.contains("TabMemory.trim("), "and the activity asks it on onTrimMemory");
+        check(read(dir + "../../../com.termux/terminal/TerminalEmulator.java")
+                        .contains("public void trimScrollback(int keep)"),
+                "the emulator can drop scrollback without touching the screen");
+
         // 6. An image reaches the prompt by ONE tap in the keyboard's clipboard panel, not
         //    by a focus-time poll. Three things have to be true for that to work.
         String clip = read(dir + "ClipboardImage.java");

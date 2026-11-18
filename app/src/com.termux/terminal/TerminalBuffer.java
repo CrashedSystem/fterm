@@ -266,8 +266,20 @@ public final class TerminalBuffer {
      * @param cursor     An int[2] containing the (column, row) cursor location.
      */
     public void resize(int newColumns, int newRows, int newTotalRows, int[] cursor, long currentStyle, boolean altScreen) {
+        resize(newColumns, newRows, newTotalRows, cursor, currentStyle, altScreen, false);
+    }
+
+    /**
+     * resize(), with the rebuilding path forced.
+     *
+     * <p>The fast path moves rows only when the <em>screen</em> shrinks; it then stores the new
+     * total without moving anything. That is correct for a size change and wrong for dropping
+     * transcript, where the circular buffer would end up pointing past its own end. Asking for
+     * the rebuild is the difference between trimming history and corrupting the screen.
+     */
+    public void resize(int newColumns, int newRows, int newTotalRows, int[] cursor, long currentStyle, boolean altScreen, boolean forceRebuild) {
         // newRows > mTotalRows should not normally happen since mTotalRows is TRANSCRIPT_ROWS (10000):
-        if (newColumns == mColumns && newRows <= mTotalRows) {
+        if (!forceRebuild && newColumns == mColumns && newRows <= mTotalRows) {
             // Fast resize where just the rows changed.
             int shiftDownOfTopRow = mScreenRows - newRows;
             if (shiftDownOfTopRow > 0 && shiftDownOfTopRow < mScreenRows) {
@@ -415,6 +427,22 @@ public final class TerminalBuffer {
         }
 
         // Handle cursor scrolling off screen:
+        if (cursor[0] < 0 || cursor[1] < 0) cursor[0] = cursor[1] = 0;
+    }
+
+    /**
+     * Drop transcript lines beyond {@code keepRows}, keeping the screen exactly as it is.
+     *
+     * <p>This is the memory half of "16 tabs" problem: a tab that is not on screen keeps up to
+     * 8,000 rows of history at roughly a kilobyte per row. The user is looking at one tab; the
+     * others can forget.
+     *
+     * @param keepRows lines of history to keep; the screen rows are never trimmed
+     */
+    public void trimTranscript(int keepRows, int[] cursor, long currentStyle, boolean altScreen) {
+        int newTotal = mScreenRows + Math.max(0, keepRows);
+        if (newTotal >= mTotalRows) return;
+        resize(mColumns, mScreenRows, newTotal, cursor, currentStyle, altScreen, true);
         if (cursor[0] < 0 || cursor[1] < 0) cursor[0] = cursor[1] = 0;
     }
 

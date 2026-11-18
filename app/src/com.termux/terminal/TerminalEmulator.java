@@ -626,6 +626,24 @@ public final class TerminalEmulator {
         mCursorRow = cursor[1];
     }
 
+    /**
+     * Keep at most {@code keep} lines of scrollback, dropping the oldest ones.
+     *
+     * <p>The screen is untouched: this is called when Android says memory is tight, and the tab
+     * being displayed must not flicker for it. A full-screen program (the alternate buffer) is
+     * skipped entirely - its screen is the program's, and the buffer under it is not what is
+     * holding the memory.
+     */
+    public void trimScrollback(int keep) {
+        if (mScreen != mMainBuffer) return;
+        int keepRows = Math.max(TERMINAL_TRANSCRIPT_ROWS_MIN, keep);
+        if (mMainBuffer.mTotalRows <= mRows + keepRows) return;
+        final int[] cursor = {mCursorCol, mCursorRow};
+        mMainBuffer.trimTranscript(keepRows, cursor, getStyle(), false);
+        mCursorCol = cursor[0];
+        mCursorRow = cursor[1];
+    }
+
     public int getCursorRow() {
         return mCursorRow;
     }

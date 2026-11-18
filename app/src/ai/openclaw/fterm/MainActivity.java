@@ -965,6 +965,17 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     // ---------------------------------------------------------------- lifecycle
 
+    /** Android is short of memory: a background tab forgets its scrollback, its screen stays. */
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        java.util.List<TerminalSession> background = new java.util.ArrayList<>();
+        for (Tab tab : mTabs) {
+            if (tab != mActive && tab.session != null) background.add(tab.session);
+        }
+        TabMemory.trim(background, level);
+    }
+
     @Override
     protected void onDestroy() {
         // A ToneGenerator holds an audio track for its whole life. Without this, every

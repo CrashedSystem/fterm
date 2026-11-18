@@ -10,6 +10,7 @@ OUT=${FTERM_TMPDIR:-/data/data/com.termux/files/usr/tmp}/fterm-transport
 rm -rf "$OUT"; mkdir -p "$OUT"
 
 javac -nowarn -d "$OUT" \
+  "$ROOT/app/src/com.termux/terminal/Protocol.java" \
   "$ROOT/app/src/com.termux/terminal/SessionTransport.java" \
   "$ROOT/app/src/com.termux/terminal/SocketTransport.java" \
   "$ROOT/tests/jvm/com/termux/terminal/TerminalSession.java" \
