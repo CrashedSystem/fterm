@@ -486,6 +486,45 @@ select 오류가 루프를 죽이지 않게 했습니다.
 `tests/jvm/harness/IdleDropTest.java` 가 회귀를 막습니다. 20회 급절단 접속 + 20초 유휴 +
 소스 순서 검사(select 전에 drop)를 확인합니다.
 
+## Rust 데몬 (`termux/ftermd-rs`) — 같은 프로토콜, 다른 안쪽
+
+파이썬 데몬은 잘 돌지만, 구조상 세 가지가 실사용에서 걸립니다. 셋 다 **데몬 하나가 죽으면
+모든 탭의 셸이 같이 죽는다**는 같은 뿌리입니다.
+
+| 문제 | 지금 동작 | Rust 데몬 |
+|---|---|---|
+| 낡은 pidfile | `os.kill(pid, 0)` 만 보므로, 크래시 뒤 그 PID 를 다른 프로세스가 받으면 `already running` 을 찍고 영원히 안 뜹니다 | `~/.fterm/ftermd.lock` 의 `flock` — 커널이 소유하므로 어떻게 죽어도 저절로 풀립니다. `stop`/`status` 는 `/proc/<pid>/cmdline` 이 이 데몬인지 확인합니다 |
+| 한 루프의 블로킹 | 모든 탭이 `select()` 하나를 공유합니다. PTY 입력이 차서 막힌 `os.write`, `redraw()` 의 50ms, 32MB 폰트 읽기가 그 루프를 잡습니다 | 세션마다 읽기·쓰기 스레드, 나머지는 유한 채널의 태스크. 막힌 탭은 그 탭만 멈춥니다 |
+| 백프레셔 없음 | 앱이 소켓을 안 읽는 동안 `Client.outbuf` 가 상한 없이 커져 데몬이 OOM 으로 죽고, **모든 탭의 셸이 같이** 죽습니다 | 클라이언트마다 4MiB 예산. 넘으면 **그 연결만** 끊고, 세션·셸·ring 은 살아 있어 재접속하면 replay 로 복구됩니다 |
+
+프로토콜은 한 바이트도 바꾸지 않았습니다. 상수·프레이밍·`E_*`·`S_ERROR`/`C_CLOSE` 동작,
+`ART` 변수 상속과 캐시, `FTERM_HISTORY_BYTES`, 글꼴 경로, 세션 16개, ring 256KiB, `Modes`
+복원 순서가 같습니다. 그래서 **앱은 어느 데몬에 붙었는지 알 수 없고**, `install.sh` 와
+keeper 도 그대로 동작합니다(명령줄·출력·종료 코드가 같습니다).
+
+### 기기에서 빌드하고 켜기
+
+Termux 안에서 직접 빌드합니다(크로스 컴파일이 아니라 그 기기에서).
+
+```bash
+pkg install rust
+cd ~/projects/fterm/termux/ftermd-rs && cargo build --release
+# 설치할 때부터 Rust 데몬을 쓰려면:
+FTERM_DAEMON=rust bash ~/projects/fterm/termux/install.sh
+```
+
+`FTERM_DAEMON=rust` 는 `~/fterm/ftermd` 자리에 Rust 바이너리를 놓습니다. 그 뒤로는 앱도
+keeper 도 같은 소켓으로 이야기합니다. 되돌리려면 `FTERM_DAEMON=python` 으로 다시 설치하면
+됩니다 — 두 데몬의 명령줄이 같으므로 스크립트도 앱도 바뀌지 않습니다.
+
+### 검증
+
+CI 가 **같은 두 스위트**(`termux/test_client.py`, `tests/test_modes.py --daemon`)를 파이썬
+데몬과 Rust 바이너리에 그대로 돌립니다. 추가로 `tests/test_daemon_hardening.py` 가 위 표의
+세 가지를 실제 소켓으로 확인합니다(다른 프로세스의 pid 를 가진 pidfile, 읽지 않는
+클라이언트, 입력을 안 읽는 탭). 이 세 검사는 **파이썬 데몬에서는 실패하는 것이 정상**이며,
+그 실패가 고치려는 버그 자체입니다.
+
 ## 이전 수정 (핑/타임아웃) — 여전히 유효하지만 충분하지 않았습니다
 
 기기에서 "유휴 아니면 프리징"이 보고됐고, `IdleTest` 가 20초 유휴에서 세션이 죽는 것을

@@ -8,7 +8,36 @@ DEST=${FTERM_HOME:-$HOME/fterm}
 command -v python3 >/dev/null || { echo "python3 필요: pkg install python" >&2; exit 1; }
 
 mkdir -p "$DEST"
-cp "$HERE/ftermd" "$DEST/ftermd"
+
+# Which daemon: python3 is the one that has been running here, rust is the same protocol with
+# the selector loop, the stale pidfile and the unbounded output buffer fixed. Both answer the
+# same commands with the same output and exit codes, so nothing below this point - and nothing
+# in the app - has to know which one it got.
+DAEMON_KIND=${FTERM_DAEMON:-python}
+RUST_CRATE="$HERE/ftermd-rs"
+RUST_BIN=""
+
+if [ "$DAEMON_KIND" = "rust" ]; then
+  if [ -n "${FTERM_RUST_BIN:-}" ] && [ -x "$FTERM_RUST_BIN" ]; then
+    RUST_BIN=$FTERM_RUST_BIN
+  elif [ -x "$RUST_CRATE/target/release/ftermd" ]; then
+    RUST_BIN="$RUST_CRATE/target/release/ftermd"
+  else
+    command -v cargo >/dev/null || {
+      echo "Rust 데몬을 빌드하려면 cargo 가 필요합니다: pkg install rust" >&2
+      echo "(또는 이미 빌드한 바이너리를 FTERM_RUST_BIN 으로 지정하십시오)" >&2
+      exit 1
+    }
+    echo "Rust 데몬 빌드 (기기에서 몇 분 걸립니다)"
+    ( cd "$RUST_CRATE" && cargo build --release --locked )
+    RUST_BIN="$RUST_CRATE/target/release/ftermd"
+  fi
+  cp "$RUST_BIN" "$DEST/ftermd"
+  echo "데몬: rust ($RUST_BIN)"
+else
+  cp "$HERE/ftermd" "$DEST/ftermd"
+  echo "데몬: python3"
+fi
 chmod 700 "$DEST/ftermd"
 
 # The keeper is what lets the app start the daemon by itself: RUN_COMMAND is silently
