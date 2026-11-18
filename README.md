@@ -548,6 +548,22 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 | UI 19종 (드롭다운·팔레트·이름 고정·테마 색·Enter) | `tests/jvm/core/UiTest.java` | 통과 |
 | 한글 IME 조합 16종 (ㅎ→하→한, 성장/축소, commit 꼬리, delete, 소스 대조) | `tests/jvm/core/ImeComposeTest.java` | 통과 |
 
+### 자동 검증 (GitHub Actions)
+
+위 표는 손으로 돌린 기록입니다. 지금은 `push`와 PR마다 `.github/workflows/ci.yml`이 러너에서
+돌릴 수 있는 것을 자동으로 돌립니다.
+
+| 잡 | 도는 것 | 조건 |
+|---|---|---|
+| `python` | `test_modes.py`·`test_env.py`, 그리고 데몬을 띄워 `test_client.py`·`test_modes.py --daemon` | 항상 |
+| `rust` | `cargo build --release`·`cargo test`, 그리고 **같은 두 스위트를 Rust 바이너리로** | `termux/ftermd-rs/Cargo.toml` 이 있을 때 |
+| `java` | `tests/run_core.sh` (ANSI 파서·폭·팔레트·모드 복원) | 항상 |
+
+데몬은 `FTERM_RUNDIR`·`FTERM_PORT`를 따로 받아 뜨므로 폰의 탭과 섞이지 않습니다. 러너가 확인할
+수 없는 것(`install.sh`, 진짜 Android PTY, `termux-api`, 폰트 선택 UI, keeper, 도즈)은
+`docs/ROADMAP.md` 에 "기기에서만 확인되는 것"으로 적어 두었습니다. 남은 작업 순서도 그 문서에
+있습니다.
+
 ### 한글 입력 — termlib 방식
 
 ConnectBot이 같은 문제를 푼 방식([connectbot#2352](https://github.com/connectbot/connectbot/issues/2352),

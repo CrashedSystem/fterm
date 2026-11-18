@@ -3,7 +3,9 @@
 # 렌더링은 안 하고 그리드만 확인한다 — 한글이 2칸을 차지하는지가 핵심.
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-OUT=/data/data/com.termux/files/usr/tmp/fterm-core
+# Termux's tmp is the natural scratch dir on a phone; a Linux CI runner has no such path, so
+# it can point this somewhere else and run the same suite unmodified.
+OUT=${FTERM_TMPDIR:-/data/data/com.termux/files/usr/tmp}/fterm-core
 rm -rf "$OUT"; mkdir -p "$OUT"
 
 STUB=$ROOT/tests/androidstub
