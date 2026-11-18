@@ -11,8 +11,8 @@ import java.util.Map;
  */
 public class SchemesTest {
 
-    /** The real Prefs.SCHEME_NAMES length; checked separately on the device. */
-    static final int SCHEME_COUNT = 6;
+    /** The built-in Prefs.SCHEME_NAMES entries; the last one is the editable slot. */
+    static final int SCHEME_COUNT = 7;
 
     static int pass = 0;
 
@@ -81,8 +81,10 @@ public class SchemesTest {
         check(contrast >= 7.0, "OLED foreground contrast " + contrast + " is at least 7:1");
         System.out.println("ok  OLED contrast " + Math.round(contrast * 10) / 10.0 + ":1");
 
-        // And each scheme's own foreground must clear 4.5:1 against its background.
-        for (int i = 0; i < SCHEME_COUNT; i++) {
+        // And each built-in scheme's foreground must clear 4.5:1 against its background.
+        // The custom slot is excluded: its colours are whatever the user typed, and a
+        // palette tool that refuses low contrast is a tool that argues with its user.
+        for (int i = 0; i < SCHEME_COUNT - 1; i++) {
             int[] t = ai.openclaw.fterm.Schemes.colors(i);
             double lf = luminance(t[com.termux.terminal.TextStyle.COLOR_INDEX_FOREGROUND], false);
             double lb = luminance(t[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND], false);
@@ -92,6 +94,38 @@ public class SchemesTest {
                     + " contrast " + ratio + " is below 4.5:1");
             pass++;
         }
+
+        // The custom slot is not compiled in: it is whatever nineteen ints are handed to it,
+        // and the cube/ramp are still generated so the renderer never reads zeros.
+        int[] slots = new int[ai.openclaw.fterm.Schemes.CUSTOM_SLOTS];
+        for (int i = 0; i < 16; i++) slots[i] = rgb(16 * i, 255 - 16 * i, 40 + 4 * i);
+        slots[16] = rgb(0xee, 0xee, 0xee);
+        slots[17] = rgb(0x11, 0x11, 0x11);
+        slots[18] = rgb(0x00, 0xdd, 0xff);
+        int[] custom = ai.openclaw.fterm.Schemes.colors(
+                ai.openclaw.fterm.Schemes.CUSTOM_INDEX, slots);
+        eq(custom.length, expectedSize, "custom table size");
+        for (int c = 0; c < 16; c++) eq(custom[c], slots[c], "custom ANSI " + c + " is the stored slot");
+        eq(custom[16], rgb(0, 0, 0), "custom cube starts at black");
+        eq(custom[17], rgb(0, 0, 0x5f), "custom cube's second step is the 0x5f level");
+        eq(custom[16 + 216], rgb(8, 8, 8), "custom grey ramp starts at 8");
+        eq(custom[com.termux.terminal.TextStyle.COLOR_INDEX_FOREGROUND], slots[16],
+                "custom foreground");
+        eq(custom[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND], slots[17],
+                "custom background");
+        eq(custom[com.termux.terminal.TextStyle.COLOR_INDEX_CURSOR], slots[18],
+                "custom cursor");
+        // Without slots the custom index must not return a broken table.
+        eq(ai.openclaw.fterm.Schemes.colors(ai.openclaw.fterm.Schemes.CUSTOM_INDEX, null).length,
+                expectedSize, "custom without slots still fills the table");
+        // A custom scheme with a black background counts as OLED for chrome purposes.
+        check(ai.openclaw.fterm.Schemes.isOled(ai.openclaw.fterm.Schemes.CUSTOM_INDEX, slots)
+                == false, "custom #111 background is not OLED");
+        slots[17] = rgb(0, 0, 0);
+        check(ai.openclaw.fterm.Schemes.isOled(ai.openclaw.fterm.Schemes.CUSTOM_INDEX, slots),
+                "custom black background is OLED");
+        check(ai.openclaw.fterm.Schemes.isOled(ai.openclaw.fterm.Schemes.OLED_INDEX, null),
+                "built-in OLED is still OLED");
 
         // Only Miku carries a picture.
         for (int i = 0; i < SCHEME_COUNT; i++) {

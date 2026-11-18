@@ -47,6 +47,11 @@ final class SettingsSheet {
 
         void onScheme(int index);
 
+        /** The nineteen editable slots: 16 ANSI, then foreground, background, cursor. */
+        int[] customSlots();
+
+        void onCustomSlot(int slot, int color);
+
         boolean bellVibrate();
 
         boolean bellSound();
@@ -356,16 +361,17 @@ final class SettingsSheet {
      * legibility judgeable before it is applied.
      */
     private void schemesPage(LinearLayout col) {
-        col.addView(preview(mHost.scheme()));
+        int[] slots = mHost.customSlots();
+        col.addView(preview(mHost.scheme(), slots));
 
         LinearLayout colours = card(col);
         colours.addView(cardTitle("색"));
-        int[] table = Schemes.colors(mHost.scheme());
+        int[] table = Schemes.colors(mHost.scheme(), slots);
         String[] names = {"검정", "빨강", "녹색", "노랑", "파랑", "보라색", "녹청색", "흰색"};
-        int[] normal = {0, 1, 2, 3, 4, 5, 6, 7};
+        final boolean editable = mHost.scheme() == Schemes.CUSTOM_INDEX;
         for (int i = 0; i < names.length; i++) {
-            colours.addView(swatchRow(names[i], table[normal[i]], table[normal[i] + 8],
-                    i == names.length - 1));
+            colours.addView(swatchRow(names[i], table[i], table[i + 8], i == names.length - 1,
+                    editable, i, slots));
         }
 
         LinearLayout list = card(col);
@@ -379,20 +385,106 @@ final class SettingsSheet {
                     }));
         }
 
-        hint(col, "색 구성표는 앱에 내장되어 있습니다. 편집은 아직 없고, "
-                + "선택하면 터미널과 크롬이 동시에 바뀝니다.");
+        hint(col, editable
+                ? "색을 누르면 그 자리의 값을 바꿀 수 있습니다. 왼쪽이 보통색, "
+                        + "오른쪽이 밝은색입니다."
+                : "색 구성표는 앱에 내장되어 있습니다. \"사용자 지정\"을 고르면 "
+                        + "16색을 직접 정할 수 있습니다.");
+    }
+
+    /**
+     * A colour editor for one slot: a hex field, a live chip, and a preview of the result.
+     *
+     * <p>A full HSV picker would be another screen of custom drawing; the terminal's own
+     * vocabulary is the hex code, and every colour a user would paste from a scheme file is
+     * written that way. The chip exists so a typo is visible before it is committed.
+     */
+    private void editSlot(final int slot, int current, final int[] slots) {
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(8), dp(20), 0);
+
+        final View chip = new View(mActivity);
+        chip.setBackground(Chrome.plate(current | 0xff000000, 4));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(40));
+        clp.bottomMargin = dp(10);
+        chip.setLayoutParams(clp);
+        box.addView(chip);
+
+        final android.widget.EditText hex = new android.widget.EditText(mActivity);
+        hex.setText(String.format("#%06X", current & 0xffffff));
+        hex.setSingleLine(true);
+        hex.setTextSize(15);
+        hex.setTypeface(Typeface.MONOSPACE);
+        hex.setTextColor(TEXT);
+        hex.setHintTextColor(HINT);
+        box.addView(hex);
+
+        TextView label = new TextView(mActivity);
+        label.setText(slot < 16 ? (slot < 8 ? "보통색 " : "밝은색 ") + (slot % 8 + 1) + "번"
+                : slot == 16 ? "전경" : slot == 17 ? "배경" : "커서");
+        label.setTextColor(HINT);
+        label.setTextSize(11);
+        label.setPadding(0, dp(6), 0, 0);
+        box.addView(label);
+
+        hex.addTextChangedListener(new android.text.TextWatcher() {
+            public void afterTextChanged(android.text.Editable e) {
+                Integer c = parseHex(e.toString());
+                if (c != null) chip.setBackground(Chrome.plate(c, 4));
+            }
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            public void onTextChanged(CharSequence s, int a, int b, int c) {}
+        });
+
+        new android.app.AlertDialog.Builder(mActivity)
+                .setTitle("색 지정")
+                .setView(box)
+                .setPositiveButton("저장", (d, w) -> {
+                    Integer c = parseHex(hex.getText().toString());
+                    if (c != null) {
+                        mHost.onCustomSlot(slot, c);
+                        slots[slot] = c;
+                        render();
+                    }
+                })
+                .setNegativeButton("취소", null)
+                .setNeutralButton("전경으로", (d, w) -> {
+                    mHost.onCustomSlot(slot, slots[16]);
+                    slots[slot] = slots[16];
+                    render();
+                })
+                .show();
+    }
+
+    /** Accepts "#rrggbb", "rrggbb" and "#rgb"; returns null when it is not a colour. */
+    static Integer parseHex(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        if (t.startsWith("#")) t = t.substring(1);
+        if (t.length() == 3) {
+            t = "" + t.charAt(0) + t.charAt(0) + t.charAt(1) + t.charAt(1)
+                    + t.charAt(2) + t.charAt(2);
+        }
+        if (t.length() != 6) return null;
+        try {
+            return 0xff000000 | Integer.parseInt(t, 16);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**
      * A miniature terminal: the scheme's own background, and the eight colour names written in
      * the colours they name, normal then bright, one row each.
      */
-    private View preview(int schemeIndex) {
-        int[] table = Schemes.colors(schemeIndex);
+    private View preview(int schemeIndex, int[] slots) {
+        int[] table = Schemes.colors(schemeIndex, slots);
         LinearLayout box = new LinearLayout(mActivity);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(12), dp(10), dp(12), dp(10));
-        box.setBackground(Chrome.plate(Schemes.background(schemeIndex), 6));
+        box.setBackground(Chrome.plate(Schemes.background(schemeIndex, slots), 6));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.bottomMargin = dp(10);
@@ -427,8 +519,15 @@ final class SettingsSheet {
         return box;
     }
 
-    /** One palette entry: name, its normal swatch, its bright swatch. */
-    private View swatchRow(String name, int normal, int bright, boolean last) {
+    /**
+     * One palette entry: name, its normal swatch, its bright swatch.
+     *
+     * <p>When the custom scheme is active the two swatches become tappable, because that is
+     * where editing lives - WT's colour page is the same idea with a picker instead of a hex
+     * field. The row itself stays a row: a value you can change, not a form control.
+     */
+    private View swatchRow(String name, int normal, int bright, boolean last,
+                           boolean editable, final int base, final int[] slots) {
         LinearLayout row = new LinearLayout(mActivity);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -442,8 +541,19 @@ final class SettingsSheet {
         t.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         row.addView(t);
-        row.addView(swatch(normal));
-        row.addView(swatch(bright));
+
+        if (editable) {
+            final int slot = base;
+            View n = swatch(normal);
+            n.setOnClickListener(v -> editSlot(slot, slots[slot], slots));
+            row.addView(n);
+            View b = swatch(bright);
+            b.setOnClickListener(v -> editSlot(slot + 8, slots[slot + 8], slots));
+            row.addView(b);
+        } else {
+            row.addView(swatch(normal));
+            row.addView(swatch(bright));
+        }
         return cardRow(row, last);
     }
 

@@ -48,8 +48,13 @@ public class UiTest {
                 "and the shell title stops overwriting it");
 
         // The key bar and the tab close box must use the scheme's colours, not literals.
-        check(src.contains("Schemes.colors(mScheme)"), "chrome follows the active scheme");
-        check(src.contains("Schemes.isOled(mScheme)"), "and OLED gets true black");
+        // The custom-editable slot means the palette is a function of (index, slots), so the
+        // one-argument forms being gone is itself the assertion that prefs are respected.
+        check(src.contains("Schemes.colors(mScheme, mCustom)"),
+                "chrome follows the active scheme, custom slots included");
+        check(src.contains("Schemes.isOled(mScheme, mCustom)"), "and OLED gets true black");
+        check(!src.contains("Schemes.colors(mScheme)"),
+                "no call site ignores the custom slots");
 
         // Enter closes a dead tab from either keyboard.
         check(src.contains("KEYCODE_ENTER"), "hardware Enter is handled");

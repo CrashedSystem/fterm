@@ -3,16 +3,22 @@ package ai.openclaw.fterm;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.termux.terminal.TextStyle;
+
 /** Everything the terminal remembers between launches. */
 public final class Prefs {
 
     public static final String DEFAULT_HOST = "127.0.0.1";
     public static final int DEFAULT_PORT = 8791;
 
-    /** Windows Terminal "Campbell", One Dark, Solarized Dark, Dracula, OLED. */
+    /** Windows Terminal "Campbell", One Dark, Solarized Dark, Dracula, OLED, Miku, 사용자 지정. */
     public static final String[] SCHEME_NAMES = {
-            "Campbell", "One Dark", "Solarized Dark", "Dracula", "OLED (순수 검정)", "Miku"
+            "Campbell", "One Dark", "Solarized Dark", "Dracula", "OLED (순수 검정)", "Miku",
+            "사용자 지정"
     };
+
+    /** The index of "사용자 지정" in {@link #SCHEME_NAMES}; its sixteen colours are editable. */
+    public static final int CUSTOM_SCHEME = SCHEME_NAMES.length - 1;
 
     private static final String FILE = "fterm";
 
@@ -43,6 +49,42 @@ public final class Prefs {
 
     public int scheme() { return sp().getInt("scheme", 0); }
     public void setScheme(int s) { sp().edit().putInt("scheme", s).apply(); }
+
+    /**
+     * The custom scheme's nineteen slots: sixteen ANSI colours, then foreground, background
+     * and cursor. Stored as nineteen ints rather than one string because each one is edited
+     * independently and a partial write should not corrupt the rest.
+     *
+     * <p>Seeded from Campbell so a fresh install showing "사용자 지정" shows a real palette
+     * rather than black on black.
+     */
+    public int[] customSlots() {
+        int[] campbell = Schemes.campbell();
+        int[] out = new int[Schemes.CUSTOM_SLOTS];
+        for (int i = 0; i < 16; i++) {
+            out[i] = sp().getInt("custom_" + i, campbell[i]);
+        }
+        out[16] = sp().getInt("custom_fg", campbell[TextStyle.COLOR_INDEX_FOREGROUND]);
+        out[17] = sp().getInt("custom_bg", campbell[TextStyle.COLOR_INDEX_BACKGROUND]);
+        out[18] = sp().getInt("custom_cursor", campbell[TextStyle.COLOR_INDEX_CURSOR]);
+        return out;
+    }
+
+    public void setCustomSlot(int slot, int color) {
+        String key = slot < 16 ? "custom_" + slot
+                : slot == 16 ? "custom_fg" : slot == 17 ? "custom_bg" : "custom_cursor";
+        sp().edit().putInt(key, color).apply();
+    }
+
+    public void setCustomSlots(int[] slots) {
+        if (slots == null || slots.length != Schemes.CUSTOM_SLOTS) return;
+        android.content.SharedPreferences.Editor e = sp().edit();
+        for (int i = 0; i < 16; i++) e.putInt("custom_" + i, slots[i]);
+        e.putInt("custom_fg", slots[16]);
+        e.putInt("custom_bg", slots[17]);
+        e.putInt("custom_cursor", slots[18]);
+        e.apply();
+    }
 
     public boolean keyBarVisible() { return sp().getBoolean("keybar", true); }
     public void setKeyBarVisible(boolean v) { sp().edit().putBoolean("keybar", v).apply(); }

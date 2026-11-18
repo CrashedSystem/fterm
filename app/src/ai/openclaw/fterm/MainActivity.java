@@ -85,6 +85,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private Chrome mChrome;
     private Notifier mNotifier;
     private int mScheme;
+    /** The custom scheme's 19 editable slots, loaded once and kept in step with Prefs. */
+    private int[] mCustom;
     private float mScale = 1f;
 
     private boolean mFn;
@@ -98,6 +100,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mPrefs = new Prefs(this);
         mFontDp = mPrefs.fontSizeDp();
         mScheme = mPrefs.scheme();
+        mCustom = mPrefs.customSlots();
 
         applyChrome();
         buildUi();
@@ -133,7 +136,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // which makes ADJUST_RESIZE unnecessary (and it is a no-op there anyway).
         w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
         EdgeToEdge.enable(this);
-        if (Schemes.isOled(mScheme) && android.os.Build.VERSION.SDK_INT < 35) {
+        if (Schemes.isOled(mScheme, mCustom) && android.os.Build.VERSION.SDK_INT < 35) {
             getWindow().setStatusBarColor(0xff000000);
         }
     }
@@ -641,13 +644,14 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         tab.chip.setSelected(false);
         tab.chip.setSelected(active);
 
-        int[] palette = Schemes.colors(mScheme);
+        int[] palette = Schemes.colors(mScheme, mCustom);
         int termBg = palette[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND];
 
         GradientDrawable d = new GradientDrawable();
         // Inactive tabs are a slightly lighter gray than the bar so they read as tabs; the
         // active one takes the terminal's own background and grows into the pane.
-        d.setColor(active ? termBg : (Schemes.isOled(mScheme) ? 0xff0a0a0a : 0xff303338));
+        d.setColor(active ? termBg
+                : (Schemes.isOled(mScheme, mCustom) ? 0xff0a0a0a : 0xff303338));
         d.setCornerRadii(new float[]{dp(7), dp(7), dp(7), dp(7), 0, 0, 0, 0});
         // A 2dp accent at the bottom of the active tab is the cue that survives a dark theme,
         // where the tab fill and the pane are the same colour by design.
@@ -765,13 +769,14 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mPrefs.setScheme(index);
         // On the OLED scheme every surface goes to true black; a #1e1e1e strip next to a
         // #000000 terminal is a visible seam and, on OLED, lit pixels.
-        final int chrome = Schemes.isOled(index) ? 0xff000000 : 0xff1e1e1e;
-        final int bar = Schemes.isOled(index) ? 0xff0a0a0a : 0xff2b2b2b;
-        final int keys = Schemes.isOled(index) ? 0xff0d0d0d : 0xff252526;
+        final boolean oled = Schemes.isOled(index, mCustom);
+        final int chrome = oled ? 0xff000000 : 0xff1e1e1e;
+        final int bar = oled ? 0xff0a0a0a : 0xff2b2b2b;
+        final int keys = oled ? 0xff0d0d0d : 0xff252526;
         mRoot.setBackgroundColor(chrome);
         if (mTopBar != null) mTopBar.setBackgroundColor(bar);
         if (mTabStrip != null) mTabStrip.setBackgroundColor(bar);
-        if (mKeyBar != null) mKeyBar.applyTheme(Schemes.isOled(index));
+        if (mKeyBar != null) mKeyBar.applyTheme(oled);
         if (mTabScroll != null) mTabScroll.setBackgroundColor(bar);
         if (mTermFrame != null) mTermFrame.setBackgroundColor(chrome);
         if (mActive != null && mActive.session != null) applySchemeTo(mActive.session);
@@ -780,7 +785,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private void applySchemeTo(TerminalSession session) {
         if (session == null || session.getEmulator() == null) return;
         TerminalColors colors = session.getEmulator().mColors;
-        int[] table = Schemes.colors(mScheme);
+        int[] table = Schemes.colors(mScheme, mCustom);
         System.arraycopy(table, 0, TerminalColors.COLOR_SCHEME.mDefaultColors, 0, table.length);
         System.arraycopy(table, 0, colors.mCurrentColors, 0, table.length);
         // Only the Miku scheme has a picture; the others must clear it or the last one
@@ -840,6 +845,15 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 @Override public void onFontSize(int dp) { applyFontSize(dp); }
                 @Override public int scheme() { return mScheme; }
                 @Override public void onScheme(int index) { applyScheme(index); }
+                @Override public int[] customSlots() { return mCustom; }
+                @Override public void onCustomSlot(int slot, int color) {
+                    if (slot < 0 || slot >= Schemes.CUSTOM_SLOTS) return;
+                    mCustom[slot] = color;
+                    mPrefs.setCustomSlot(slot, color);
+                    // Editing a slot is only visible if the custom scheme is the one in use,
+                    // so the edit also selects it - that is what the user clicked into.
+                    applyScheme(Schemes.CUSTOM_INDEX);
+                }
                 @Override public boolean bellVibrate() { return mPrefs.bellVibrate(); }
                 @Override public boolean bellSound() { return mPrefs.bellSound(); }
                 @Override public void onBell(boolean vibrate, boolean sound) {

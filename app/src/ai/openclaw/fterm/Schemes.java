@@ -18,6 +18,15 @@ public final class Schemes {
     /** mterm's Miku theme: One Half Dark plus the illustration. */
     public static final int MIKU_INDEX = 5;
 
+    /**
+     * The editable scheme. Its nineteen slots (16 ANSI, foreground, background, cursor) are
+     * stored by {@link Prefs}, not compiled in, which is the whole point of it existing.
+     */
+    public static final int CUSTOM_INDEX = 6;
+
+    /** The slots the custom scheme stores: sixteen ANSI, then foreground, background, cursor. */
+    public static final int CUSTOM_SLOTS = 19;
+
     private Schemes() {}
 
     public static int[] colors(int index) {
@@ -29,6 +38,29 @@ public final class Schemes {
             case 5: return miku();
             default: return campbell();
         }
+    }
+
+    /**
+     * The palette for a scheme index, with the user's own colours when the index is the
+     * custom slot.
+     *
+     * <p>Kept separate from {@link #colors(int)} because that one is a pure function of the
+     * index and is what the tests pin; the custom scheme is a function of stored state, so it
+     * needs the state passed in rather than read from a singleton.
+     */
+    public static int[] colors(int index, int[] customSlots) {
+        if (index == CUSTOM_INDEX && customSlots != null
+                && customSlots.length == CUSTOM_SLOTS) {
+            return fromSlots(customSlots);
+        }
+        return colors(index);
+    }
+
+    /** Builds a full palette (ANSI + cube + ramp + defaults) from the 19 stored slots. */
+    public static int[] fromSlots(int[] slots) {
+        int[] ansi = new int[16];
+        System.arraycopy(slots, 0, ansi, 0, 16);
+        return build(ansi, slots[16], slots[17], slots[18]);
     }
 
     private static int rgb(int r, int g, int b) {
@@ -85,6 +117,17 @@ public final class Schemes {
     /** True when the scheme paints pure black, so the chrome around it should too. */
     public static boolean isOled(int index) {
         return index == OLED_INDEX;
+    }
+
+    /**
+     * As {@link #isOled(int)}, but a custom scheme counts as OLED when its background is
+     * actual black: the point of the flag is that lit pixels and grey seams are wrong there,
+     * and that follows the colour, not which slot it came from.
+     */
+    public static boolean isOled(int index, int[] slots) {
+        if (isOled(index)) return true;
+        return index == CUSTOM_INDEX && slots != null
+                && slots.length == CUSTOM_SLOTS && (slots[17] & 0xffffff) == 0;
     }
 
     /** Windows Terminal's default. */
@@ -154,5 +197,13 @@ public final class Schemes {
 
     public static int foreground(int index) {
         return colors(index)[TextStyle.COLOR_INDEX_FOREGROUND];
+    }
+
+    public static int background(int index, int[] customSlots) {
+        return colors(index, customSlots)[TextStyle.COLOR_INDEX_BACKGROUND];
+    }
+
+    public static int foreground(int index, int[] customSlots) {
+        return colors(index, customSlots)[TextStyle.COLOR_INDEX_FOREGROUND];
     }
 }
