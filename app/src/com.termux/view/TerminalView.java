@@ -761,7 +761,14 @@ public final class TerminalView extends View {
     }
 
     public void setTypeface(Typeface newTypeface) {
+        // Carry the face selector across, the same way setTextSize does. Replacing the
+        // renderer drops it otherwise, and a caller that installs the stack and then the
+        // default face - which is exactly what loadFonts() does - would silently lose the
+        // Hangul and icon faces: every code point would render with the platform's own
+        // fallback, so changing the Korean font looked like it did nothing.
+        TerminalRenderer.FaceSelector faces = mRenderer == null ? null : mRenderer.mFaces;
         mRenderer = new TerminalRenderer(mRenderer.mTextSize, newTypeface);
+        mRenderer.setFaceSelector(faces);
         updateSize();
         invalidate();
     }

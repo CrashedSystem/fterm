@@ -9,6 +9,8 @@
   ftermd status           소켓/pid 확인
   ftermd token            토큰 출력(없으면 생성)
   ftermd reset-token      토큰 교체 (앱 재입력 필요)
+  ftermd fonts            앱에 줄 수 있는 글꼴 목록 (크기\t경로)
+  ftermd font <url>       글꼴을 ~/.fonts 로 내려받고 경로 출력
 
 설계 노트
 - 세션은 데몬 수명과 함께 산다. 클라이언트가 끊겨도 셸은 계속 돈다.
@@ -913,6 +915,38 @@ def cmd_token():
     return 0
 
 
+def cmd_fonts():
+    """List what the daemon would offer the app, as tab-separated size and path.
+
+    The same scan the socket uses, so the CLI and the picker cannot disagree about what is
+    installed. Tab-separated because a path may contain spaces and this is read by scripts.
+    """
+    fonts = font_scan()
+    for path, size in fonts:
+        print("%d\t%s" % (size, path))
+    return 0 if fonts else 1
+
+
+def cmd_font(url):
+    """Download a font into ~/.fonts, then print where it landed.
+
+    This is the bootstrap for the app's "URL로 받기": a user who has never opened the app can
+    put a font somewhere the app can see with one command, and a user whose app is stuck gets
+    the same command as a fallback. The rules - http(s) only, .ttf/.otf only, 32 MB cap - live
+    in fetch_font, so the CLI cannot accept something the socket would refuse.
+    """
+    if not url:
+        print("사용법: ftermd font <url>", file=sys.stderr)
+        return 2
+    try:
+        dest = fetch_font(url)
+    except Exception as e:
+        print("ftermd font: %s" % e, file=sys.stderr)
+        return 1
+    print(dest)
+    return 0
+
+
 def cmd_reset_token():
     p = token_path()
     try:
@@ -938,6 +972,10 @@ def main(argv):
         return cmd_token()
     if cmd == "reset-token":
         return cmd_reset_token()
+    if cmd == "fonts":
+        return cmd_fonts()
+    if cmd == "font":
+        return cmd_font(argv[2] if len(argv) > 2 else "")
     print("ftermd: unknown command %s" % cmd, file=sys.stderr)
     return 2
 

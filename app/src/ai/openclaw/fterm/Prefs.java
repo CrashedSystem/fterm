@@ -115,6 +115,21 @@ public final class Prefs {
         sp().edit().putString("font_family", v == null ? Fonts.ASSET_ID : v).apply();
     }
 
+    /**
+     * The Korean face: an id from {@link Fonts#hangulCatalog}.
+     *
+     * <p>Separate from {@link #fontFamily} because the two lists are filtered by opposite
+     * rules - the Latin face must define a cell, the Korean face only has to have the glyphs -
+     * and because one preference was silently forcing the compiled-in Pretendard for every
+     * Korean syllable no matter what the picker said.
+     */
+    public String hangulFamily() {
+        return sp().getString("hangul_family", Fonts.HANGUL_ASSET_ID);
+    }
+    public void setHangulFamily(String v) {
+        sp().edit().putString("hangul_family", v == null ? Fonts.HANGUL_ASSET_ID : v).apply();
+    }
+
     /** Where a new session starts; "" means the daemon's home directory. */
     public String startDir() { return sp().getString("start_dir", ""); }
     public void setStartDir(String v) { sp().edit().putString("start_dir", v == null ? "" : v).apply(); }

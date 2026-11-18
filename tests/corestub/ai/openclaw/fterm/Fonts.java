@@ -18,6 +18,8 @@ public final class Fonts {
      * assert: the id format, and the rule that an unknown id resolves to the bundled face.
      */
     public static final String ASSET_ID = "asset:iosevka";
+    /** The bundled Korean face's id; a separate picker and a separate default. */
+    public static final String HANGUL_ASSET_ID = "asset:pretendard";
     /** App-private, because a shared /sdcard folder is unreadable to the app since API 30. */
     public static final String USER_DIR_NAME = "fonts";
     public static final String FILE_PREFIX = "file:";

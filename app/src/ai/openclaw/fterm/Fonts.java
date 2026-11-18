@@ -35,7 +35,13 @@ final class Fonts {
 
     /** The bundled face, which is also the default and the one that always works. */
     static final String ASSET_PATH = "fonts/Iosevka.ttf";
+
+    /** The bundled Korean face; the default, and the last resort when a chosen one fails. */
+    static final String HANGUL_PATH = "fonts/PretendardHangul.ttf";
     static final String ASSET_ID = "asset:iosevka";
+
+    /** The bundled Korean face's id, the default for the Hangul picker. */
+    static final String HANGUL_ASSET_ID = "asset:pretendard";
 
     /**
      * Where an imported font is kept: this app's own files directory.
@@ -146,7 +152,16 @@ final class Fonts {
         return adopt(out);
     }
 
-    /** Validate a file already in {@link #userDir} and turn it into a catalog id. */
+    /**
+     * Validate a file already in {@link #userDir} and turn it into a catalog id.
+     *
+     * <p>Two ways to be a valid font, because there are two pickers. A Latin face has to be
+     * fixed-advance: it defines the cell, and a proportional face makes columns drift. A
+     * Korean face only has to render Hangul, because it is drawn per code point at a scale
+     * derived from the cell - which is why every Korean font on a real device is
+     * proportional and every one of them was refused here before. The catalog filters decide
+     * where an accepted file then appears; this method only rejects what neither list can use.
+     */
     private static Import adopt(java.io.File out) {
         String name = out.getName();
         Typeface face = loadFile(out.getAbsolutePath());
@@ -154,10 +169,13 @@ final class Fonts {
             out.delete();
             return new Import(null, "글꼴 파일을 열 수 없습니다: " + name);
         }
-        if (!isFixedAdvance(face)) {
+        boolean mono = isFixedAdvance(face);
+        boolean korean = hasHangul(out);
+        if (!mono && !korean) {
             out.delete();
             return new Import(null, "글자 폭이 일정하지 않은 글꼴입니다: " + name
-                    + "\n\n터미널은 한 칸이 한 글자인 격자라, 비례 글꼴을 쓰면 열이 어긋납니다.");
+                    + "\n\n터미널은 한 칸이 한 글자인 격자라, 비례 글꼴을 쓰면 열이 어긋납니다."
+                    + "\n한글 글꼴이면 글꼴 목록의 「한글 글꼴」에서 고를 수 있습니다.");
         }
         rescan();
         return new Import(FILE_PREFIX + out.getAbsolutePath(), null);
@@ -190,6 +208,66 @@ final class Fonts {
         }
     }
 
+    /**
+     * Code points that prove a face can draw Hangul: 가 (U+AC00), 한 (U+D55C), 힣 (U+D7A3).
+     *
+     * <p>The first, a common one, and the last - a subset that answers one and not the others
+     * is exactly the case where a word renders and the next one is boxes.
+     */
+    private static final int[] HANGUL_PROBES = {0xAC00, 0xD55C, 0xD7A3};
+
+    /** Conjoining jamo, which is what a decomposed paste and some IMEs send. */
+    private static final int[] JAMO_PROBES = {0x1100, 0x1161, 0x11A8};
+
+    /**
+     * Whether a font file's own cmap contains every one of these code points.
+     *
+     * <p>Deliberately not {@link Paint#hasGlyph}: that asks the platform, which answers
+     * through its font fallback chain, so every face on the device claimed to have Hangul and
+     * the Korean picker listed all of them - a list whose sample line rendered from a
+     * <em>different</em> font than the row was offering. The question this picker has to
+     * answer is what the file itself can draw, and only the cmap table knows.
+     */
+    static boolean covers(java.io.File file, int[] codePoints) {
+        return FontCoverage.covers(file, codePoints);
+    }
+
+    static boolean hasHangul(java.io.File file) {
+        return covers(file, HANGUL_PROBES);
+    }
+
+    static boolean hasJamo(java.io.File file) {
+        return covers(file, JAMO_PROBES);
+    }
+
+    /** Whether a picker row's face can follow an IME through conjoining jamo. */
+    static boolean faceHasJamo(Context context, Face f) {
+        if (f.path == null) {
+            return FontCoverage.covers(readAsset(context, HANGUL_PATH), JAMO_PROBES);
+        }
+        return hasJamo(new java.io.File(f.path));
+    }
+
+    private static Typeface loadBundledHangul(Context context) {
+        try {
+            return Typeface.createFromAsset(context.getAssets(), HANGUL_PATH);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    static byte[] readAsset(Context context, String path) {
+        try (java.io.InputStream in = context.getAssets().open(path)) {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            return out.toByteArray();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     private static java.util.List<Face> sCatalog;
 
     /**
@@ -210,9 +288,83 @@ final class Fonts {
         return out;
     }
 
+    /**
+     * Whether a catalog id can serve as the Latin face, i.e. it defines a cell.
+     *
+     * <p>Asked after an install so the picker that opens next is the one the file belongs in.
+     * A Korean font is proportional by design and belongs in the other list; opening the
+     * Latin picker on it would show a list the new row is not in.
+     */
+    static boolean isLatinFace(String id) {
+        // Asked of the file, not of the catalog: ensureVisible() runs right after install()
+        // and the id is a bare path at that moment, before either list has been rescanned.
+        if (id == null || !id.startsWith(FILE_PREFIX)) return true;
+        String path = id.substring(FILE_PREFIX.length());
+        if (!new java.io.File(path).isFile()) return true;
+        return isFixedAdvance(loadFile(path));
+    }
+
     /** Drop the cached catalog so the next picker shows a font the user just copied in. */
     static void rescan() {
         sCatalog = null;
+        sHangulCatalog = null;
+    }
+
+    private static java.util.List<Face> sHangulCatalog;
+
+    /**
+     * The faces that can render Hangul, for the Korean face picker.
+     *
+     * <p>A separate list from {@link #catalog} because the filter is the opposite one. The
+     * Latin list requires a fixed advance - a proportional Latin face breaks the column grid -
+     * but Hangul is drawn per code point at a derived scale so that one syllable lands on two
+     * cells, which means the Hangul face's own advances do not matter. Applying the Latin
+     * filter here is why every Korean font on the device was missing from the picker: Nanum
+     * Gothic and Noto Sans KR are both proportional, so both were rejected, and the only
+     * Korean face the app could offer was the one compiled in.
+     */
+    static java.util.List<Face> hangulCatalog(Context context) {
+        if (sHangulCatalog != null) return sHangulCatalog;
+        java.util.List<Face> out = new java.util.ArrayList<>();
+        out.add(new Face(HANGUL_ASSET_ID, "Pretendard (기본)", null, true));
+
+        java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
+        addHangulDir(out, seen, new java.io.File(SYSTEM_DIR), "", bundledSize(context));
+        addHangulDir(out, seen, userDir(context), " (내 글꼴)", bundledSize(context));
+        sHangulCatalog = out;
+        return out;
+    }
+
+    /** The bundled Korean face's byte length, or -1 when the asset cannot be opened. */
+    private static long bundledSize(Context context) {
+        try {
+            return context.getAssets().openFd(HANGUL_PATH).getLength();
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
+
+    private static void addHangulDir(java.util.List<Face> out, java.util.Set<String> seen,
+                                     java.io.File dir, String suffix, long bundledSize) {
+        java.io.File[] files = dir.listFiles();
+        if (files == null) return;
+        java.util.Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        for (java.io.File f : files) {
+            String name = f.getName().toLowerCase(java.util.Locale.ROOT);
+            if (!name.endsWith(".ttf") && !name.endsWith(".otf") && !name.endsWith(".ttc")) {
+                continue;
+            }
+            if (!f.isFile() || f.length() == 0) continue;
+            // A copy of the bundled face on disk is the same face under a second name. Two
+            // rows that render identically is a row the user has to guess about, and the
+            // check has to be on bytes: a Typeface loaded from an asset and one loaded from
+            // a file never compare equal in memory.
+            if (bundledSize > 0 && f.length() == bundledSize) continue;
+            String path = f.getAbsolutePath();
+            if (!seen.add(path)) continue;
+            if (!hasHangul(f)) continue;
+            out.add(new Face(FILE_PREFIX + path, stripExtension(f.getName()) + suffix, path, false));
+        }
     }
 
     private static void addDir(java.util.List<Face> out, java.util.Set<String> seen,
@@ -256,6 +408,33 @@ final class Fonts {
     }
 
     /**
+     * The Hangul catalog entry for an id, or the bundled Korean face.
+     *
+     * <p>Total for the same reason {@link #find} is: a stored id may name a font the user has
+     * since deleted, and that must cost the Korean face, not the terminal. Note that this
+     * falls back to the *bundled Hangul* face, not the bundled Latin one - Pretendard has no
+     * Latin glyphs worth printing, and Iosevka has no Hangul at all.
+     */
+    static Face findHangul(Context context, String id) {
+        java.util.List<Face> all = hangulCatalog(context);
+        for (Face f : all) {
+            if (f.id.equals(id)) return f;
+        }
+        if (id != null && id.startsWith(FILE_PREFIX)) {
+            String path = id.substring(FILE_PREFIX.length());
+            java.io.File f = new java.io.File(path);
+            if (f.isFile() && f.length() > 0) {
+                // The one property this picker requires, which is not the Latin one: the file
+                // has to carry Hangul glyphs. Proportional is fine here.
+                if (hasHangul(f)) {
+                    return new Face(id, stripExtension(f.getName()) + " (직접 지정)", path, false);
+                }
+            }
+        }
+        return all.get(0);
+    }
+
+    /**
      * The catalog entry for a user-typed {@code file:} id, or null.
      *
      * <p>Not cached: the point of a typed path is that it is not in the catalog, so a cache
@@ -275,6 +454,11 @@ final class Fonts {
     /** The picker's caption for an id. */
     static String labelOf(Context context, String id) {
         return find(context, id).label;
+    }
+
+    /** The Korean picker's caption for an id. */
+    static String labelOfHangul(Context context, String id) {
+        return findHangul(context, id).label;
     }
 
     private static String stripExtension(String name) {
@@ -342,6 +526,20 @@ final class Fonts {
      * {@link #userDir} and must not lose the ability to open a terminal because of it.
      */
     static Fonts load(Context context, float latinCellPx, float textSizePx, String id) {
+        return load(context, latinCellPx, textSizePx, id, HANGUL_ASSET_ID);
+    }
+
+    /**
+     * As {@link #load(Context, float, float, String)}, with both faces chosen by catalog id.
+     *
+     * <p>Two ids rather than one because the two pickers answer different questions. The
+     * Latin face must be fixed-advance - it defines the cell - while the Korean face only has
+     * to have the glyphs, because it is drawn per code point at a scale derived here. Sharing
+     * one id meant every Korean font on the device was filtered out by the Latin rule and the
+     * Korean face could not be changed at all.
+     */
+    static Fonts load(Context context, float latinCellPx, float textSizePx, String id,
+                      String hangulId) {
         Typeface mono = null;
         Typeface hangul = null;
         Typeface symbols = null;
@@ -354,9 +552,13 @@ final class Fonts {
             }
         }
         if (mono == null) mono = Typeface.MONOSPACE;
-        try {
-            hangul = Typeface.createFromAsset(context.getAssets(), "fonts/PretendardHangul.ttf");
-        } catch (Throwable ignored) {
+        Face hangulChosen = findHangul(context, hangulId);
+        if (hangulChosen.path != null) hangul = loadFile(hangulChosen.path);
+        if (hangul == null) {
+            try {
+                hangul = Typeface.createFromAsset(context.getAssets(), HANGUL_PATH);
+            } catch (Throwable ignored) {
+            }
         }
         try {
             symbols = Typeface.createFromAsset(context.getAssets(), "fonts/NerdSymbols.ttf");

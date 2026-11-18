@@ -88,6 +88,11 @@ final class SettingsSheet {
 
         void onFontFamily(String id);
 
+        /** The face id from {@link Fonts#hangulCatalog}, for Korean syllables. */
+        String hangulFamily();
+
+        void onHangulFamily(String id);
+
         /** The directory new sessions start in; empty means the daemon's home. */
         String startDir();
 
@@ -788,6 +793,86 @@ final class SettingsSheet {
     }
 
     /**
+     * The Korean face, from its own list.
+     *
+     * <p>A separate picker from {@link #chooseFont} because it is a separate question with a
+     * separate filter. The Latin list is fixed-advance only; every Korean font on a real
+     * device is proportional, so that list was structurally unable to contain one. Here the
+     * only requirement is that the face answers Hangul, and the sample is a Korean word plus
+     * conjoining jamo - the jamo line is what tells the user whether the face can follow an
+     * IME, which the bundled Pretendard cannot.
+     */
+    private void chooseHangulFont() {
+        final java.util.List<Fonts.Face> faces = Fonts.hangulCatalog(mActivity);
+        String current = mHost.hangulFamily();
+
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(8), dp(4), dp(8), 0);
+
+        final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
+
+        for (int i = 0; i < faces.size(); i++) {
+            final Fonts.Face f = faces.get(i);
+            LinearLayout row = new LinearLayout(mActivity);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(12), dp(11), dp(12), dp(11));
+            row.setBackground(touchable());
+            row.setClickable(true);
+
+            TextView sample = new TextView(mActivity);
+            sample.setText(i == 0 ? "한글 가나다 12" : "한글 가나다 ▲");
+            sample.setTextSize(15);
+            sample.setTextColor(TEXT);
+            sample.setTypeface(faceForHangul(f));
+            sample.setSingleLine(true);
+            sample.setLayoutParams(new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            row.addView(sample);
+
+            TextView name = new TextView(mActivity);
+            // "자모" marks a face whose own cmap has conjoining jamo. The bundled Pretendard
+            // does not - syllables only - and the platform fills the gap with a fallback face,
+            // so the mark is about which font draws the text, not about whether it appears.
+            name.setText(Fonts.faceHasJamo(mActivity, f) ? f.label + " · 자모" : f.label);
+            name.setTextSize(11);
+            name.setTextColor(f.id.equals(current) ? ACCENT : HINT);
+            name.setPadding(0, 0, dp(10), 0);
+            row.addView(name);
+
+            if (f.id.equals(current)) row.addView(Chrome.icon(mActivity, "check", 16, false, null));
+
+            row.setOnClickListener(v -> {
+                mHost.onHangulFamily(f.id);
+                if (holder[0] != null) holder[0].dismiss();
+                render();
+            });
+            box.addView(row);
+            if (i < faces.size() - 1) box.addView(hairline(dp(12), dp(0)));
+        }
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(mActivity);
+        scroll.setFillViewport(true);
+        scroll.addView(box);
+        scroll.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(340)));
+
+        holder[0] = new android.app.AlertDialog.Builder(mActivity)
+                .setTitle("한글 글꼴")
+                .setView(scroll)
+                .setPositiveButton("다시 찾기", (d, w) -> {
+                    Fonts.rescan();
+                    render();
+                    chooseHangulFont();
+                })
+                .setNeutralButton("설치", (d, w) -> installFont())
+                .setNegativeButton("닫기", null)
+                .create();
+        holder[0].show();
+    }
+
+    /**
      * Every way a font gets in, in one dialog.
      *
      * <p>There are two real answers and they are not equally easy. The device picker works
@@ -1006,15 +1091,24 @@ final class SettingsSheet {
                 .show();
     }
 
-    /** Install a font and select it, or say why it was refused. */
+    /**
+     * Install a font, select it, and reopen the picker it belongs in.
+     *
+     * <p>A Korean font is proportional, so the Latin list can never contain it - reopening
+     * that list after installing one would show a list the new row is not in and read as a
+     * failed install. The rule is the same one {@link Fonts#adopt} uses to accept the file.
+     */
     private void applyImported(Fonts.Import imported) {
         if (imported.id == null) {
             showFontError(imported.reason);
             return;
         }
-        mHost.onFontFamily(imported.id);
+        boolean latin = Fonts.isLatinFace(imported.id);
+        if (latin) mHost.onFontFamily(imported.id);
+        else mHost.onHangulFamily(imported.id);
         render();
-        chooseFont();
+        if (latin) chooseFont();
+        else chooseHangulFont();
     }
 
     /**
@@ -1083,6 +1177,22 @@ final class SettingsSheet {
         return Typeface.MONOSPACE;
     }
 
+    /** The actual Korean face for a catalog entry; the first row is the bundled one. */
+    private Typeface faceForHangul(Fonts.Face f) {
+        if (f.path == null) {
+            try {
+                return Typeface.createFromAsset(mActivity.getAssets(), Fonts.HANGUL_PATH);
+            } catch (Throwable ignored) {
+            }
+        } else {
+            try {
+                return Typeface.createFromFile(f.path);
+            } catch (Throwable ignored) {
+            }
+        }
+        return Typeface.DEFAULT;
+    }
+
     private void editStartDir() {
         prompt("시작 디렉터리", mHost.startDir(), "/data/data/com.termux/files/home",
                 "비우면 데몬의 홈 디렉터리에서 시작합니다. 존재하지 않는 경로를 적으면 "
@@ -1149,6 +1259,9 @@ final class SettingsSheet {
         card.addView(valueRow("글꼴", "라틴 문자에 쓰는 고정폭 글꼴",
                 Fonts.labelOf(mActivity, mHost.fontFamily()),
                 this::chooseFont, false));
+        card.addView(valueRow("한글 글꼴", "한 글자가 정확히 두 칸을 차지하게 맞춤",
+                Fonts.labelOfHangul(mActivity, mHost.hangulFamily()),
+                this::chooseHangulFont, false));
         card.addView(valueRow("색 구성표", "미리보기와 16색 팔레트",
                 Prefs.SCHEME_NAMES[Math.max(0, Math.min(Prefs.SCHEME_NAMES.length - 1,
                         mHost.scheme()))],

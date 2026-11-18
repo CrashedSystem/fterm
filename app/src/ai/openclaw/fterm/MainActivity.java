@@ -724,7 +724,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             probe.setTextSize(px);
             cell = probe.measureText("M");
         }
-        mFonts = Fonts.load(this, cell, px, mPrefs.fontFamily());
+        mFonts = Fonts.load(this, cell, px, mPrefs.fontFamily(), mPrefs.hangulFamily());
         mTermView.setFaceSelector(new TerminalRenderer.FaceSelector() {
             @Override
             public Typeface typefaceFor(int codePoint) {
@@ -755,6 +755,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     /** Switch the Latin face; loadFonts() recomputes the cell width the face implies. */
     void applyFontFamily(String id) {
         mPrefs.setFontFamily(id);
+        loadFonts();
+    }
+
+    /** Switch the Korean face; it does not change the cell, so the grid is untouched. */
+    void applyHangulFamily(String id) {
+        mPrefs.setHangulFamily(id);
         loadFonts();
     }
 

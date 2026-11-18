@@ -65,6 +65,9 @@ final class SettingsHost implements SettingsSheet.Host {
     @Override public String fontFamily() { return a.mPrefs.fontFamily(); }
     @Override public void onFontFamily(String id) { a.applyFontFamily(id); }
 
+    @Override public String hangulFamily() { return a.mPrefs.hangulFamily(); }
+    @Override public void onHangulFamily(String id) { a.applyHangulFamily(id); }
+
     @Override public String startDir() { return a.mPrefs.startDir(); }
     @Override public void onStartDir(String dir) { a.mPrefs.setStartDir(dir); }
 

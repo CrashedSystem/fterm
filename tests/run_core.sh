@@ -51,7 +51,9 @@ javac -nowarn -d "$OUT" \
   "$ROOT/app/src/ai/openclaw/fterm/Search.java" \
   "$ROOT/tests/jvm/core/SearchTest.java" \
   "$ROOT/app/src/ai/openclaw/fterm/RetroShader.java" \
-  "$ROOT/tests/jvm/core/RetroTest.java"
+  "$ROOT/tests/jvm/core/RetroTest.java" \
+  "$ROOT/app/src/ai/openclaw/fterm/FontCoverage.java" \
+  "$ROOT/tests/jvm/core/FontCoverageTest.java"
 
 
 echo "[2/2] 실행"
@@ -75,3 +77,8 @@ java -cp "$OUT" ProfilesTest
 java -cp "$OUT" ProfileTabTest
 java -cp "$OUT" SearchTest
 java -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" RetroTest
+java -Dhangul.src="$ROOT/assets/fonts/PretendardHangul.ttf" \
+     -Dlatin.src="$ROOT/assets/fonts/Iosevka.ttf" \
+     -Dhome="$HOME" \
+     -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" \
+     -cp "$OUT" FontCoverageTest

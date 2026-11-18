@@ -5,9 +5,11 @@
 `result=0`으로 끝나지만 아무 명령도 실행되지 않는다). 그래서 반대 방향으로 간다: 앱이
 공유 저장소에 **요청 파일**을 쓰고, 이 keeper가 그것을 보고 데몬을 띄운 뒤 토큰을 돌려준다.
 
-  fterm-keeper start     포그라운드 감시 (nohup으로 띄운다)
-  fterm-keeper stop      중지
-  fterm-keeper status    상태
+  fterm-keeper start              포그라운드 감시 (nohup으로 띄운다)
+  fterm-keeper stop               중지
+  fterm-keeper status             상태
+  fterm-keeper font <url>         글꼴 내려받기 (데몬에 위임)
+  fterm-keeper fonts              앱이 쓸 수 있는 글꼴 목록
 
 앱 쪽 규약
   /sdcard/Download/fterm-up     앱이 만든다 → 데몬 기동 + 토큰 발행
@@ -160,6 +162,16 @@ def cmd_status():
     return 0 if alive else 2
 
 
+def daemon_cmd(args):
+    """Run a daemon subcommand and pass its output through.
+
+    Delegated rather than reimplemented: fetch_font's rules are what keeps a wrong file out
+    of the picker, and a second copy here would drift from it. The keeper's job is to exist
+    when the app cannot reach a shell, not to own the font policy.
+    """
+    return subprocess.run([DAEMON] + args).returncode
+
+
 def main(argv):
     if len(argv) < 2:
         print(__doc__)
@@ -172,6 +184,13 @@ def main(argv):
         return cmd_stop()
     if cmd == "status":
         return cmd_status()
+    if cmd == "font":
+        if len(argv) < 3:
+            print("사용법: fterm-keeper font <url>", file=sys.stderr)
+            return 2
+        return daemon_cmd(["font", argv[2]])
+    if cmd == "fonts":
+        return daemon_cmd(["fonts"])
     print("fterm-keeper: unknown command %s" % cmd, file=sys.stderr)
     return 2
 
