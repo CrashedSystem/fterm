@@ -52,6 +52,16 @@ final class SettingsSheet {
 
         void onCustomSlot(int slot, int color);
 
+        /** The directory new sessions start in; empty means the daemon's home. */
+        String startDir();
+
+        void onStartDir(String dir);
+
+        /** The shell new sessions run; empty means the daemon's default. */
+        String startShell();
+
+        void onStartShell(String shell);
+
         boolean bellVibrate();
 
         boolean bellSound();
@@ -290,14 +300,76 @@ final class SettingsSheet {
     private void startPage(LinearLayout col) {
         LinearLayout card = card(col);
 
-        card.addView(valueRow("기본 프로필", "새 탭을 열 때 쓰는 프로필", "shell", null, true));
-        card.addView(valueRow("기본 셸", "데몬이 실행하는 로그인 셸", "bash -l", null, false));
-        card.addView(valueRow("터미널 종류", "이 앱은 자체 뷰를 씁니다", "fterm", null, false));
+        card.addView(valueRow("기본 프로필", "새 탭을 열 때 쓰는 프로필", "shell", null, false));
+        card.addView(valueRow("시작 디렉터리", "새 세션이 시작하는 위치",
+                mHost.startDir().isEmpty() ? "홈" : mHost.startDir(),
+                this::editStartDir, false));
+        card.addView(valueRow("시작 셸", "새 세션이 실행하는 프로그램",
+                mHost.startShell().isEmpty() ? "기본 셸" : mHost.startShell(),
+                this::editStartShell, false));
         card.addView(toggleCardRow("앱을 열 때 키보드", "시작하자마자 입력할 수 있습니다",
                 mHost.keyboardOnStart(), mHost::onKeyboardOnStart, true));
 
-        hint(col, "프로필과 셸 선택은 데몬 설정에서 바뀝니다. "
-                + "앱은 지금 연결된 세션의 값을 그대로 보여줍니다.");
+        hint(col, "디렉터리와 셸은 다음에 여는 탭부터 적용됩니다. "
+                + "이미 열린 탭은 그대로입니다. 셸은 데몬이 허용한 경로만 실행됩니다.");
+    }
+
+    /**
+     * A one-line text prompt, used by both start-page rows.
+     *
+     * <p>WT opens a file picker for the directory; a phone has no such picker that reaches
+     * the Termux home, and the path is already the thing the user thinks in, so the field is
+     * the path itself. Empty means "the daemon's default", which is why the hint says so.
+     */
+    private void prompt(String title, String value, String placeholder, String noteText,
+                        java.util.function.Consumer<String> onOk) {
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(4), dp(20), 0);
+
+        final android.widget.EditText field = new android.widget.EditText(mActivity);
+        field.setText(value);
+        field.setSingleLine(true);
+        field.setTextSize(14);
+        field.setTypeface(Typeface.MONOSPACE);
+        field.setTextColor(TEXT);
+        field.setHintTextColor(HINT);
+        field.setHint(placeholder);
+        box.addView(field);
+
+        TextView note = new TextView(mActivity);
+        note.setText(noteText);
+        note.setTextColor(HINT);
+        note.setTextSize(10.5f);
+        note.setPadding(0, dp(6), 0, 0);
+        box.addView(note);
+
+        new android.app.AlertDialog.Builder(mActivity)
+                .setTitle(title)
+                .setView(box)
+                .setPositiveButton("저장", (d, w) -> onOk.accept(field.getText().toString().trim()))
+                .setNegativeButton("취소", null)
+                .setNeutralButton("기본값", (d, w) -> onOk.accept(""))
+                .show();
+    }
+
+    private void editStartDir() {
+        prompt("시작 디렉터리", mHost.startDir(), "/data/data/com.termux/files/home",
+                "비우면 데몬의 홈 디렉터리에서 시작합니다. 존재하지 않는 경로를 적으면 "
+                        + "홈으로 대체됩니다.",
+                v -> {
+                    mHost.onStartDir(v);
+                    render();
+                });
+    }
+
+    private void editStartShell() {
+        prompt("시작 셸", mHost.startShell(), "/data/data/com.termux/files/usr/bin/bash",
+                "데몬이 허용한 경로만 실행됩니다. 비우면 데몬 기본 셸을 씁니다.",
+                v -> {
+                    mHost.onStartShell(v);
+                    render();
+                });
     }
 
     /** 모양: the same rows as WT's appearance page, restricted to what this app has. */

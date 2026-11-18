@@ -26,6 +26,15 @@ public class TransportTest {
         return s;
     }
 
+    /** As {@link #open}, with an explicit shell and starting directory. */
+    static TerminalSession openDir(String token, int port, int id, String shell, String cwd) {
+        TerminalSession s = new TerminalSession();
+        SocketTransport t = new SocketTransport("127.0.0.1", port, token, id, shell, cwd);
+        s.setTransport(t);
+        t.start(s);
+        return s;
+    }
+
     static SocketTransport transportOf(TerminalSession s) {
         return s.transport();
     }
@@ -100,6 +109,31 @@ public class TransportTest {
         System.out.println("ok  two sessions stay separate");
         ta.close();
         tb.close();
+
+        // --- the OPEN frame's optional tail: a directory and a shell
+        TerminalSession d = openDir(token, port, 65, "", "/data/data/com.termux/files/usr");
+        SocketTransport td = transportOf(d);
+        check(await(() -> d.delivered.indexOf("$") >= 0 || d.delivered.indexOf("#") >= 0, 8000),
+                "cwd session: no prompt, got: " + d.delivered);
+        byte[] pw = "echo PWD-$(pwd)\n".getBytes("UTF-8");
+        td.write(pw, 0, pw.length);
+        check(await(() -> d.delivered.indexOf("PWD-/data/data/com.termux/files/usr") >= 0, 6000),
+                "start directory not applied: " + d.delivered);
+        System.out.println("ok  OPEN carries a starting directory");
+        td.close();
+
+        TerminalSession sh = openDir(token, port, 66, "/data/data/com.termux/files/usr/bin/sh", "");
+        SocketTransport tsh = transportOf(sh);
+        check(await(() -> sh.delivered.indexOf("$") >= 0 || sh.delivered.indexOf("#") >= 0, 8000),
+                "shell session: no prompt, got: " + sh.delivered);
+        byte[] zero = "echo ZERO-$0\n".getBytes("UTF-8");
+        tsh.write(zero, 0, zero.length);
+        check(await(() -> sh.delivered.indexOf("ZERO-") >= 0, 6000),
+                "shell prompt missing: " + sh.delivered);
+        check(sh.delivered.indexOf("ZERO-/data/data/com.termux/files/usr/bin/bash") < 0,
+                "requested shell was ignored: " + sh.delivered);
+        System.out.println("ok  OPEN carries the shell");
+        tsh.close();
 
         System.out.println("ALL OK");
         System.exit(0);

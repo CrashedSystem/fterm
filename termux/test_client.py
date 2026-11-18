@@ -217,6 +217,71 @@ def interactive():
         c.frame(C_INPUT, struct.pack("<H", 7) + struct.pack("<I", len(b) + 6) + b)
 
 
+def read_output(c, seconds=1.5):
+    text = b""
+    for typ, pay in c.collect(seconds):
+        if typ == S_OUTPUT:
+            _, ln = struct.unpack_from("<HI", pay, 0)
+            text += pay[6:6 + ln]
+    return text
+
+
+def run(c, sid, command, seconds=1.5):
+    b = command.encode()
+    c.frame(C_INPUT, struct.pack("<H", sid) + struct.pack("<I", len(b) + 6) + b)
+    return read_output(c, seconds)
+
+
+def test_open_strings():
+    """OPEN may carry a shell and a directory; both are optional and both validated."""
+    c = Conn()
+    c.hello()
+    shell = "/data/data/com.termux/files/usr/bin/sh"
+    cwd = "/data/data/com.termux/files/usr"
+    payload = struct.pack("<HHH", 2, 80, 24)
+    for text in (shell, cwd):
+        raw = text.encode()
+        payload += struct.pack("<H", len(raw)) + raw
+    c.frame(C_OPEN, payload)
+    frames = c.collect(1.5)
+    assert any(t == S_OPENED for t, _ in frames), [t for t, _ in frames]
+    # $0 is the realpath of what was asked for - sh is a symlink to dash here - so the
+    # assertion is the directory it runs from plus "not the daemon's own bash".
+    out = run(c, 2, "echo CWD-$(pwd); echo ZERO-$0\n")
+    assert b"CWD-/data/data/com.termux/files/usr" in out, out[-300:]
+    zero = [ln for ln in out.replace(b"\r", b"").split(b"\n") if ln.startswith(b"ZERO-")]
+    assert zero and b"bash" not in zero[0], (zero, out[-300:])
+    print("ok  OPEN carries a starting directory and a shell")
+
+    # A shell outside the allowlist must fall back, not run. /system/bin/sh is allowed, so
+    # the check uses something the daemon has no business execing.
+    c2 = Conn()
+    c2.hello()
+    bad = b"/data/data/com.termux/files/usr/bin/../bin/../../../../system/bin/toybox"
+    payload = struct.pack("<HHH", 3, 80, 24) + struct.pack("<H", len(bad)) + bad
+    payload += struct.pack("<H", 0)
+    c2.frame(C_OPEN, payload)
+    frames = c2.collect(1.5)
+    assert any(t == S_OPENED for t, _ in frames), [t for t, _ in frames]
+    out = run(c2, 3, "echo SH-$(basename $0)\n")
+    assert b"SH-toybox" not in out, ("disallowed shell must not run", out[-300:])
+    print("ok  OPEN ignores a shell outside the allowlist")
+    c2.frame(C_CLOSE, struct.pack("<H", 3))
+    time.sleep(0.3)
+    c2.close()
+
+    # Six-byte OPEN (no strings) is what an older client sends and must still work.
+    c.frame(C_CLOSE, struct.pack("<H", 2))
+    time.sleep(0.3)
+    c.frame(C_OPEN, struct.pack("<HHH", 4, 80, 24))
+    frames = c.collect(1.5)
+    assert any(t == S_OPENED for t, _ in frames), [t for t, _ in frames]
+    print("ok  six-byte OPEN still opens a session")
+    c.frame(C_CLOSE, struct.pack("<H", 4))
+    time.sleep(0.3)
+    c.close()
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "shell":
         interactive()
@@ -228,4 +293,5 @@ if __name__ == "__main__":
     c = test_replay(c)
     test_close_and_sync(c)
     c.close()
+    test_open_strings()
     print("ALL OK")

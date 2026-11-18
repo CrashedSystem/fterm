@@ -83,6 +83,67 @@ def default_shell():
     return "/system/bin/sh"
 
 
+# The app may name a shell and a starting directory; the daemon is the one that runs them,
+# so the daemon is where "is this allowed" is decided. Without this the app could ask for
+# /system/bin/anything, which is a privilege the terminal does not need.
+SHELL_PREFIXES = (
+    "/data/data/com.termux/files/usr/bin/",
+    "/data/data/com.termux/files/usr/local/bin/",
+    "/system/bin/sh",
+    "/bin/",
+)
+
+
+def resolve_shell(requested):
+    """The shell to exec: the requested one if it is an allowed absolute path, else None."""
+    if not requested:
+        return None
+    path = os.path.realpath(requested)
+    if not os.path.isabs(path):
+        return None
+    if not any(path == pre or path.startswith(pre) for pre in SHELL_PREFIXES):
+        return None
+    if not (os.path.isfile(path) and os.access(path, os.X_OK)):
+        return None
+    return path
+
+
+def resolve_cwd(requested):
+    """The directory to start in: the requested one if it exists, else the home directory."""
+    home = os.path.expanduser("~")
+    if not requested:
+        return home
+    path = os.path.abspath(os.path.expanduser(requested))
+    if os.path.isdir(path) and os.access(path, os.R_OK | os.X_OK):
+        return path
+    return home
+
+
+def parse_open_strings(p, offset):
+    """The two optional strings in an OPEN payload: (shell, cwd), either possibly "".
+
+    Layout after the fixed six bytes is <u16 len><utf-8><u16 len><utf-8>. Both are optional
+    together with the whole tail, so a truncation here means "use the defaults" rather than
+    an error: an old app must still be able to open a session.
+    """
+    out = ["", ""]
+
+    def take(off, slot):
+        if off + 2 > len(p):
+            return None
+        (ln,) = struct.unpack_from("<H", p, off)
+        off += 2
+        if off + ln > len(p):
+            return None
+        out[slot] = p[off:off + ln].decode("utf-8", "replace")
+        return off + ln
+
+    off = take(offset, 0)
+    if off is not None:
+        take(off, 1)
+    return out[0], out[1]
+
+
 def ensure_rundir():
     os.makedirs(RUNDIR, mode=0o700, exist_ok=True)
     try:
@@ -146,7 +207,7 @@ class Ring:
 
 
 class Session:
-    def __init__(self, sid, cols, rows, shell, env):
+    def __init__(self, sid, cols, rows, shell, env, cwd=None):
         self.sid = sid
         self.cols = cols
         self.rows = rows
@@ -157,7 +218,7 @@ class Session:
         if pid == 0:
             # 자식: forkpty가 이미 setsid를 했다. 여기서는 exec만.
             try:
-                os.chdir(os.path.expanduser("~"))
+                os.chdir(resolve_cwd(cwd))
             except OSError:
                 pass
             env = dict(env)
@@ -470,6 +531,9 @@ class Daemon:
                 cl.error(E_BAD_FRAME, "short open")
                 return
             sid, cols, rows = struct.unpack_from("<HHH", p, 0)
+            # Trailing strings are optional: a client that sends six bytes gets the daemon's
+            # default shell and the home directory, which is exactly what older builds did.
+            shell_req, cwd_req = parse_open_strings(p, 6)
             if sid in self.sessions:
                 sess = self.sessions[sid]
                 sess.set_size(cols, rows)
@@ -477,8 +541,9 @@ class Daemon:
                 if len(self.sessions) >= MAX_SESSIONS:
                     cl.error(E_TOO_MANY, "too many sessions")
                     return
+                shell = resolve_shell(shell_req) or self.shell
                 try:
-                    sess = Session(sid, cols, rows, self.shell, self.base_env)
+                    sess = Session(sid, cols, rows, shell, self.base_env, cwd_req)
                 except Exception as e:
                     cl.error(E_SPAWN, "spawn failed: %s" % e)
                     return

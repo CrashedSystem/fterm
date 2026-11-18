@@ -150,11 +150,26 @@ public final class SocketTransport implements SessionTransport {
     /** When the daemon last said anything; drives the keep-alive ping. */
     private volatile long mLastRecv = System.currentTimeMillis();
 
+    /** The shell and directory a session opens with; both may be empty for the defaults. */
+    private final String mShell;
+    private final String mCwd;
+
     public SocketTransport(String host, int port, String token, int sessionId) {
+        this(host, port, token, sessionId, null, null);
+    }
+
+    /**
+     * @param shell an absolute path the daemon may run, or null/"" for its own default
+     * @param cwd   the directory to start in, or null/"" for the daemon's home
+     */
+    public SocketTransport(String host, int port, String token, int sessionId,
+                           String shell, String cwd) {
         mHost = host;
         mPort = port;
         mToken = token;
         mSessionId = sessionId;
+        mShell = shell;
+        mCwd = cwd;
     }
 
     public String getLastError() {
@@ -543,11 +558,25 @@ public final class SocketTransport implements SessionTransport {
 
     // ------------------------------------------------------------------ framing
 
+    /**
+     * The OPEN frame: id and size, then the shell and directory as length-prefixed UTF-8.
+     *
+     * <p>The tail is optional by protocol, so an older daemon reads the first six bytes and
+     * ignores the rest, and a request with no shell and no directory is still six bytes -
+     * which is what keeps the two builds speaking to each other.
+     */
     private byte[] openPayload(int cols, int rows) {
-        byte[] b = new byte[6];
+        byte[] shell = mShell == null ? new byte[0] : mShell.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] cwd = mCwd == null ? new byte[0] : mCwd.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] b = new byte[6 + 2 + shell.length + 2 + cwd.length];
         putShort(b, 0, mSessionId);
         putShort(b, 2, cols);
         putShort(b, 4, rows);
+        putShort(b, 6, shell.length);
+        System.arraycopy(shell, 0, b, 8, shell.length);
+        int off = 8 + shell.length;
+        putShort(b, off, cwd.length);
+        System.arraycopy(cwd, 0, b, off + 2, cwd.length);
         return b;
     }
 

@@ -89,6 +89,14 @@ public final class Prefs {
     public boolean keyBarVisible() { return sp().getBoolean("keybar", true); }
     public void setKeyBarVisible(boolean v) { sp().edit().putBoolean("keybar", v).apply(); }
 
+    /** Where a new session starts; "" means the daemon's home directory. */
+    public String startDir() { return sp().getString("start_dir", ""); }
+    public void setStartDir(String v) { sp().edit().putString("start_dir", v == null ? "" : v).apply(); }
+
+    /** Which program a new session runs; "" means the daemon's default shell. */
+    public String startShell() { return sp().getString("start_shell", ""); }
+    public void setStartShell(String v) { sp().edit().putString("start_shell", v == null ? "" : v).apply(); }
+
     /** Some IMEs (Samsung in particular) mangle a TYPE_NULL input connection. */
     /**
      * Some IMEs mangle a TYPE_NULL connection: the Samsung keyboard commits each jamo of a

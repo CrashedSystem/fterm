@@ -449,7 +449,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
         TerminalSession session = new TerminalSession("", null, null, null, 8000, this);
         SocketTransport transport = new SocketTransport(
-                mPrefs.host(), mPrefs.port(), token, tab.id);
+                mPrefs.host(), mPrefs.port(), token, tab.id,
+                mPrefs.startShell(), mPrefs.startDir());
         session.setTransport(transport);
         tab.session = session;
         tab.transport = transport;
@@ -845,6 +846,10 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 @Override public void onFontSize(int dp) { applyFontSize(dp); }
                 @Override public int scheme() { return mScheme; }
                 @Override public void onScheme(int index) { applyScheme(index); }
+                @Override public String startDir() { return mPrefs.startDir(); }
+                @Override public void onStartDir(String dir) { mPrefs.setStartDir(dir); }
+                @Override public String startShell() { return mPrefs.startShell(); }
+                @Override public void onStartShell(String shell) { mPrefs.setStartShell(shell); }
                 @Override public int[] customSlots() { return mCustom; }
                 @Override public void onCustomSlot(int slot, int color) {
                     if (slot < 0 || slot >= Schemes.CUSTOM_SLOTS) return;
