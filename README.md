@@ -388,14 +388,53 @@ export DEX2OATBOOTCLASSPATH=...   # BOOTCLASSPATH와 같은 값의 DEX2OAT varia
 rish -c id                        # → uid=2000(shell)
 ```
 
-**해결**: `~/bin/rish2` 래퍼가 이 변수들을 채워 실행합니다. fterm 데몬 환경에서도
-동작합니다. Shizuku 이슈 트래커의 "rish returns nothing" 보고 다수가 이것으로 보입니다.
+**해결**: `ftermd` 가 세션 환경을 만들 때 이 변수들을 물려줍니다. 발견 경로는 세
+단계입니다 — 자기 환경, 캐시(`~/.fterm/android.env`, 0600), `/proc` 의 살아있는 프로세스.
+데몬이 ssh나 cron에서 떠서 ART 변수를 하나도 못 받은 경우에도 `am` 이 동작합니다.
+발견 결과는 캐시되고, 캐시의 jar가 사라졌으면(시스템 업데이트) 버리고 다시 찾습니다.
+
+`DEX2OATBOOTCLASSPATH` 는 `BOOTCLASSPATH` 와 **다른 값**입니다. 같은 61개를 넣으면
+`app_process` 가 메시지 없이 abort합니다(rc=134). dex2oat가 컴파일할 목록이지 ART가
+로드할 목록이 아니기 때문입니다. 캐시에 있는 값이 21개인 이유입니다.
+
+`~/bin/rish2` 도 같은 캐시를 씁니다. 하드코딩된 61개 경로는 기기 업데이트에서 깨지므로
+버렸습니다. `ftermd env` 가 발견 결과를 shell 문법으로 출력하고, 래퍼는 그것을
+`eval` 합니다. 데몬이 없으면 `/proc` 을 직접 훑어 채우고 캐시에 남깁니다.
+
+**실측**: ART 변수를 하나도 받지 않은 데몬(`env -u BOOTCLASSPATH ...`)의 세션에서
+`termux-battery-status`, `termux-toast`, `termux-clipboard-get`, `am broadcast` 넷 다
+rc=0. 대조군으로 데몬 환경을 그대로 물려줬을 때(수정 전)는 `termux-battery-status` 가
+출력 없이 멈췄습니다 — 오지 않을 콜백을 기다리고 있었습니다.
+
+**확인 방법** — 다섯 중 하나만 빠져도 `am` 이 죽습니다. Termux 앱 셸에서 하나씩 빼보면
+재현됩니다.
+
+```bash
+for V in BOOTCLASSPATH DEX2OATBOOTCLASSPATH ANDROID_ART_ROOT ANDROID_I18N_ROOT ANDROID_TZDATA_ROOT; do
+  echo "unset $V -> $(env -u $V sh -c 'am broadcast -a android.intent.action.BATTERY_CHANGED 2>&1 | head -1')"
+done
+# unset ANDROID_DATA, ANDROID_ROOT, TERMUX_APP__* 는 영향 없음
+```
+
+Shizuku 이슈 트래커의 "rish returns nothing" 보고 다수가 이것으로 보입니다.
 
 ### 데몬은 파일 교체로 갱신되지 않습니다
 
 `termux/install.sh` 가 데몬을 재시작하는 이유입니다. 실행 중인 프로세스는 디스크의 새
 코드를 읽지 않습니다. `TERM_PROGRAM` 도 select() 크래시 수정도 **재시작 후에만**
 적용됩니다.
+
+재시작은 스크립트 자신의 세션에서 합니다(`setsid`). 스크립트는 보통 fterm 탭에서
+돌리고, 그 탭의 셸은 데몬의 자식입니다. `stop` 이 PTY를 닫으면 셸이 SIGHUP을 받아
+스크립트가 재시작 도중에 죽고, 데몬이 아예 없는 상태로 남습니다. 실측: 두 번 돌려
+pid가 31319에서 31340으로 바뀌고, 교체된 데몬의 세션에서 `termux-battery-status` 가
+rc=0으로 답합니다.
+
+**환경 변수 문제를 없애는 원칙** 하나가 남습니다. "Termux에서는 되는데 여기서는 안
+된다"가 나오면, 그 차이는 대개 **부모 프로세스가 물려준 환경**입니다. 세션을 띄우는
+쪽이 변수 열한 개를 골라 넘기면 그 뒤로는 조용히 깨집니다 — 에러가 아니라 **아무 일도
+일어나지 않는 것**으로 보이기 때문입니다. 그래서 지금은 물려받고, 부모의 정체를
+설명하는 변수만 거릅니다(SSH_*, TERM, TERM_PROGRAM, LD_*).
 
 ## 유휴 사망 — 두 개의 원인, 둘 다 실측
 
@@ -485,6 +524,10 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 |---|---|---|
 | 데몬 프로토콜 9종 (인증 거부, 에코, 한글, resize, replay, close, OPEN 문자열, 링 밖 터미널 모드 복원, 끈 모드 유지) | `tests/run_all.sh` 의 python 파트 | 통과 |
 | 모드 추적기 41종 (바이트 분할 17종, 결합 파라미터, 무관한 CSI, 마지막 선언 우선, carry 상한) | `tests/test_modes.py` | 통과 |
+| 셸 환경 22종 (ART 변수 목록, 부모 정체 거르기, 캐시 왕복·0600·staleness, 죽은 pid) | `tests/test_env.py` | 통과 |
+| ART 변수 없는 데몬에서 termux-api 4종 (battery·toast·clipboard·am broadcast) | 격리 포트 `FTERM_PORT=8813` 에 `env -u BOOTCLASSPATH` 로 기동 | 통과 (rc=0) |
+| `install.sh` 재시작 (pid 교체 후 새 세션에서 배터리 조회) | 격리 `FTERM_HOME`·`FTERM_RUNDIR` 로 두 번 실행 | 통과 |
+| `rish2` 캐시 없이 동작 (`ftermd` 없이 `/proc` 발견) | `env -i` 로 캐시 삭제 후 실행 | 통과 (uid=2000 shell) |
 | 복원된 모드가 에뮬레이터에서 실제 마우스 ON이 되는지 7종 | `tests/jvm/core/ModeRestoreTest.java` | 통과 |
 | Java `SocketTransport` 9종 (토큰 오류, 왕복, 한글, resize, pid, replay, close, 세션 분리) | 실제 `ftermd` 에 JVM으로 접속 | 통과 |
 | `DaemonClient` SYNC 5종 (빈 데몬, 목록, 토큰 오류, 포트 거부, 종료 후 제거) | 같음 | 통과 |
@@ -549,6 +592,8 @@ tests/                        프로토콜, 전송, 파서, 폭 테스트
 
 ```bash
 ftermd start | stop | status | token | reset-token
+ftermd fonts | font <url>     # 앱의 글꼴 목록·내려받기
+ftermd env                    # ART 환경 변수를 shell 문법으로 출력 (rish 같은 래퍼가 eval)
 ```
 
 환경 변수: `FTERM_PORT`(8791), `FTERM_SHELL`, `FTERM_RUNDIR`(`~/.fterm`),
