@@ -1,5 +1,21 @@
 package com.termux.terminal;
 
+import static com.termux.terminal.Protocol.C_CLOSE;
+import static com.termux.terminal.Protocol.C_HELLO;
+import static com.termux.terminal.Protocol.C_INPUT;
+import static com.termux.terminal.Protocol.C_OPEN;
+import static com.termux.terminal.Protocol.C_PING;
+import static com.termux.terminal.Protocol.C_RESIZE;
+import static com.termux.terminal.Protocol.E_BAD_FRAME;
+import static com.termux.terminal.Protocol.MAX_FRAME;
+import static com.termux.terminal.Protocol.S_ERROR;
+import static com.termux.terminal.Protocol.S_EXIT;
+import static com.termux.terminal.Protocol.S_HELLO_OK;
+import static com.termux.terminal.Protocol.S_OPENED;
+import static com.termux.terminal.Protocol.S_OUTPUT;
+import static com.termux.terminal.Protocol.S_REPLAY;
+import static com.termux.terminal.Protocol.S_SYNCED;
+
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -41,23 +57,6 @@ public final class SocketTransport implements SessionTransport {
 
     private static final String LOG_TAG = "SocketTransport";
 
-    private static final int C_HELLO = 0x01;
-    private static final int C_SYNC = 0x09;
-    private static final int C_OPEN = 0x10;
-    private static final int C_CLOSE = 0x11;
-    private static final int C_INPUT = 0x12;
-    private static final int C_RESIZE = 0x13;
-    private static final int C_PING = 0x18;
-
-    private static final int S_HELLO_OK = 0x80;
-    private static final int S_OPENED = 0x90;
-    private static final int S_OUTPUT = 0x91;
-    private static final int S_EXIT = 0x92;
-    private static final int S_REPLAY = 0x93;
-    private static final int S_SYNCED = 0x9E;
-    private static final int S_ERROR = 0x9F;
-
-    private static final int MAX_FRAME = 1 << 20;
 
     /**
      * Read timeout, and it must be comfortably larger than the ping interval.
@@ -293,7 +292,7 @@ public final class SocketTransport implements SessionTransport {
             // HELLO must be the first frame on the connection, so it is written here before
             // the writer thread exists. Everything after it goes through the queue.
             OutputStream out = s.getOutputStream();
-            out.write(frameOf(C_HELLO, helloPayload()));
+            out.write(Protocol.frame(C_HELLO, Protocol.hello(mToken)));
             out.flush();
             ok = true;
             return s;
@@ -336,7 +335,7 @@ public final class SocketTransport implements SessionTransport {
             while (gen == mGeneration && !mClosed) {
                 mLastRecv = System.currentTimeMillis();
                 int type = in.readUnsignedByte();
-                int len = readIntLE(in);
+                int len = Protocol.readInt(in);
                 if (len < 0 || len > MAX_FRAME) return "프레임 길이 오류";
                 byte[] payload = new byte[len];
                 in.readFully(payload);
@@ -365,7 +364,7 @@ public final class SocketTransport implements SessionTransport {
             case S_OPENED:
                 mOpened = true;
                 if (p.length >= 6) {
-                    mPid = readIntLE(p, 2);
+                    mPid = Protocol.readInt(p, 2);
                     TerminalSession s = mSession;
                     if (s != null) {
                         s.mShellPid = mPid > 0 ? mPid : -2;
@@ -382,13 +381,13 @@ public final class SocketTransport implements SessionTransport {
             }
             case S_OUTPUT: {
                 if (p.length >= 6) {
-                    int n = readIntLE(p, 2);
+                    int n = Protocol.readInt(p, 2);
                     if (n > 0 && 6 + n <= p.length) deliver(p, 6, n);
                 }
                 return true;
             }
             case S_EXIT: {
-                int code = p.length >= 6 ? readIntLE(p, 2) : -1;
+                int code = p.length >= 6 ? Protocol.readInt(p, 2) : -1;
                 // The daemon removed the session itself; a C_CLOSE here would only be a line in
                 // its log. Marking it sent is what keeps a later path from opening a connection
                 // just to say "already gone".
@@ -401,7 +400,7 @@ public final class SocketTransport implements SessionTransport {
             }
             case S_ERROR: {
                 int code = p.length >= 1 ? (p[0] & 0xff) : 0;
-                int msgLen = p.length >= 3 ? readShortLE(p, 1) : 0;
+                int msgLen = p.length >= 3 ? Protocol.readShort(p, 1) : 0;
                 String msg = msgLen > 0 && 3 + msgLen <= p.length
                         ? new String(p, 3, msgLen, StandardCharsets.UTF_8) : "";
                 mLastError = errorText(code, msg);
@@ -531,15 +530,15 @@ public final class SocketTransport implements SessionTransport {
     /** Enqueue a frame. Safe from the UI thread; never touches the socket. */
     private void enqueue(int type, byte[] payload) {
         if (mClosed) return;
-        mOutQueue.offer(frameOf(type, payload));
+        mOutQueue.offer(Protocol.frame(type, payload));
     }
 
     @Override
     public void write(byte[] data, int offset, int count) {
         if (mClosed || !mRunning) return;
         byte[] b = new byte[6 + count];
-        putShort(b, 0, mSessionId);
-        putInt(b, 2, count);
+        Protocol.putShort(b, 0, mSessionId);
+        Protocol.putInt(b, 2, count);
         System.arraycopy(data, offset, b, 6, count);
         enqueue(C_INPUT, b);
     }
@@ -552,9 +551,9 @@ public final class SocketTransport implements SessionTransport {
         mRows = rows;
         if (mClosed || !mRunning) return;
         byte[] b = new byte[6];
-        putShort(b, 0, mSessionId);
-        putShort(b, 2, columns);
-        putShort(b, 4, rows);
+        Protocol.putShort(b, 0, mSessionId);
+        Protocol.putShort(b, 2, columns);
+        Protocol.putShort(b, 4, rows);
         enqueue(C_RESIZE, b);
     }
 
@@ -576,17 +575,6 @@ public final class SocketTransport implements SessionTransport {
 
     // ------------------------------------------------------------------ closing the shell
 
-    /** HELLO: the protocol byte, then the token as a length-prefixed UTF-8 string. */
-    private byte[] helloPayload() {
-        byte[] tok = mToken.getBytes(StandardCharsets.UTF_8);
-        byte[] hello = new byte[3 + tok.length];
-        hello[0] = 1;
-        hello[1] = (byte) (tok.length & 0xff);
-        hello[2] = (byte) ((tok.length >> 8) & 0xff);
-        System.arraycopy(tok, 0, hello, 3, tok.length);
-        return hello;
-    }
-
     /**
      * Kill the shell this session owns, once.
      *
@@ -606,11 +594,11 @@ public final class SocketTransport implements SessionTransport {
         if (!mOpened || mCloseSent) return;
         mCloseSent = true;
         byte[] b = new byte[2];
-        putShort(b, 0, mSessionId);
+        Protocol.putShort(b, 0, mSessionId);
         Socket live = mSocket;
         if (useLiveLink && live != null && live.isConnected() && !live.isClosed()) {
             // Queued rather than written: every socket write belongs to the writer thread.
-            mOutQueue.offer(frameOf(C_CLOSE, b));
+            mOutQueue.offer(Protocol.frame(C_CLOSE, b));
             return;
         }
         Socket tmp = null;
@@ -619,8 +607,8 @@ public final class SocketTransport implements SessionTransport {
             tmp.connect(new InetSocketAddress(mHost, mPort), 800);
             tmp.setSoTimeout(800);
             OutputStream out = tmp.getOutputStream();
-            out.write(frameOf(C_HELLO, helloPayload()));
-            out.write(frameOf(C_CLOSE, b));
+            out.write(Protocol.frame(C_HELLO, Protocol.hello(mToken)));
+            out.write(Protocol.frame(C_CLOSE, b));
             out.flush();
             // Read the daemon's first frame: that is the acknowledgement that it has read
             // HELLO, and CLOSE is in the same segment behind it.
@@ -651,24 +639,17 @@ public final class SocketTransport implements SessionTransport {
         byte[] shell = mShell == null ? new byte[0] : mShell.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         byte[] cwd = mCwd == null ? new byte[0] : mCwd.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         byte[] b = new byte[6 + 2 + shell.length + 2 + cwd.length];
-        putShort(b, 0, mSessionId);
-        putShort(b, 2, cols);
-        putShort(b, 4, rows);
-        putShort(b, 6, shell.length);
+        Protocol.putShort(b, 0, mSessionId);
+        Protocol.putShort(b, 2, cols);
+        Protocol.putShort(b, 4, rows);
+        Protocol.putShort(b, 6, shell.length);
         System.arraycopy(shell, 0, b, 8, shell.length);
         int off = 8 + shell.length;
-        putShort(b, off, cwd.length);
+        Protocol.putShort(b, off, cwd.length);
         System.arraycopy(cwd, 0, b, off + 2, cwd.length);
         return b;
     }
 
-    private static byte[] frameOf(int type, byte[] payload) {
-        byte[] head = new byte[5 + payload.length];
-        head[0] = (byte) type;
-        putInt(head, 1, payload.length);
-        System.arraycopy(payload, 0, head, 5, payload.length);
-        return head;
-    }
 
     private static int readIntLE(DataInputStream in) throws IOException {
         int b0 = in.readUnsignedByte();
@@ -687,15 +668,5 @@ public final class SocketTransport implements SessionTransport {
         return (b[off] & 0xff) | ((b[off + 1] & 0xff) << 8);
     }
 
-    private static void putShort(byte[] b, int off, int v) {
-        b[off] = (byte) (v & 0xff);
-        b[off + 1] = (byte) ((v >> 8) & 0xff);
-    }
 
-    private static void putInt(byte[] b, int off, int v) {
-        b[off] = (byte) (v & 0xff);
-        b[off + 1] = (byte) ((v >> 8) & 0xff);
-        b[off + 2] = (byte) ((v >> 16) & 0xff);
-        b[off + 3] = (byte) ((v >> 24) & 0xff);
-    }
 }
