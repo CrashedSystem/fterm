@@ -11,6 +11,7 @@
   ftermd reset-token      토큰 교체 (앱 재입력 필요)
   ftermd fonts            앱에 줄 수 있는 글꼴 목록 (크기\t경로)
   ftermd font <url>       글꼴을 ~/.fonts 로 내려받고 경로 출력
+  ftermd env              ART 환경 변수를 shell 문법으로 출력 (rish 같은 래퍼가 source)
 
 설계 노트
 - 세션은 데몬 수명과 함께 산다. 클라이언트가 끊겨도 셸은 계속 돈다.
@@ -185,6 +186,191 @@ def resolve_cwd(requested):
     if os.path.isdir(path) and os.access(path, os.R_OK | os.X_OK):
         return path
     return home
+
+
+# The variables Termux's own app shell hands to bash, and which most of /system/bin needs.
+# `am` is the one that bites: it is `app_process` starting an APK's dex, and ART builds its
+# boot class path from BOOTCLASSPATH. Without it `am` exits 0 having printed nothing, so
+# termux-api commands look like they hang - they are waiting for a callback that the
+# broadcast never sent. Measured by removing one variable at a time from a working shell:
+# dropping any of these five breaks `am broadcast`; dropping ANDROID_DATA, ANDROID_ROOT or
+# TERMUX_APP__* does not.
+ANDROID_ENV = (
+    "BOOTCLASSPATH",
+    "DEX2OATBOOTCLASSPATH",
+    "ANDROID_ART_ROOT",
+    "ANDROID_I18N_ROOT",
+    "ANDROID_TZDATA_ROOT",
+    "ANDROID_DATA",
+    "ANDROID_ROOT",
+)
+
+# Identity variables worth keeping for programs that ask "am I inside Termux".
+TERMUX_ENV = (
+    "TERMUX_VERSION",
+    "TERMUX_MAIN_PACKAGE_FORMAT",
+    "TERMUX_APK_RELEASE",
+    "TERMUX_API_VERSION",
+    "TERMUX_IS_DEBUGGABLE_BUILD",
+    "TERMUX_APP_PID",
+    "TERMUX__PREFIX",
+    "TERMUX__HOME",
+    "TERMUX__ROOTFS_DIR",
+    "TERMUX_APP__DATA_DIR",
+    "TERMUX_APP__LEGACY_DATA_DIR",
+)
+
+# Not inherited even when the daemon has it: these describe the daemon's own parent (an ssh
+# session, the keeper, a debugger), and a shell that inherits SSH_CONNECTION believes it is
+# an ssh login and skips the parts of .bashrc meant for a local terminal.
+NEVER_INHERIT = (
+    "SSH_CLIENT",
+    "SSH_CONNECTION",
+    "SSH_TTY",
+    "SSH_AUTH_SOCK",
+    "LD_PRELOAD",
+    "LD_LIBRARY_PATH",
+    "LD_INSERT_LIBRARIES",
+    "TERM",
+    "COLORTERM",
+    "TERM_PROGRAM",
+    "TERM_PROGRAM_VERSION",
+    "FTERM_NOTIFY",
+    "FTERM_PORT",
+    "FTERM_RUNDIR",
+    "FTERM_SHELL",
+    "FTERM_HISTORY_BYTES",
+    "FTERM_FONT_DIRS",
+)
+
+
+def _read_environ(pid):
+    """One process's environment, or None if it is not readable."""
+    try:
+        with open("/proc/%s/environ" % pid, "rb") as f:
+            raw = f.read()
+    except (OSError, IOError):
+        return None
+    env = {}
+    for item in raw.split(b"\0"):
+        if b"=" in item:
+            k, v = item.split(b"=", 1)
+            if k:
+                env[k.decode("utf-8", "replace")] = v.decode("utf-8", "replace")
+    return env
+
+
+def _bootclasspath_valid(value):
+    """A boot class path from another device build lists jars that no longer exist."""
+    if not value:
+        return False
+    parts = [p for p in value.split(":") if p]
+    if not parts:
+        return False
+    return all(os.path.exists(p) for p in parts)
+
+
+def _discover_android_env():
+    """Find the ART variables by asking every process that has them.
+
+    The daemon may be started by the keeper (which inherited the app shell's environment),
+    by ssh, by cron, or by hand. Only the first of those has BOOTCLASSPATH. There is no
+    system service to ask: /system/etc/classpaths/bootclasspath.pb lists only the framework
+    jars and omits the ART core jars, so a shell built from it still dies. Reading a live
+    process is the only accurate source. The result is cached, so this scan happens once.
+    """
+    own = _read_environ("self") or {}
+    if _bootclasspath_valid(own.get("BOOTCLASSPATH")):
+        found = {k: own[k] for k in ANDROID_ENV if k in own}
+        write_cache(found)
+        return found
+    cached = _read_cache()
+    if cached and _bootclasspath_valid(cached.get("BOOTCLASSPATH")):
+        return cached
+    try:
+        pids = [p for p in os.listdir("/proc") if p.isdigit()]
+    except OSError:
+        pids = []
+    # Our own pid first, then everything else; the app's shell is usually near the end.
+    pids.sort(key=lambda p: (p != str(os.getpid()), int(p)))
+    for pid in pids:
+        env = _read_environ(pid)
+        if env and _bootclasspath_valid(env.get("BOOTCLASSPATH")):
+            found = {k: env[k] for k in ANDROID_ENV if k in env}
+            write_cache(found)
+            return found
+    return {}
+
+
+def env_cache_path():
+    return os.path.join(RUNDIR, "android.env")
+
+
+def _read_cache():
+    env = {}
+    try:
+        with open(env_cache_path()) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("export ") and "=" in line:
+                    k, v = line[7:].split("=", 1)
+                    env[k] = v.strip("\"'")
+    except OSError:
+        return {}
+    return env
+
+
+def write_cache(env):
+    """Write the ART variables as shell syntax, so rish and other wrappers can source it."""
+    ensure_rundir()
+    dest = env_cache_path()
+    tmp = dest + ".tmp"
+    try:
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write("# Generated by ftermd. Source this to make app_process/am work.\n")
+            for k in ANDROID_ENV:
+                if k in env:
+                    f.write("export %s='%s'\n" % (k, env[k].replace("'", "'\\''")))
+            f.write("export CLASSPATH=\n")
+        os.replace(tmp, dest)
+    except OSError:
+        pass
+
+
+def shell_env():
+    """The environment for a session's shell.
+
+    Inheriting the daemon's whole environment would be wrong (see NEVER_INHERIT) and building
+    a short list from scratch was worse: it left out the ART variables, and termux-api
+    commands silently did nothing. So inherit, then curate - a shell may inherit it, but
+    curate the list of what it may not.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in NEVER_INHERIT}
+    for k in TERMUX_ENV:
+        if k in os.environ:
+            env[k] = os.environ[k]
+    env.update(_discover_android_env())
+    # A pid borrowed from another process is meaningless once that process is gone.
+    if "TERMUX_APP_PID" in env:
+        try:
+            os.kill(int(env["TERMUX_APP_PID"]), 0)
+        except (OSError, ValueError):
+            env.pop("TERMUX_APP_PID", None)
+    env["HOME"] = os.path.expanduser("~")
+    env["PWD"] = env["HOME"]
+    env["PATH"] = os.environ.get(
+        "PATH", "/data/data/com.termux/files/usr/bin:/system/bin:/usr/bin:/bin")
+    env["PREFIX"] = os.environ.get("PREFIX", "/data/data/com.termux/files/usr")
+    env["TMPDIR"] = os.environ.get("TMPDIR", "/data/data/com.termux/files/usr/tmp")
+    env["LANG"] = os.environ.get("LANG", "en_US.UTF-8")
+    env["SHELL"] = default_shell()
+    env["TERM"] = "xterm-256color"
+    env["COLORTERM"] = "truecolor"
+    env["TERM_PROGRAM"] = "fterm"
+    env["TERM_PROGRAM_VERSION"] = "0.2.0"
+    env["FTERM_NOTIFY"] = "1"
+    return env
 
 
 def parse_open_strings(p, offset):
@@ -368,6 +554,8 @@ class Session:
             except OSError:
                 pass
             env = dict(env)
+            # TERM_PROGRAM and friends are already set by shell_env(); they are repeated here
+            # only so a caller that builds its own environment still gets them.
             env.setdefault("TERM", "xterm-256color")
             env.setdefault("COLORTERM", "truecolor")
             # Programs that can notify a terminal check this. fterm parses OSC 9 and OSC 777
@@ -543,18 +731,7 @@ class Daemon:
         self.clients = []
         self.shell = default_shell()
         self.srv = None
-        self.base_env = {
-            "HOME": os.path.expanduser("~"),
-            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-            "TERM": "xterm-256color",
-            "COLORTERM": "truecolor",
-            "TERM_PROGRAM": "fterm",
-            "TERM_PROGRAM_VERSION": "0.2.0",
-            "FTERM_NOTIFY": "1",
-            "LANG": "en_US.UTF-8",
-            "PREFIX": os.environ.get("PREFIX", "/data/data/com.termux/files/usr"),
-            "TMPDIR": os.environ.get("TMPDIR", "/data/data/com.termux/files/usr/tmp"),
-        }
+        self.base_env = shell_env()
 
     # ---------- lifecycle ----------
 
@@ -1054,6 +1231,18 @@ def cmd_font(url):
     return 0
 
 
+def cmd_env():
+    """Print the ART variables as shell syntax, for wrappers such as rish2 to source."""
+    env = _discover_android_env()
+    if not _bootclasspath_valid(env.get("BOOTCLASSPATH")):
+        print("ftermd env: could not find BOOTCLASSPATH in any process", file=sys.stderr)
+        return 1
+    for k in ANDROID_ENV:
+        if k in env:
+            print("export %s='%s'" % (k, env[k].replace("'", "'\\''")))
+    return 0
+
+
 def cmd_reset_token():
     p = token_path()
     try:
@@ -1083,6 +1272,8 @@ def main(argv):
         return cmd_fonts()
     if cmd == "font":
         return cmd_font(argv[2] if len(argv) > 2 else "")
+    if cmd == "env":
+        return cmd_env()
     print("ftermd: unknown command %s" % cmd, file=sys.stderr)
     return 2
 

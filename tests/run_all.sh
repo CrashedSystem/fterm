@@ -19,6 +19,10 @@ echo "=== mode tracker"
 python3 "$ROOT/tests/test_modes.py"
 
 echo
+echo "=== shell environment"
+python3 "$ROOT/tests/test_env.py"
+
+echo
 echo "=== java transport"
 rm -rf "$T"; mkdir -p "$T/out"
 javac -d "$T/out" \
