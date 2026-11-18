@@ -67,6 +67,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private LinearLayout mTabStrip;
     private HorizontalScrollView mTabScroll;
     private FrameLayout mTermFrame;
+    private FindBar mFind;
     KeyBar mKeyBar;
     private TerminalView mTermView;
 
@@ -226,6 +227,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         ClipboardImage.selfTestIfRequested(this);
 
         mRoot.addView(top);
+        mFind = new FindBar(this, mTermView);
+        mRoot.addView(mFind.view());
         mRoot.addView(mTermFrame);
         mRoot.addView(mKeyBar.view());
         setContentView(mRoot);
@@ -251,6 +254,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 MainActivity.this.newTab(p, true);
             }
             @Override public void manageProfiles() { showSettings("profiles"); }
+            @Override public void find() { MainActivity.this.find(); }
         });
 
         loadFonts();
@@ -841,6 +845,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mSettings.show(page);
     }
 
+    /** WT's find bar; also bound to Ctrl+Shift+F in the key handler. */
+    private void find() {
+        if (mFind == null) return;
+        if (mFind.isOpen()) mFind.hide(); else mFind.show();
+    }
+
     private void showAbout() {
         About.show(this, mTabs.size() + "개 세션 · " + mPrefs.host() + ":" + mPrefs.port());
     }
@@ -968,6 +978,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     @SuppressWarnings("deprecation")
     @Override
     public void onBackPressed() {
+        // An open find bar is the innermost thing on screen, so Back closes it first - the
+        // same order as every other overlay on the phone.
+        if (mFind != null && mFind.isOpen()) {
+            mFind.hide();
+            return;
+        }
         if (mPrefs.backIsEscape() && mActive != null && mActive.session != null) {
             sendEscape("esc");
             return;

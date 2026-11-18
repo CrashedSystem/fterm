@@ -47,6 +47,9 @@ final class Chrome {
 
         /** The settings page that edits profiles. */
         void manageProfiles();
+
+        /** Open the find bar over the terminal. */
+        void find();
     }
 
     /** One palette entry: the label shown, and the action it carries. */
@@ -82,6 +85,7 @@ final class Chrome {
                 new Entry("다음 탭", mCommands::nextTab),
                 new Entry("붙여넣기", mCommands::paste),
                 new Entry("복사", mCommands::copy),
+                new Entry("찾기", mCommands::find),
                 new Entry("글자 크기 키우기", mCommands::biggerFont),
                 new Entry("글자 크기 줄이기", mCommands::smallerFont),
                 new Entry("설정 열기", mCommands::settings),
@@ -210,6 +214,7 @@ final class Chrome {
                 Row.rule(),
                 Row.of("clipboard", "붙여넣기", "Ctrl+Shift+V", mCommands::paste),
                 Row.of("copy", "복사", "Ctrl+Shift+C", mCommands::copy),
+                Row.of("search", "찾기", "Ctrl+Shift+F", mCommands::find),
                 Row.rule(),
                 Row.of("gear", "설정", "Ctrl+,", mCommands::settings),
                 Row.of("terminal", "명령 팔레트", "Ctrl+Shift+P", mCommands::palette),
@@ -617,6 +622,11 @@ final class Chrome {
                             android.graphics.Path.Direction.CW);
                     p.addRoundRect(new android.graphics.RectF(4, 8, 15, 21), 1.8f, 1.8f,
                             android.graphics.Path.Direction.CW);
+                    break;
+                case "search":
+                    // A magnifier: a circle and the handle at 45 degrees.
+                    p.addCircle(10.5f, 10.5f, 6.5f, android.graphics.Path.Direction.CW);
+                    p.moveTo(15.4f, 15.4f); p.lineTo(20, 20);
                     break;
                 case "ssh":
                     // A terminal pane with a key inside it: a remote session, not a local one.

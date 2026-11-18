@@ -1312,6 +1312,7 @@ public final class TerminalView extends View {
             }
 
             mRenderer.render(mEmulator, canvas, mTopRow, sel[0], sel[1], sel[2], sel[3]);
+            drawFindHighlights(canvas);
 
             // render the text selection handles
             renderTextSelection();
@@ -1349,6 +1350,62 @@ public final class TerminalView extends View {
 
     public int getTopRow() {
         return mTopRow;
+    }
+
+    /** Search matches, as {row, startColumn, endColumn}; null or empty when not searching. */
+    private int[][] mFindHits;
+    private int mFindCurrent = -1;
+
+    /**
+     * Draw the find bar's matches.
+     *
+     * <p>Columns, not character indices: the renderer works in cells, and a wide character
+     * occupies two of them, so anything else would paint over the neighbouring text. The
+     * current match is a solid amber and the rest a faint wash, which is the distinction that
+     * makes "next" legible when several matches share a screen.
+     *
+     * <p>Painted after the renderer and before the retro overlay, so a scanline pass dims the
+     * highlight with the text rather than leaving a bright rectangle on a dark frame.
+     */
+    public void setFindHighlights(int[][] hits, int current) {
+        mFindHits = hits;
+        mFindCurrent = current;
+        invalidate();
+    }
+
+    public void clearFindHighlights() {
+        mFindHits = null;
+        mFindCurrent = -1;
+        invalidate();
+    }
+
+    private void drawFindHighlights(Canvas canvas) {
+        if (mFindHits == null || mFindHits.length == 0 || mEmulator == null) return;
+        final float cellW = mRenderer.mFontWidth;
+        final float lineH = mRenderer.mFontLineSpacing;
+        final android.graphics.Paint p = new android.graphics.Paint();
+        for (int i = 0; i < mFindHits.length; i++) {
+            int[] hit = mFindHits[i];
+            int row = hit[0] - mTopRow;
+            if (row < 0 || hit[0] < mTopRow || row >= mEmulator.mRows) continue;
+            // Both fills are heavily transparent: a match is drawn OVER the glyphs, so an
+            // opaque rectangle hides the very text it is pointing at. The current match is
+            // told apart by a drawn border rather than by being more solid.
+            boolean current = i == mFindCurrent;
+            p.setStyle(android.graphics.Paint.Style.FILL);
+            p.setColor(current ? 0x4dffb300 : 0x26ffd479);
+            float left = hit[1] * cellW;
+            float top = row * lineH;
+            float right = hit[2] * cellW;
+            float bottom = top + lineH;
+            canvas.drawRect(left, top, right, bottom, p);
+            if (current) {
+                p.setStyle(android.graphics.Paint.Style.STROKE);
+                p.setStrokeWidth(Math.max(1f, cellW * 0.12f));
+                p.setColor(0xffffb300);
+                canvas.drawRect(left, top, right, bottom, p);
+            }
+        }
     }
 
     public void setTopRow(int topRow) {
