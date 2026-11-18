@@ -113,6 +113,22 @@ final class ClipboardImage {
         worker.start();
     }
 
+    /**
+     * The paste-key path: if the clipboard holds an image, save it off the UI thread and insert
+     * its path. Returns false when the clip is not an image, so the caller can paste text.
+     *
+     * <p>This is the same work {@link #saveAsync} does for the keyboard's tap; the paste key
+     * used to call the blocking {@link #save} instead, which decodes a full-resolution
+     * screenshot on the UI thread - the terminal and the keyboard stop responding for as long as
+     * the decode takes, which on a 108 MP photo is not a frame drop but a visible freeze.
+     */
+    static boolean pasteIfImage(final Context context, final Handler postToUi,
+                                final ClipData clip, final Paste paste) {
+        if (!isImage(context, clip)) return false;
+        saveAsync(context, uriOf(clip), postToUi, paste, null);
+        return true;
+    }
+
     /** True when the primary clip is an image (any image/* MIME, or a URI that resolves to one). */
     static boolean isImage(Context context, ClipData clip) {
         ClipDescription description = clip.getDescription();

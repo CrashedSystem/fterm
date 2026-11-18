@@ -42,12 +42,36 @@ public class StructureTest {
         check(!main.contains("new SettingsSheet.Host()"), "and is not inlined in the activity");
         check(!main.contains("SeekBar size = new SeekBar(this)"), "and are not built here");
 
+        // 2b. Daemon provisioning is a state machine with four endings, and it has its own file.
+        String boot = read(dir + "DaemonBoot.java");
+        check(boot.contains("void ready(") && boot.contains("void keeperMissing()")
+                        && boot.contains("void daemonSlow()") && boot.contains("void storageBlocked()"),
+                "every way the daemon can fail to come up has an ending");
+        check(main.contains("new DaemonBoot("), "and the activity asks that class, not its own copy");
+        check(!main.contains("pollForToken("), "the polling loop is not inlined again");
+
         // 3. The foreground service is what stops the freezer, so it must exist and be started.
         check(main.contains("TerminalService.start(this)"), "the service is started with the activity");
         String svc = read(dir + "TerminalService.java");
         check(svc.contains("startForeground("), "and calls startForeground (the anti-freeze)");
         check(svc.contains("START_STICKY"), "and asks to be restarted");
         check(svc.contains("IMPORTANCE_LOW"), "with a silent channel");
+        // The type is specialUse, not dataSync: Android 15 caps dataSync at six hours in any 24,
+        // which is shorter than a shell session is meant to live.
+        String manifest = read("AndroidManifest.xml");
+        check(manifest.contains("foregroundServiceType=\"specialUse\""),
+                "the service is specialUse, not dataSync");
+        check(!manifest.contains("foregroundServiceType=\"dataSync\""),
+                "and dataSync is gone");
+        check(manifest.contains("PROPERTY_SPECIAL_USE_FGS_SUBTYPE"),
+                "with the subtype Android asks for");
+        check(manifest.contains("FOREGROUND_SERVICE_SPECIAL_USE"),
+                "and the matching permission");
+
+        // 3b. What the activity holds, it releases. A ToneGenerator owns an audio track for its
+        //     whole life, so a recreated activity would leave one behind per recreation.
+        check(main.contains("protected void onDestroy()") && main.contains("mBell.release()"),
+                "onDestroy releases the bell's tone generator");
 
         // 4. The bell is its own class and honours silent mode.
         String bell = read(dir + "Bell.java");

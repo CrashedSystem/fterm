@@ -11,7 +11,7 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 STUB=$ROOT/tests/androidstub
 CORE=$ROOT/app/src/com.termux/terminal
 
-echo "[1/2] 컴파일 (엔진 + 스텁 + 테스트)"
+echo "[1/3] 컴파일 (엔진 + 스텁 + 테스트)"
 javac -nowarn -d "$OUT" \
   $(find "$STUB" -name '*.java') \
   "$CORE/ByteQueue.java" \
@@ -61,11 +61,12 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/ModeRestoreTest.java"
 
 
-echo "[2/2] 실행"
+echo "[2/3] 실행"
 java -cp "$OUT" WidthTest
 java -cp "$OUT" ScreenTest
 java -cp "$OUT" SchemesTest
-java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" PasteTest
+java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
+  -Dclip.src="$ROOT/app/src/ai/openclaw/fterm/ClipboardImage.java" -cp "$OUT" PasteTest
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" FontsTest
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
   -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" TabCloseTest
@@ -91,3 +92,7 @@ java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
      -Drenderer.src="$ROOT/app/src/com.termux/view/TerminalRenderer.java" \
      -cp "$OUT" FontZoomTest
 java -cp "$OUT" com.termux.terminal.ModeRestoreTest
+
+echo
+echo "[3/3] 전송 계층 (데몬 없이, 가짜 데몬으로)"
+bash "$ROOT/tests/run_transport_fake.sh"
