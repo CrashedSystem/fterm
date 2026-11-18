@@ -56,6 +56,30 @@ public class ProfilesTest {
                 "a carriage return is rejected too");
         check(!ai.openclaw.fterm.Profiles.commandIsOneLine(null), "null is not a command");
 
+        // 4b. The icon is a fifth field, and its absence is not an error.
+        //
+        //     Profiles shipped with four fields. Adding the icon in the middle would have
+        //     made every stored profile undecodable; appending it means an old store reads
+        //     back with an empty icon, which already means "use the default". Both widths
+        //     therefore have to decode, and the four-field one has to keep its data.
+        java.util.List<ai.openclaw.fterm.Profiles.Profile> iconList = new java.util.ArrayList<>();
+        iconList.add(new ai.openclaw.fterm.Profiles.Profile("oc", "", "", "", "opencode"));
+        String iconEncoded = ai.openclaw.fterm.Profiles.encode(iconList);
+        java.util.List<ai.openclaw.fterm.Profiles.Profile> iconBack =
+                ai.openclaw.fterm.Profiles.decode(iconEncoded);
+        check(iconBack.size() == 1, "a profile with an icon round trips");
+        check("opencode".equals(iconBack.get(0).icon), "the icon survives");
+
+        java.util.List<ai.openclaw.fterm.Profiles.Profile> old =
+                ai.openclaw.fterm.Profiles.decode("서버\u001f/home\u001f/bin/bash\u001fssh h");
+        check(old.size() == 1, "a four-field record from the old format still decodes");
+        check("서버".equals(old.get(0).name), "with its name intact");
+        check("ssh h".equals(old.get(0).command), "and its command");
+        check(old.get(0).icon.isEmpty(), "and an empty icon, which means the default");
+
+        check(new ai.openclaw.fterm.Profiles.Profile("a", "", "", "", null).icon.isEmpty(),
+                "a null icon is stored as empty, not as the string null");
+
         // 5. The subtitle is what the menu prints: the command if there is one.
         check(new ai.openclaw.fterm.Profiles.Profile("x", "/sdcard", "", "ssh h").subtitle()
                 .equals("ssh h"), "the command is the subtitle");

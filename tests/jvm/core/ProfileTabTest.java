@@ -61,6 +61,43 @@ public class ProfileTabTest {
         check(main.contains("Profiles.commandIsOneLine("),
                 "one-line-ness is checked before the command becomes pending");
 
+        // 6. A profile's icon has to reach the chip, and has to be an override rather than a
+        //    snapshot. The chip is built once and repainted on every activate/close, so a
+        //    resolved-once value would leave a profile tab stuck with the mark it had at
+        //    open time while every other tab followed the global setting.
+        int resolver = main.indexOf("private String tabIconFor(Tab tab)");
+        check(resolver > 0, "one place decides a tab's mark");
+        String resolverBody = main.substring(resolver,
+                Math.min(main.length(), resolver + 700));
+        check(resolverBody.contains("tab.profile.icon"),
+                "a profile's own icon wins");
+        check(resolverBody.contains("mPrefs.tabIcon()"),
+                "and a tab without one follows the global setting");
+        check(!resolverBody.contains("mIcon ="),
+                "nothing is cached: the fallback is re-read on every repaint");
+
+        int addChip = main.indexOf("private void addTabChip(Tab tab)");
+        String addBody = main.substring(addChip, main.indexOf("private void updateChip"));
+        check(addBody.contains("tabIconFor(tab)"),
+                "the chip is created from the resolver");
+        int updateChip = main.indexOf("private void updateChip(Tab tab)");
+        String updateBody = main.substring(updateChip,
+                Math.min(main.length(), updateChip + 600));
+        check(updateBody.contains("tabIconFor(tab)"),
+                "and repainted from it too, or a change would need a reopen");
+
+        // 7. The dropdown and the editor have to show the same mark, or the profile that
+        //    opens from the menu is not the one the editor described.
+        String chrome = read(System.getProperty("chrome.src",
+                "app/src/ai/openclaw/fterm/Chrome.java"));
+        check(chrome.contains("profile.icon"), "the dropdown uses the profile's icon");
+        String sheet = read(System.getProperty("sheet.src",
+                "app/src/ai/openclaw/fterm/SettingsSheet.java"));
+        check(sheet.contains("pickIcon(\"프로필 아이콘\""),
+                "the editor offers the same picker as the global setting");
+        check(sheet.contains("\"탭 아이콘과 같음\""),
+                "and says plainly what an empty icon means");
+
         System.out.println("ok  " + pass + " profile-tab assertions");
         System.out.println("ALL OK");
     }

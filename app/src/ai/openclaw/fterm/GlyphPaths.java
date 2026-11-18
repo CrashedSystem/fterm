@@ -1424,6 +1424,28 @@ final class GlyphPaths {
                 p.cubicTo(16.25f, 12.9665f, 17.0335f, 13.75f, 18f, 13.75f);
                 p.close();
                 break;
+            case "opencode":
+                {
+                    Path t = new Path();
+                    t.moveTo(384f, 416f);
+                    t.lineTo(128f, 416f);
+                    t.lineTo(128f, 96f);
+                    t.lineTo(384f, 96f);
+                    t.lineTo(384f, 416f);
+                    t.close();
+                    t.moveTo(320f, 160f);
+                    t.lineTo(192f, 160f);
+                    t.lineTo(192f, 352f);
+                    t.lineTo(320f, 352f);
+                    t.lineTo(320f, 160f);
+                    t.close();
+                    Matrix m = new Matrix();
+                    m.setScale(0.075f, 0.075f);
+                    m.postTranslate(-7.2f, -7.2f);
+                    t.transform(m);
+                    p.addPath(t);
+                }
+                break;
             case "palette":
                 p.moveTo(3.8388f, 5.8576f);
                 p.cubicTo(6.7799f, 1.942f, 12.8685f, 0.8026f, 17.2028f, 3.4975f);
@@ -2364,56 +2386,56 @@ final class GlyphPaths {
             case "terminal":
                 {
                     Path t = new Path();
-                    p.moveTo(5.6464f, 9.1464f);
-                    p.cubicTo(5.8417f, 8.9512f, 6.1583f, 8.9512f, 6.3536f, 9.1464f);
-                    p.lineTo(8.3536f, 11.1464f);
-                    p.cubicTo(8.4473f, 11.2402f, 8.5f, 11.3674f, 8.5f, 11.5f);
-                    p.cubicTo(8.5f, 11.6326f, 8.4473f, 11.7598f, 8.3536f, 11.8536f);
-                    p.lineTo(6.3536f, 13.8536f);
-                    p.cubicTo(6.1583f, 14.0488f, 5.8417f, 14.0488f, 5.6464f, 13.8536f);
-                    p.cubicTo(5.4512f, 13.6583f, 5.4512f, 13.3417f, 5.6464f, 13.1464f);
-                    p.lineTo(7.2929f, 11.5f);
-                    p.lineTo(5.6464f, 9.8536f);
-                    p.cubicTo(5.4512f, 9.6583f, 5.4512f, 9.3417f, 5.6464f, 9.1464f);
-                    p.close();
-                    p.moveTo(14.5f, 13f);
-                    p.lineTo(9.5f, 13f);
-                    p.cubicTo(9.2239f, 13f, 9f, 13.2239f, 9f, 13.5f);
-                    p.cubicTo(9f, 13.7761f, 9.2239f, 14f, 9.5f, 14f);
-                    p.lineTo(14.5f, 14f);
-                    p.cubicTo(14.7761f, 14f, 15f, 13.7761f, 15f, 13.5f);
-                    p.cubicTo(15f, 13.2239f, 14.7761f, 13f, 14.5f, 13f);
-                    p.close();
-                    p.moveTo(2.9961f, 5.5f);
-                    p.cubicTo(2.9961f, 4.1193f, 4.1154f, 3f, 5.4961f, 3f);
-                    p.lineTo(14.4961f, 3f);
-                    p.cubicTo(15.8768f, 3f, 16.9961f, 4.1193f, 16.9961f, 5.5f);
-                    p.lineTo(16.9961f, 6f);
-                    p.lineTo(16.999f, 6f);
-                    p.lineTo(16.999f, 7f);
-                    p.lineTo(16.9961f, 7f);
-                    p.lineTo(16.9961f, 14.5f);
-                    p.cubicTo(16.9961f, 15.8807f, 15.8768f, 17f, 14.4961f, 17f);
-                    p.lineTo(5.4961f, 17f);
-                    p.cubicTo(4.1154f, 17f, 2.9961f, 15.8807f, 2.9961f, 14.5f);
-                    p.lineTo(2.9961f, 5.5f);
-                    p.close();
-                    p.moveTo(15.9961f, 6f);
-                    p.lineTo(15.9961f, 5.5f);
-                    p.cubicTo(15.9961f, 4.6716f, 15.3245f, 4f, 14.4961f, 4f);
-                    p.lineTo(5.4961f, 4f);
-                    p.cubicTo(4.6677f, 4f, 3.9961f, 4.6716f, 3.9961f, 5.5f);
-                    p.lineTo(3.9961f, 6f);
-                    p.lineTo(15.9961f, 6f);
-                    p.close();
-                    p.moveTo(3.9961f, 7f);
-                    p.lineTo(3.9961f, 14.5f);
-                    p.cubicTo(3.9961f, 15.3284f, 4.6677f, 16f, 5.4961f, 16f);
-                    p.lineTo(14.4961f, 16f);
-                    p.cubicTo(15.3245f, 16f, 15.9961f, 15.3284f, 15.9961f, 14.5f);
-                    p.lineTo(15.9961f, 7f);
-                    p.lineTo(3.9961f, 7f);
-                    p.close();
+                    t.moveTo(5.6464f, 9.1464f);
+                    t.cubicTo(5.8417f, 8.9512f, 6.1583f, 8.9512f, 6.3536f, 9.1464f);
+                    t.lineTo(8.3536f, 11.1464f);
+                    t.cubicTo(8.4473f, 11.2402f, 8.5f, 11.3674f, 8.5f, 11.5f);
+                    t.cubicTo(8.5f, 11.6326f, 8.4473f, 11.7598f, 8.3536f, 11.8536f);
+                    t.lineTo(6.3536f, 13.8536f);
+                    t.cubicTo(6.1583f, 14.0488f, 5.8417f, 14.0488f, 5.6464f, 13.8536f);
+                    t.cubicTo(5.4512f, 13.6583f, 5.4512f, 13.3417f, 5.6464f, 13.1464f);
+                    t.lineTo(7.2929f, 11.5f);
+                    t.lineTo(5.6464f, 9.8536f);
+                    t.cubicTo(5.4512f, 9.6583f, 5.4512f, 9.3417f, 5.6464f, 9.1464f);
+                    t.close();
+                    t.moveTo(14.5f, 13f);
+                    t.lineTo(9.5f, 13f);
+                    t.cubicTo(9.2239f, 13f, 9f, 13.2239f, 9f, 13.5f);
+                    t.cubicTo(9f, 13.7761f, 9.2239f, 14f, 9.5f, 14f);
+                    t.lineTo(14.5f, 14f);
+                    t.cubicTo(14.7761f, 14f, 15f, 13.7761f, 15f, 13.5f);
+                    t.cubicTo(15f, 13.2239f, 14.7761f, 13f, 14.5f, 13f);
+                    t.close();
+                    t.moveTo(2.9961f, 5.5f);
+                    t.cubicTo(2.9961f, 4.1193f, 4.1154f, 3f, 5.4961f, 3f);
+                    t.lineTo(14.4961f, 3f);
+                    t.cubicTo(15.8768f, 3f, 16.9961f, 4.1193f, 16.9961f, 5.5f);
+                    t.lineTo(16.9961f, 6f);
+                    t.lineTo(16.999f, 6f);
+                    t.lineTo(16.999f, 7f);
+                    t.lineTo(16.9961f, 7f);
+                    t.lineTo(16.9961f, 14.5f);
+                    t.cubicTo(16.9961f, 15.8807f, 15.8768f, 17f, 14.4961f, 17f);
+                    t.lineTo(5.4961f, 17f);
+                    t.cubicTo(4.1154f, 17f, 2.9961f, 15.8807f, 2.9961f, 14.5f);
+                    t.lineTo(2.9961f, 5.5f);
+                    t.close();
+                    t.moveTo(15.9961f, 6f);
+                    t.lineTo(15.9961f, 5.5f);
+                    t.cubicTo(15.9961f, 4.6716f, 15.3245f, 4f, 14.4961f, 4f);
+                    t.lineTo(5.4961f, 4f);
+                    t.cubicTo(4.6677f, 4f, 3.9961f, 4.6716f, 3.9961f, 5.5f);
+                    t.lineTo(3.9961f, 6f);
+                    t.lineTo(15.9961f, 6f);
+                    t.close();
+                    t.moveTo(3.9961f, 7f);
+                    t.lineTo(3.9961f, 14.5f);
+                    t.cubicTo(3.9961f, 15.3284f, 4.6677f, 16f, 5.4961f, 16f);
+                    t.lineTo(14.4961f, 16f);
+                    t.cubicTo(15.3245f, 16f, 15.9961f, 15.3284f, 15.9961f, 14.5f);
+                    t.lineTo(15.9961f, 7f);
+                    t.lineTo(3.9961f, 7f);
+                    t.close();
                     Matrix m = new Matrix();
                     m.setScale(GRID / 20f, GRID / 20f);
                     t.transform(m);
@@ -2463,6 +2485,37 @@ final class GlyphPaths {
             default:
                 // Unknown names draw nothing. A visible wrong icon is worse than a gap:
                 // it claims the toolbar works when it does not.
+                break;
+        }
+    }
+
+    /**
+     * Append the second tone for {@code name}, or leave {@code p} empty.
+     *
+     * <p>Almost every icon is one silhouette and returns nothing. The few that are not are
+     * the ones whose source draws two colours to make one shape - a bright frame around a
+     * gray block - and flattening them into a single fill loses the shape. The caller draws
+     * this path over the first at reduced alpha.
+     */
+    static void buildAccent(String name, Path p) {
+        switch (name) {
+            case "opencode":
+                {
+                    Path t = new Path();
+                    t.moveTo(320f, 224f);
+                    t.lineTo(320f, 352f);
+                    t.lineTo(192f, 352f);
+                    t.lineTo(192f, 224f);
+                    t.lineTo(320f, 224f);
+                    t.close();
+                    Matrix m = new Matrix();
+                    m.setScale(0.075f, 0.075f);
+                    m.postTranslate(-7.2f, -7.2f);
+                    t.transform(m);
+                    p.addPath(t);
+                }
+                break;
+            default:
                 break;
         }
     }

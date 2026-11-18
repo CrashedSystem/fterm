@@ -13,21 +13,30 @@ public final class Fonts {
     /** mterm's measured size-adjust for the Hangul face. */
     public static final float HANGUL_SIZE_ADJUST_PCT = 115.85f;
 
-    /** The Latin faces, mirrored from the real class for the routing test. */
-    public static final String[] LATIN_NAMES = {"Iosevka", "Droid Sans Mono", "Cutive Mono"};
-    public static final String[] LATIN_IDS = {"iosevka", "droid", "cutive"};
-    public static final String[] LATIN_PATHS = {
-            null, "/system/fonts/DroidSansMono.ttf", "/system/fonts/CutiveMono.ttf"
-    };
+    /**
+     * The catalog is scanned on the device, so the stub carries only the parts a JVM test can
+     * assert: the id format, and the rule that an unknown id resolves to the bundled face.
+     */
+    public static final String ASSET_ID = "asset:iosevka";
+    /** App-private, because a shared /sdcard folder is unreadable to the app since API 30. */
+    public static final String USER_DIR_NAME = "fonts";
+    public static final String FILE_PREFIX = "file:";
+
+    public static final class Face {
+        public final String id;
+        public final String label;
+        public final String path;
+        public final boolean bundled;
+
+        public Face(String id, String label, String path, boolean bundled) {
+            this.id = id;
+            this.label = label;
+            this.path = path;
+            this.bundled = bundled;
+        }
+    }
 
     private Fonts() {}
-
-    public static int latinIndexOf(String id) {
-        for (int i = 0; i < LATIN_IDS.length; i++) {
-            if (LATIN_IDS[i].equals(id)) return i;
-        }
-        return 0;
-    }
 
     public static boolean isHangul(int c) {
         return (c >= 0x1100 && c <= 0x11FF)

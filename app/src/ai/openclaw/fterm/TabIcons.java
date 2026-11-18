@@ -41,6 +41,7 @@ final class TabIcons {
             "star", "heart", "cube", "puzzle", "fire",
             "camera", "gift", "brush", "flashlight", "home",
             "chat", "mail", "phone", "print", "ruler",
+            "opencode",
     };
 
     /** What the settings list prints for each of {@link #GLYPHS}, same order. */
@@ -52,6 +53,7 @@ final class TabIcons {
             "별", "하트", "큐브", "퍼즐", "불꽃",
             "카메라", "선물", "붓", "손전등", "집",
             "말풍선", "메일", "전화", "프린터", "자",
+            "opencode",
     };
 
     /** The default: the prompt every terminal has printed since the teletype. */

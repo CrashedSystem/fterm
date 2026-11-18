@@ -18,6 +18,10 @@ import java.util.List;
  * so a hand-rolled format cannot be attacked by quoting. Parsing is total - a malformed
  * record is dropped, because a profile list is a convenience and must never stop a tab from
  * opening.
+ *
+ * <p>A record has five fields. It used to have four, and the fifth (the icon) was added at
+ * the end rather than in the middle for exactly that reason: an old store still decodes, with
+ * an empty icon, and no migration pass is needed for a value that means "the default".
  */
 public final class Profiles {
 
@@ -40,14 +44,28 @@ public final class Profiles {
         public String dir = "";
         public String shell = "";
         public String command = "";
+        /**
+         * The tab mark for this profile: a {@link TabIcons} glyph id, literal text, or "" to
+         * inherit the global tab icon.
+         *
+         * <p>Per profile rather than global because that is the whole point of having
+         * profiles: one tab is an ssh session, one is a database console, one is opencode,
+         * and the mark is how a glance tells them apart before the title is read.
+         */
+        public String icon = "";
 
         public Profile() {}
 
         public Profile(String name, String dir, String shell, String command) {
+            this(name, dir, shell, command, "");
+        }
+
+        public Profile(String name, String dir, String shell, String command, String icon) {
             this.name = safe(name);
             this.dir = safe(dir);
             this.shell = safe(shell);
             this.command = safe(command);
+            this.icon = safe(icon);
         }
 
         /** What the dropdown and the settings list print under the name. */
@@ -59,6 +77,20 @@ public final class Profiles {
     }
 
     private Profiles() {}
+
+    /**
+     * The example profile the settings page offers: opencode, started on top of the shell.
+     *
+     * <p>Here, beside {@link #DEFAULT_NAME}, because it is the app's own example and not a
+     * user setting - a literal in the settings UI would be the same string in a place where
+     * no test can reach it. The command is the bare name, not an absolute path: opencode is
+     * on PATH through the shell's startup files, and a hard-coded
+     * {@code /data/data/com.termux/files/home/.local/bin/opencode} would break the moment the
+     * user moves it and would say nothing about <em>how</em> the profile runs it.
+     */
+    public static Profile opencodeExample() {
+        return new Profile("opencode", "", "", "opencode", "opencode");
+    }
 
     /** Drop the separators; a name with a record separator would otherwise split the list. */
     private static String safe(String s) {
@@ -74,7 +106,8 @@ public final class Profiles {
             out.append(safe(p.name)).append(UNIT)
                     .append(safe(p.dir)).append(UNIT)
                     .append(safe(p.shell)).append(UNIT)
-                    .append(safe(p.command));
+                    .append(safe(p.command)).append(UNIT)
+                    .append(safe(p.icon));
         }
         return out.toString();
     }
@@ -84,12 +117,12 @@ public final class Profiles {
         if (stored == null || stored.isEmpty()) return out;
         for (String record : stored.split(String.valueOf(RECORD), -1)) {
             if (record.isEmpty()) continue;
-            // A record with four fields is a profile; anything else is a leftover from an
-            // older format and is not worth guessing at.
+            // Four fields is a profile written before profiles had an icon, five is current.
+            // Anything else is a leftover from an older format and is not worth guessing at.
             String[] f = record.split(String.valueOf(UNIT), -1);
-            if (f.length != 4) continue;
+            if (f.length != 4 && f.length != 5) continue;
             if (f[0].isEmpty() && f[1].isEmpty() && f[2].isEmpty() && f[3].isEmpty()) continue;
-            out.add(new Profile(f[0], f[1], f[2], f[3]));
+            out.add(new Profile(f[0], f[1], f[2], f[3], f.length == 5 ? f[4] : ""));
         }
         return out;
     }

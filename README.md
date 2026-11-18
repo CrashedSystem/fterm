@@ -97,6 +97,29 @@ bash termux/install.sh
 | `Ctrl+Shift+T/W/C/V` | 있음 |
 | 분할 창 | **없음** (모바일이라 의도적으로 미구현) |
 
+### 글꼴
+
+기본은 번들 Iosevka이고, `모양 → 글꼴 → 글꼴 설치`에서 세 가지 방법으로 추가한다.
+
+| 방법 | 하는 일 |
+|---|---|
+| Termux에서 받기 | 데몬이 `~/.fonts`, `~/.local/share/fonts`, `$PREFIX/share/fonts/TTF`, `~/storage/downloads/fonts`를 훑어 목록으로 보여준다. 고르면 소켓으로 바이트를 넘겨받아 앱 저장소에 복사한다. |
+| URL로 받기 | 앱에는 URL 클라이언트도, 다운로드할 수 있는 저장소도 없다. 그래서 데몬이 대신 내려받아 `~/.fonts`에 넣고, 그 경로를 다시 받아온다. |
+| 기기의 파일에서 고르기 | SAF 문서 선택기. 파일이 이미 폰에 있을 때만 쓴다. |
+
+가장 짧은 경로는 Termux에서 한 줄이다. 그러면 앱을 열었을 때 목록에 바로 있다.
+
+```bash
+curl -fLo ~/.fonts/JetBrainsMono-Regular.ttf \
+  https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/fonts/ttf/JetBrainsMono-Regular.ttf
+```
+
+`/sdcard/Download/fonts`는 쓰지 않는다. Android 11부터 앱이 그 디렉터리의 파일을 열 수
+없어서, 넣어도 목록에 나오지 않는다(실측).
+
+목록은 스캔 결과이므로 고정폭 여부를 실제로 측정해 거른다 — `M`/`i`/`l`/`W`/`0`의 폭이
+1% 넘게 차이 나면 비례 글꼴로 보고 제외한다. 받은 파일도 같은 검사를 통과해야 저장된다.
+
 터미널 벨은 BEL을 진동/비프로 옮긴다 — 무음 모드에서는 진동만, 활성 탭만 울린다.
 네이티브 알림은 포그라운드 서비스의 상시 알림 하나이고, 탭하면 앱으로 돌아온다.
 
@@ -383,4 +406,4 @@ ftermd start | stop | status | token | reset-token
 ```
 
 환경 변수: `FTERM_PORT`(8791), `FTERM_SHELL`, `FTERM_RUNDIR`(`~/.fterm`),
-`FTERM_HISTORY_BYTES`(256KiB).
+`FTERM_HISTORY_BYTES`(256KiB), `FTERM_FONT_DIRS`(콜론으로 구분한 글꼴 검색 경로).

@@ -81,6 +81,46 @@ ICONS = {
 BASE = ("https://raw.githubusercontent.com/microsoft/fluentui-system-icons/main/"
         "assets/%s/SVG/ic_fluent_%s_%d_regular.svg")
 
+# Icons that are not Fluent. A profile mark for a specific program should be that program's
+# own mark: an opencode tab with a generic terminal glyph is the wrong signal, and the app
+# already owns the path-data pipeline, so the only cost is a source URL.
+#
+# Each entry is (viewBox size, path data) or (viewBox size, path data, (x, y, w, h)), where
+# the third value is the bounding box of the ink inside the viewBox. The path is scaled onto
+# the 24 grid, so the set stays optically level; an entry with a bounding box is cropped to it
+# first, because a site favicon is drawn with dead margin around it and at 15dp that margin is
+# half the slot.
+#
+# The box is width and height, not one span: a mark is not always square. The opencode mark is
+# 256 wide and 320 tall, and fitting it to a square box squashed it against the short side.
+RAW = {
+    # github.com/anomalyco/opencode, packages/ui/src/assets/favicon/favicon.svg.
+    #
+    # The original is a white frame with an evenodd hole and a gray block filling the lower
+    # half of that hole. Android's path fill is non-zero, so the hole is written the other
+    # way round - the inner square is traversed counter-clockwise - and the gray block is a
+    # normal clockwise subpath: frame and block both paint, the gap between them stays empty.
+    # That is the monochrome reading of the mark, which is what a 15dp tab slot needs; the
+    # original's two colours would collapse into a blob at this size.
+    # Cropped to the frame: the favicon's frame sits at 128..384 of a 512 canvas, so an
+    # uncropped glyph fills a quarter of its slot and reads as a smudge.
+    #
+    # Only the frame is here. The block inside it is the mark's second tone, and one filled
+    # path cannot carry two tones: the block would merge with the frame into a slab, which is
+    # exactly the shape this mark is not. It comes from RAW_ACCENT instead.
+    "opencode": (512,
+                 "M384 416H128V96H384V416Z"          # outer frame
+                 "M320 160H192V352H320V160Z",        # hole: reversed, so it stays a hole
+                 (128, 96, 256, 320))
+}
+
+# Marks that are two-tone in their source: the main path drawn in the tint, this one at
+# partial alpha over it. Keyed and cropped like RAW.
+RAW_ACCENT = {
+    # The lower half of opencode's opening, gray in the favicon while the frame is white.
+    "opencode": "M320 224V352H192V224H320Z",
+}
+
 TOKEN = re.compile(r'([MmLlHhVvCcZz])|(-?\d*\.?\d+(?:e-?\d+)?)')
 
 
@@ -116,7 +156,7 @@ def fmt(v):
     return "0" if s in ("", "-0") else s
 
 
-def emit(d, pad):
+def emit(d, pad, var="p"):
     """Path calls for one Fluent path, relative commands folded into absolutes."""
     out, cur, start = [], (0.0, 0.0), (0.0, 0.0)
     for cmd, nums in parse(d):
@@ -128,20 +168,20 @@ def emit(d, pad):
                     x, y = x + cur[0], y + cur[1]
                 if c == "M" and i == 0:
                     start = (x, y)
-                    out.append("%sp.moveTo(%sf, %sf);" % (pad, fmt(x), fmt(y)))
+                    out.append("%s%s.moveTo(%sf, %sf);" % (pad, var, fmt(x), fmt(y)))
                 else:
-                    out.append("%sp.lineTo(%sf, %sf);" % (pad, fmt(x), fmt(y)))
+                    out.append("%s%s.lineTo(%sf, %sf);" % (pad, var, fmt(x), fmt(y)))
                 cur = (x, y)
         elif c == "H":
             for v in nums:
                 x = cur[0] + v if rel else v
                 cur = (x, cur[1])
-                out.append("%sp.lineTo(%sf, %sf);" % (pad, fmt(x), fmt(cur[1])))
+                out.append("%s%s.lineTo(%sf, %sf);" % (pad, var, fmt(x), fmt(cur[1])))
         elif c == "V":
             for v in nums:
                 y = cur[1] + v if rel else v
                 cur = (cur[0], y)
-                out.append("%sp.lineTo(%sf, %sf);" % (pad, fmt(cur[0]), fmt(y)))
+                out.append("%s%s.lineTo(%sf, %sf);" % (pad, var, fmt(cur[0]), fmt(y)))
         elif c == "C":
             for i in range(0, len(nums) - 5, 6):
                 x1, y1, x2, y2, x, y = nums[i:i + 6]
@@ -149,12 +189,12 @@ def emit(d, pad):
                     x1, y1 = x1 + cur[0], y1 + cur[1]
                     x2, y2 = x2 + cur[0], y2 + cur[1]
                     x, y = x + cur[0], y + cur[1]
-                out.append("%sp.cubicTo(%sf, %sf, %sf, %sf, %sf, %sf);"
-                           % (pad, fmt(x1), fmt(y1), fmt(x2), fmt(y2), fmt(x), fmt(y)))
+                out.append("%s%s.cubicTo(%sf, %sf, %sf, %sf, %sf, %sf);"
+                           % (pad, var, fmt(x1), fmt(y1), fmt(x2), fmt(y2), fmt(x), fmt(y)))
                 cur = (x, y)
         elif c == "Z":
             cur = start
-            out.append("%sp.close();" % pad)
+            out.append("%s%s.close();" % (pad, var))
         else:
             raise SystemExit("unsupported SVG command %r" % cmd)
     return out
@@ -197,6 +237,22 @@ FOOTER = '''            default:
                 break;
         }
     }
+
+    /**
+     * Append the second tone for {@code name}, or leave {@code p} empty.
+     *
+     * <p>Almost every icon is one silhouette and returns nothing. The few that are not are
+     * the ones whose source draws two colours to make one shape - a bright frame around a
+     * gray block - and flattening them into a single fill loses the shape. The caller draws
+     * this path over the first at reduced alpha.
+     */
+    static void buildAccent(String name, Path p) {
+        switch (name) {
+__ACCENT__
+            default:
+                break;
+        }
+    }
 }
 '''
 
@@ -205,28 +261,76 @@ def main():
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     out = root + "/app/src/ai/openclaw/fterm/GlyphPaths.java"
     body = []
-    for name in sorted(ICONS):
-        folder, size = ICONS[name]
-        d = path_data(fetch(folder, size))
+    for name in sorted(list(ICONS) + list(RAW)):
+        box = None
+        if name in RAW:
+            entry = RAW[name]
+            size, d = entry[0], entry[1]
+            if len(entry) > 2:
+                box = entry[2]
+        else:
+            folder, size = ICONS[name]
+            d = path_data(fetch(folder, size))
         body.append('            case "%s":' % name)
         if size == 24:
             body.extend(emit(d, "                "))
         else:
-            # Window Console is only published on a 20-grid. Draw it into a scratch path and
-            # scale that grid up to 24 so it sits optically level with the rest of the set.
+            # Window Console is only published on a 20-grid, and a favicon is published with
+            # margin around its mark. Draw into a scratch path and scale that grid up to 24,
+            # then shift a cropped entry so its ink starts at the origin - together these put
+            # the mark on the same optical footing as the rest of the set.
             body.append("                {")
             body.append("                    Path t = new Path();")
-            body.extend(emit(d, "                    "))
+            # Draw into t, not into p: an unscaled 512- or 20-grid path in p is off the
+            # visible grid, which is why these icons rendered as nothing at all.
+            body.extend(emit(d, "                    ", var="t"))
             body.append("                    Matrix m = new Matrix();")
-            body.append("                    m.setScale(GRID / %df, GRID / %df);" % (size, size))
+            if box is None:
+                body.append("                    m.setScale(GRID / %df, GRID / %df);"
+                            % (size, size))
+            else:
+                x, y, w, h = box
+                # Fit the larger side to the grid, then centre the other one: filling the
+                # grid on both axes would stretch a mark that is not square.
+                scale = 24.0 / max(w, h)
+                body.append("                    m.setScale(%sf, %sf);" % (fmt(scale), fmt(scale)))
+                body.append("                    m.postTranslate(%sf, %sf);"
+                            % (fmt((24.0 - w * scale) / 2 - x * scale),
+                               fmt((24.0 - h * scale) / 2 - y * scale)))
             body.append("                    t.transform(m);")
             body.append("                    p.addPath(t);")
             body.append("                }")
         body.append("                break;")
+    accent = []
+    for name in sorted(RAW_ACCENT):
+        entry = RAW[name]
+        size = entry[0]
+        box = entry[2] if len(entry) > 2 else None
+        accent.append('            case "%s":' % name)
+        accent.append("                {")
+        accent.append("                    Path t = new Path();")
+        accent.extend(emit(RAW_ACCENT[name], "                    ", var="t"))
+        accent.append("                    Matrix m = new Matrix();")
+        if box is None:
+            accent.append("                    m.setScale(GRID / %df, GRID / %df);"
+                          % (size, size))
+        else:
+            x, y, w, h = box
+            scale = 24.0 / max(w, h)
+            accent.append("                    m.setScale(%sf, %sf);"
+                          % (fmt(scale), fmt(scale)))
+            accent.append("                    m.postTranslate(%sf, %sf);"
+                          % (fmt((24.0 - w * scale) / 2 - x * scale),
+                             fmt((24.0 - h * scale) / 2 - y * scale)))
+        accent.append("                    t.transform(m);")
+        accent.append("                    p.addPath(t);")
+        accent.append("                }")
+        accent.append("                break;")
+
     with open(out, "w") as f:
         f.write(HEADER)
         f.write("\n".join(body) + "\n")
-        f.write(FOOTER)
+        f.write(FOOTER.replace("__ACCENT__", "\n".join(accent)))
     print("wrote", out)
 
 

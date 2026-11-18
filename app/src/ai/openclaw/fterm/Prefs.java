@@ -86,13 +86,33 @@ public final class Prefs {
         e.apply();
     }
 
+    /**
+     * The cursor colour override, or 0 for "follow the scheme".
+     *
+     * <p>Zero is not a colour: it has no alpha, so it cannot be written by the hex editor and
+     * cannot collide with one. Stored separately from the custom scheme's cursor slot because
+     * the two answer different questions - the slot is part of one palette, this is "my cursor
+     * is this colour whatever palette I pick", which is the usual reason to override it.
+     */
+    public int cursorColor() { return sp().getInt("cursor_color", 0); }
+
+    public void setCursorColor(int color) { sp().edit().putInt("cursor_color", color).apply(); }
+
     public boolean keyBarVisible() { return sp().getBoolean("keybar", true); }
     public void setKeyBarVisible(boolean v) { sp().edit().putBoolean("keybar", v).apply(); }
 
-    /** The Latin face for the terminal: an id from {@link Fonts#LATIN_IDS}. */
-    public String fontFamily() { return sp().getString("font_family", "iosevka"); }
+    /**
+     * The terminal face: an id from {@link Fonts#catalog}.
+     *
+     * <p>An id, not a path, because the catalog scans: a path stored today may be a deleted
+     * file tomorrow, and an id that no longer resolves to a font falls back to the bundled
+     * face instead of leaving the terminal blank. Old stores hold "iosevka"/"droid"/"cutive";
+     * those no longer match anything, which is the intended migration - all three resolve to
+     * the bundled face, which is what the first of them already meant.
+     */
+    public String fontFamily() { return sp().getString("font_family", Fonts.ASSET_ID); }
     public void setFontFamily(String v) {
-        sp().edit().putString("font_family", v == null ? "iosevka" : v).apply();
+        sp().edit().putString("font_family", v == null ? Fonts.ASSET_ID : v).apply();
     }
 
     /** Where a new session starts; "" means the daemon's home directory. */

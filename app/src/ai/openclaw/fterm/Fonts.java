@@ -33,31 +33,284 @@ final class Fonts {
     /** mterm: iosevka 500/1000 em, recommendation for the Hangul face's size-adjust. */
     static final float HANGUL_SIZE_ADJUST_PCT = 115.85f;
 
-    /**
-     * The Latin faces a user may pick, in menu order.
-     *
-     * <p>All three are monospaced with a whole-pixel cell, which is the only property the
-     * renderer actually requires: a proportional face would break the grid, and a face whose
-     * advance is fractional would make columns drift apart over eighty cells. Two of them
-     * ship with the system, so the list costs nothing to the APK.
-     */
-    static final String[] LATIN_NAMES = {"Iosevka", "Droid Sans Mono", "Cutive Mono"};
-    static final String[] LATIN_IDS = {"iosevka", "droid", "cutive"};
-    /** The bundled fallback face, named once so the settings preview loads the same file. */
+    /** The bundled face, which is also the default and the one that always works. */
     static final String ASSET_PATH = "fonts/Iosevka.ttf";
+    static final String ASSET_ID = "asset:iosevka";
 
-    static final String[] LATIN_PATHS = {
-            null,                                   // asset, handled separately
-            "/system/fonts/DroidSansMono.ttf",
-            "/system/fonts/CutiveMono.ttf"
-    };
+    /**
+     * Where an imported font is kept: this app's own files directory.
+     *
+     * <p>Not {@code /sdcard/Download}. Since Android 11 an app cannot list or open an
+     * arbitrary file under {@code /sdcard} - not even one it just wrote - so a shared folder
+     * looked like a reasonable place to put a font and was readable by nobody. The app's
+     * files directory needs no permission and no storage scope; the way in is
+     * {@link #importFont(Context, android.net.Uri)}, which copies through a document the user
+     * picked, and that picker is the only door the platform leaves open.
+     */
+    static java.io.File userDir(Context context) {
+        java.io.File dir = new java.io.File(context.getFilesDir(), "fonts");
+        if (!dir.isDirectory()) dir.mkdirs();
+        return dir;
+    }
 
-    /** The index for a stored id, or 0 (Iosevka) when the id is unknown. */
-    static int latinIndexOf(String id) {
-        for (int i = 0; i < LATIN_IDS.length; i++) {
-            if (LATIN_IDS[i].equals(id)) return i;
+    private static final String SYSTEM_DIR = "/system/fonts";
+
+    /** The prefix of a {@code file:} id; a stored preference is an id, never a bare path. */
+    static final String FILE_PREFIX = "file:";
+
+    /**
+     * The outcome of an import: an id, or why there is none.
+     *
+     * <p>A reason, not a boolean. "Could not read that" is indistinguishable from a bug; the
+     * actual failure - the document would not open, the file was not a font, the font was
+     * proportional - tells the user whether to try another file or stop trying.
+     */
+    static final class Import {
+        final String id;
+        final String reason;
+
+        private Import(String id, String reason) {
+            this.id = id;
+            this.reason = reason;
         }
-        return 0;
+    }
+
+    /**
+     * Copy a font the user picked into {@link #userDir} and return its catalog id.
+     *
+     * <p>Copied rather than referenced: a {@code content://} URI is a permission-scoped
+     * handle that outlives neither a reboot nor a revocation, and the terminal reads the file
+     * on every font change for the rest of the install's life.
+     */
+    static Import importFont(Context context, android.net.Uri uri) {
+        if (uri == null) return new Import(null, "파일을 받지 못했습니다.");
+        String name = null;
+        try (android.database.Cursor c = context.getContentResolver().query(uri,
+                new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (c != null && c.moveToFirst()) name = c.getString(0);
+        } catch (Throwable ignored) {
+        }
+        if (name == null || name.isEmpty()) name = "font" + System.currentTimeMillis() + ".ttf";
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        if (!lower.endsWith(".ttf") && !lower.endsWith(".otf")) {
+            return new Import(null, "TTF 또는 OTF 파일이 아닙니다: " + name);
+        }
+        // The picker shows a display name and nothing stops one containing a path separator.
+        name = name.replaceAll("[^A-Za-z0-9._-]", "_");
+        java.io.File out = new java.io.File(userDir(context), name);
+        long bytes = 0;
+        try (java.io.InputStream in = context.getContentResolver().openInputStream(uri);
+             java.io.OutputStream os = new java.io.FileOutputStream(out)) {
+            if (in == null) return new Import(null, "파일을 열 수 없습니다: " + uri);
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                os.write(buf, 0, n);
+                bytes += n;
+            }
+        } catch (Throwable t) {
+            // A half-written file would show up in the catalog as a face that cannot load.
+            out.delete();
+            return new Import(null, "파일을 복사하지 못했습니다: " + t);
+        }
+        if (bytes == 0) {
+            out.delete();
+            return new Import(null, "빈 파일입니다: " + name);
+        }
+        return adopt(out);
+    }
+
+    /**
+     * Install bytes that did not come from a document picker.
+     *
+     * <p>Same checks and same destination as {@link #importFont}: only the delivery differs.
+     * The Termux daemon is the other delivery - it can download, and it can read directories
+     * this app cannot - so a font fetched there lands here through this method rather than
+     * through a second copy of the validation rules.
+     */
+    static Import install(Context context, String name, byte[] bytes) {
+        if (bytes == null || bytes.length == 0) return new Import(null, "빈 파일입니다.");
+        if (name == null || name.isEmpty()) name = "font.ttf";
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        if (!lower.endsWith(".ttf") && !lower.endsWith(".otf")) {
+            return new Import(null, "TTF 또는 OTF 파일이 아닙니다: " + name);
+        }
+        name = name.replaceAll("[^A-Za-z0-9._-]", "_");
+        java.io.File out = new java.io.File(userDir(context), name);
+        try (java.io.OutputStream os = new java.io.FileOutputStream(out)) {
+            os.write(bytes);
+        } catch (Throwable t) {
+            out.delete();
+            return new Import(null, "파일을 저장하지 못했습니다: " + t);
+        }
+        return adopt(out);
+    }
+
+    /** Validate a file already in {@link #userDir} and turn it into a catalog id. */
+    private static Import adopt(java.io.File out) {
+        String name = out.getName();
+        Typeface face = loadFile(out.getAbsolutePath());
+        if (face == null) {
+            out.delete();
+            return new Import(null, "글꼴 파일을 열 수 없습니다: " + name);
+        }
+        if (!isFixedAdvance(face)) {
+            out.delete();
+            return new Import(null, "글자 폭이 일정하지 않은 글꼴입니다: " + name
+                    + "\n\n터미널은 한 칸이 한 글자인 격자라, 비례 글꼴을 쓰면 열이 어긋납니다.");
+        }
+        rescan();
+        return new Import(FILE_PREFIX + out.getAbsolutePath(), null);
+    }
+
+    /**
+     * One selectable face.
+     *
+     * <p>The list is built by scanning, not by naming fonts in code. A hard-coded table is
+     * why the setting offered three faces on a device with hundreds: it could only ever
+     * offer what the app already knew about. The scan is filtered by the one property the
+     * renderer actually requires - a fixed advance - so a proportional face is never
+     * offered and never breaks the grid.
+     */
+    static final class Face {
+        /** {@link #ASSET_ID} or "file:/abs/path". Unknown ids fall back to the asset. */
+        final String id;
+        /** What the picker prints. */
+        final String label;
+        /** Absolute path, or null for the bundled asset. */
+        final String path;
+        /** True for the bundled face. */
+        final boolean bundled;
+
+        Face(String id, String label, String path, boolean bundled) {
+            this.id = id;
+            this.label = label;
+            this.path = path;
+            this.bundled = bundled;
+        }
+    }
+
+    private static java.util.List<Face> sCatalog;
+
+    /**
+     * Every face the renderer can use, in picker order.
+     *
+     * <p>Cached because the scan opens every file on the device and the picker is opened more
+     * than once per session. {@link #rescan()} clears it when the user has added a font.
+     */
+    static java.util.List<Face> catalog(Context context) {
+        if (sCatalog != null) return sCatalog;
+        java.util.List<Face> out = new java.util.ArrayList<>();
+        out.add(new Face(ASSET_ID, "Iosevka (기본)", null, true));
+
+        java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
+        addDir(out, seen, new java.io.File(SYSTEM_DIR), "");
+        addDir(out, seen, userDir(context), " (내 글꼴)");
+        sCatalog = out;
+        return out;
+    }
+
+    /** Drop the cached catalog so the next picker shows a font the user just copied in. */
+    static void rescan() {
+        sCatalog = null;
+    }
+
+    private static void addDir(java.util.List<Face> out, java.util.Set<String> seen,
+                               java.io.File dir, String suffix) {
+        java.io.File[] files = dir.listFiles();
+        if (files == null) return;
+        // Sorted so the list does not reshuffle between opens: a picker whose order changes
+        // is a picker the user has to re-read every time.
+        java.util.Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        for (java.io.File f : files) {
+            String name = f.getName().toLowerCase(java.util.Locale.ROOT);
+            if (!name.endsWith(".ttf") && !name.endsWith(".otf")) continue;
+            if (!f.isFile() || f.length() == 0) continue;
+            String path = f.getAbsolutePath();
+            if (!seen.add(path)) continue;
+            Typeface face = loadFile(path);
+            if (face == null || !isFixedAdvance(face)) continue;
+            out.add(new Face(FILE_PREFIX + path, stripExtension(f.getName()) + suffix, path, false));
+        }
+    }
+
+    /**
+     * The catalog entry for an id, or the bundled face.
+     *
+     * <p>Total on purpose: a prefs file written by another build, or a font the user has
+     * since deleted, must still open a terminal.
+     */
+    static Face find(Context context, String id) {
+        java.util.List<Face> all = catalog(context);
+        for (Face f : all) {
+            if (f.id.equals(id)) return f;
+        }
+        // An id that names a file outside the scanned directories is still honoured, as long
+        // as that file is a fixed-advance face right now. The user typed the path in
+        // deliberately; refusing it because the file lives somewhere this app does not scan
+        // would make the field a lie. A path that no longer loads falls through to the
+        // bundled face, which is the same rule as everywhere else here.
+        Face typed = typedPath(id);
+        if (typed != null) return typed;
+        return all.get(0);
+    }
+
+    /**
+     * The catalog entry for a user-typed {@code file:} id, or null.
+     *
+     * <p>Not cached: the point of a typed path is that it is not in the catalog, so a cache
+     * would only be able to hold stale answers about a file that may have moved.
+     */
+    private static Face typedPath(String id) {
+        if (id == null || !id.startsWith(FILE_PREFIX)) return null;
+        String path = id.substring(FILE_PREFIX.length());
+        if (path.isEmpty()) return null;
+        java.io.File f = new java.io.File(path);
+        if (!f.isFile() || f.length() == 0) return null;
+        Typeface face = loadFile(path);
+        if (face == null || !isFixedAdvance(face)) return null;
+        return new Face(id, stripExtension(f.getName()) + " (직접 지정)", path, false);
+    }
+
+    /** The picker's caption for an id. */
+    static String labelOf(Context context, String id) {
+        return find(context, id).label;
+    }
+
+    private static String stripExtension(String name) {
+        int dot = name.lastIndexOf('.');
+        return dot > 0 ? name.substring(0, dot) : name;
+    }
+
+    private static Typeface loadFile(String path) {
+        try {
+            return Typeface.createFromFile(path);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * Whether every glyph occupies the same advance.
+     *
+     * <p>This is the only property the grid needs: with a fixed advance, one cell is the
+     * character width, and a proportional face would make columns drift apart over a line.
+     * Measured from the face itself rather than from its name, because a file called
+     * "Mono" is not a promise.
+     */
+    static boolean isFixedAdvance(Typeface face) {
+        if (face == null) return false;
+        Paint p = new Paint();
+        p.setTypeface(face);
+        p.setTextSize(64f);
+        float m = p.measureText("M");
+        if (m <= 0f) return false;
+        // Four extremes: two narrow, two wide. A face whose widest and narrowest differ by
+        // more than a hundredth of a cell is proportional.
+        for (String probe : new String[]{"i", "l", "W", "M", "0"}) {
+            if (Math.abs(p.measureText(probe) - m) > m * 0.01f) return false;
+        }
+        return true;
     }
 
     private final Typeface mIosevka;
@@ -79,24 +332,21 @@ final class Fonts {
      *                    by the caller from the renderer's own Paint so the two cannot drift.
      */
     static Fonts load(Context context, float latinCellPx, float textSizePx) {
-        return load(context, latinCellPx, textSizePx, 0);
+        return load(context, latinCellPx, textSizePx, ASSET_ID);
     }
 
     /**
-     * As {@link #load(Context, float, float)}, with the Latin face chosen by index into
-     * {@link #LATIN_IDS}. An index whose font is missing falls back to the asset face, so a
-     * system image without Cutive Mono still opens a terminal.
+     * As {@link #load(Context, float, float)}, with the Latin face chosen by catalog id.
+     *
+     * <p>A missing file falls back to the bundled asset: the user can delete a font from
+     * {@link #userDir} and must not lose the ability to open a terminal because of it.
      */
-    static Fonts load(Context context, float latinCellPx, float textSizePx, int latinIndex) {
+    static Fonts load(Context context, float latinCellPx, float textSizePx, String id) {
         Typeface mono = null;
         Typeface hangul = null;
         Typeface symbols = null;
-        if (latinIndex > 0 && latinIndex < LATIN_PATHS.length && LATIN_PATHS[latinIndex] != null) {
-            try {
-                mono = Typeface.createFromFile(LATIN_PATHS[latinIndex]);
-            } catch (Throwable ignored) {
-            }
-        }
+        Face chosen = find(context, id);
+        if (chosen.path != null) mono = loadFile(chosen.path);
         if (mono == null) {
             try {
                 mono = Typeface.createFromAsset(context.getAssets(), ASSET_PATH);

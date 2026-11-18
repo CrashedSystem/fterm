@@ -47,6 +47,9 @@ C_CLOSE = 0x11
 C_INPUT = 0x12
 C_RESIZE = 0x13
 C_PING = 0x18
+C_FONT_LIST = 0x1A
+C_FONT_GET = 0x1B
+C_FONT_FETCH = 0x1C
 
 # 데몬 -> 클라
 S_HELLO_OK = 0x80
@@ -57,6 +60,9 @@ S_REPLAY = 0x93
 S_SYNCED = 0x9E
 S_ERROR = 0x9F
 S_PONG = 0x98
+S_FONT_LIST = 0x9A
+S_FONT_DATA = 0x9B
+S_FONT_FETCHED = 0x9C
 
 E_BAD_MAGIC = 1
 E_BAD_PROTO = 2
@@ -67,6 +73,66 @@ E_SPAWN = 6
 E_TOO_MANY = 7
 
 MAX_SESSIONS = 16
+
+# A font is served in chunks: MAX_FRAME caps one frame at 1 MiB and a real Iosevka build is
+# larger than that, so the whole file cannot be a single frame.
+FONT_CHUNK = 256 * 1024
+FONT_MAX_BYTES = 32 * 1024 * 1024
+
+
+def font_dirs():
+    """Where the daemon looks for fonts to hand to the app.
+
+    The point of this path is that it uses Termux's own reach: `curl` into ~/.fonts is one
+    command, and the app cannot fetch a URL to storage it cannot write anyway. The shared
+    Download folder is included because that is where a browser or a download manager drops
+    a file, and ~/storage/downloads is the same directory seen through Termux's symlink.
+    """
+    env = os.environ.get("FTERM_FONT_DIRS")
+    if env:
+        return [os.path.expanduser(d) for d in env.split(":") if d]
+    home = os.path.expanduser("~")
+    prefix = os.environ.get("PREFIX", "/data/data/com.termux/files/usr")
+    return [
+        os.path.join(home, ".fonts"),
+        os.path.join(home, ".local/share/fonts"),
+        os.path.join(prefix, "share/fonts/TTF"),
+        os.path.join(home, "storage/downloads/fonts"),
+        "/sdcard/Download/fonts",
+    ]
+
+
+def font_scan():
+    """Every .ttf/.otf the daemon can see, as (path, size), deduplicated.
+
+    Deduplicated by real path: ~/storage/downloads/fonts and /sdcard/Download/fonts are the
+    same directory twice, and listing one file twice makes the picker look broken.
+    """
+    out = []
+    seen = set()
+    for d in font_dirs():
+        try:
+            names = sorted(os.listdir(d))
+        except OSError:
+            continue
+        for name in names:
+            if not name.lower().endswith((".ttf", ".otf")):
+                continue
+            path = os.path.join(d, name)
+            try:
+                if not os.path.isfile(path):
+                    continue
+                real = os.path.realpath(path)
+                if real in seen:
+                    continue
+                size = os.path.getsize(real)
+            except OSError:
+                continue
+            if size <= 0 or size > FONT_MAX_BYTES:
+                continue
+            seen.add(real)
+            out.append((real, size))
+    return out
 
 # a client that has not sent a frame in this long is a ghost (a frozen app)
 IDLE_TIMEOUT = 120
@@ -322,6 +388,57 @@ class Client:
         self.send(self.frame(S_ERROR, struct.pack("<BH", code, len(b)) + b))
 
 
+def fetch_font(url):
+    """Download one font into ~/.fonts and return its path, or raise ValueError.
+
+    Done here rather than in the app because this is the side with a network stack that can
+    write a font somewhere the app can read. The app has neither: no URL client of its own,
+    and no storage the download could land in that it is allowed to open.
+    """
+    import urllib.request
+
+    url = (url or "").strip()
+    if not url.startswith(("http://", "https://")):
+        raise ValueError("http:// 또는 https:// 주소만 받습니다")
+    name = url.split("?")[0].rstrip("/").rsplit("/", 1)[-1]
+    if not name.lower().endswith((".ttf", ".otf")):
+        raise ValueError("주소가 .ttf/.otf로 끝나지 않습니다: %s" % name)
+    name = "".join(c if (c.isalnum() or c in "._-") else "_" for c in name)
+    dest_dir = os.path.join(os.path.expanduser("~"), ".fonts")
+    os.makedirs(dest_dir, exist_ok=True)
+    dest = os.path.join(dest_dir, name)
+    tmp = dest + ".part"
+    try:
+        with urllib.request.urlopen(url, timeout=30) as r, open(tmp, "wb") as f:
+            size = 0
+            while True:
+                block = r.read(65536)
+                if not block:
+                    break
+                f.write(block)
+                size += len(block)
+                if size > FONT_MAX_BYTES:
+                    raise ValueError("파일이 너무 큽니다 (32MB 초과)")
+        if size == 0:
+            raise ValueError("빈 파일입니다")
+        os.replace(tmp, dest)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+    return dest
+
+
+def u16(v):
+    return struct.pack("<H", v)
+
+
+def u32(v):
+    return struct.pack("<I", v)
+
+
 class Daemon:
     def __init__(self):
         ensure_rundir()
@@ -497,6 +614,56 @@ class Daemon:
                 self.log("client %s idle for %ds, dropped" % (c.addr, IDLE_TIMEOUT))
                 self.drop(c)
 
+    def font_list_payload(self):
+        fonts = font_scan()
+        out = bytearray(u16(len(fonts)))
+        for path, size in fonts:
+            name = os.path.basename(path).encode("utf-8", "replace")
+            p = path.encode("utf-8", "replace")
+            out += u16(len(name)) + name + u32(size) + u16(len(p)) + p
+        return bytes(out)
+
+    def send_font(self, cl, path):
+        """Stream one scanned font. Only a path the scan itself returned is served.
+
+        The request carries a path, so without this check the frame would be a way to read
+        any file the daemon uid can open. Rescanning and matching the real path keeps the
+        surface at "fonts that are already visible in the picker".
+        """
+        wanted = None
+        try:
+            real = os.path.realpath(path)
+        except OSError:
+            real = path
+        for p, _ in font_scan():
+            if p == real:
+                wanted = p
+                break
+        if wanted is None:
+            cl.error(E_BAD_FRAME, "font not found")
+            return
+        try:
+            with open(wanted, "rb") as f:
+                data = f.read(FONT_MAX_BYTES + 1)
+        except OSError as e:
+            cl.error(E_BAD_FRAME, "font unreadable: %s" % e)
+            return
+        if len(data) > FONT_MAX_BYTES:
+            cl.error(E_BAD_FRAME, "font too large")
+            return
+        total = len(data)
+        pb = wanted.encode("utf-8", "replace")
+        off = 0
+        while off < total:
+            chunk = data[off:off + FONT_CHUNK]
+            cl.send(cl.frame(S_FONT_DATA,
+                             u32(total) + u32(off) + u16(len(pb)) + pb + chunk))
+            off += len(chunk)
+            # A 1 MiB font is four frames; flushing after each keeps the client's read loop
+            # from starving behind the daemon's select() turn.
+            cl.flush()
+        self.log("font sent %s (%d bytes)" % (os.path.basename(wanted), total))
+
     def handle(self, cl, typ, p):
         if typ == C_HELLO:
             if len(p) < 1:
@@ -526,6 +693,31 @@ class Daemon:
 
         if typ == C_PING:
             cl.send(cl.frame(S_PONG, p))
+        elif typ == C_FONT_LIST:
+            cl.send(cl.frame(S_FONT_LIST, self.font_list_payload()))
+        elif typ == C_FONT_FETCH:
+            if len(p) < 2:
+                cl.error(E_BAD_FRAME, "short fetch request")
+                return
+            (n,) = struct.unpack_from("<H", p, 0)
+            url = p[2:2 + n].decode("utf-8", "replace")
+            try:
+                dest = fetch_font(url)
+            except Exception as e:
+                self.log("font fetch failed: %s (%s)" % (url, e))
+                msg = ("%s" % e).encode("utf-8", "replace")
+                cl.send(cl.frame(S_FONT_FETCHED, u16(0) + u16(len(msg)) + msg))
+                return
+            self.log("font fetched %s" % dest)
+            pb = dest.encode("utf-8", "replace")
+            cl.send(cl.frame(S_FONT_FETCHED, u16(len(pb)) + pb))
+        elif typ == C_FONT_GET:
+            if len(p) < 2:
+                cl.error(E_BAD_FRAME, "short font request")
+                return
+            (n,) = struct.unpack_from("<H", p, 0)
+            path = p[2:2 + n].decode("utf-8", "replace")
+            self.send_font(cl, path)
         elif typ == C_OPEN:
             if len(p) < 6:
                 cl.error(E_BAD_FRAME, "short open")

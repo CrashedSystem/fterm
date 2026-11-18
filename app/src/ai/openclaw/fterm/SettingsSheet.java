@@ -62,6 +62,11 @@ final class SettingsSheet {
 
         void onTabIcon(String id);
 
+        /** The cursor colour override, or 0 to follow the scheme. */
+        int cursorColor();
+
+        void onCursorColor(int color);
+
         /** The cursor shape: 0 block, 1 underline, 2 bar. */
         int cursorStyle();
 
@@ -71,7 +76,14 @@ final class SettingsSheet {
 
         void onCursorBlink(boolean on);
 
-        /** The Latin face id; see Fonts.LATIN_IDS. */
+        /** The daemon's address, for one-shot font questions. */
+        String daemonHost();
+
+        int daemonPort();
+
+        String daemonToken();
+
+        /** The face id from {@link Fonts#catalog}; see {@link Fonts.Face#id}. */
         String fontFamily();
 
         void onFontFamily(String id);
@@ -366,17 +378,113 @@ final class SettingsSheet {
             for (int i = 0; i < list.size(); i++) {
                 final int index = i;
                 final Profiles.Profile p = list.get(i);
-                card.addView(valueRow(p.name.isEmpty() ? "(이름 없음)" : p.name, p.subtitle(),
-                        null, () -> editProfile(index, false), i == list.size() - 1));
+                card.addView(profileRow(p, () -> editProfile(index, false),
+                        i == list.size() - 1));
             }
         }
 
         card.addView(valueRow("프로필 추가", "예: ssh 서버 이름과 명령", "+",
-                () -> editProfile(-1, true), true));
+                () -> editProfile(-1, true), false));
+
+        // An example, not documentation. "명령에 opencode를 넣으세요" is a sentence the user
+        // has to translate into four fields and an icon; a row that installs the finished
+        // profile is the same information in one tap, and it doubles as the only place the
+        // OpenCode mark is discoverable without opening the icon grid.
+        card.addView(valueRow("예제: opencode", "OpenCode를 띄우는 프로필을 추가합니다", "",
+                this::addOpencodeExample, true));
 
         hint(col, "줄을 누르면 편집합니다. 탭을 열 때는 왼쪽 위 메뉴 첫 블록에서 "
                 + "프로필을 고르세요. 명령은 셸이 뜬 뒤에 입력되므로 ssh가 로그인 셸의 키와 "
                 + "설정을 그대로 씁니다.");
+    }
+
+    /**
+     * The example profile: opencode, with its own mark.
+     *
+     * <p>Four fields are already filled in by {@link Profiles#opencodeExample()}, so this is
+     * only the confirmation step - the row says what it will do, the dialog names the command,
+     * and a second opencode profile is refused rather than piled up.
+     */
+    private void addOpencodeExample() {
+        Profiles.Profile example = Profiles.opencodeExample();
+        boolean present = false;
+        for (Profiles.Profile p : mHost.profiles()) {
+            if (example.name.equals(p.name) && example.command.equals(p.command)) present = true;
+        }
+        if (present) {
+            new android.app.AlertDialog.Builder(mActivity)
+                    .setTitle("예제: opencode")
+                    .setMessage("opencode 프로필이 이미 있습니다. 프로필 목록에서 눌러 편집하세요.")
+                    .setPositiveButton("확인", null)
+                    .show();
+            return;
+        }
+        new android.app.AlertDialog.Builder(mActivity)
+                .setTitle("예제: opencode")
+                .setMessage("이름 「" + example.name + "」, 시작 명령 「" + example.command
+                        + "」, 아이콘 OpenCode로 프로필을 추가합니다.\n\n"
+                        + "탭을 열면 셸 위에서 opencode가 실행됩니다. "
+                        + "설치 경로가 PATH에 있어야 합니다.")
+                .setPositiveButton("추가", (d, w) -> {
+                    java.util.List<Profiles.Profile> list = mHost.profiles();
+                    list.add(example);
+                    mHost.onProfiles(list);
+                    render();
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    /**
+     * One row of the profile list: the mark the tab will carry, the name, the subtitle.
+     *
+     * <p>The mark is shown here rather than only in the editor because the list is where the
+     * user decides which profile is which. A name alone makes two profiles called "서버"
+     * indistinguishable; the icon is the thing that would have told them apart in the tab
+     * strip, so it belongs in the list that configures the strip.
+     */
+    private View profileRow(Profiles.Profile p, Runnable onClick, boolean last) {
+        LinearLayout row = new LinearLayout(mActivity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(9), 0, dp(9));
+        row.setClickable(true);
+        row.setBackground(touchable());
+        row.setOnClickListener(v -> onClick.run());
+
+        LinearLayout slot = new LinearLayout(mActivity);
+        slot.setGravity(Gravity.CENTER);
+        slot.setLayoutParams(new LinearLayout.LayoutParams(dp(28), dp(28)));
+        String icon = p.icon == null || p.icon.isEmpty() ? "" : p.icon;
+        slot.addView(icon.isEmpty()
+                ? Chrome.icon(mActivity, "terminal", 16, true, null)
+                : TabIcons.build(mActivity, icon, HINT));
+        LinearLayout.LayoutParams slp = (LinearLayout.LayoutParams) slot.getLayoutParams();
+        slp.rightMargin = dp(10);
+        slot.setLayoutParams(slp);
+        row.addView(slot);
+
+        LinearLayout text = new LinearLayout(mActivity);
+        text.setOrientation(LinearLayout.VERTICAL);
+        text.setLayoutParams(new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView name = new TextView(mActivity);
+        name.setText(p.name.isEmpty() ? "(이름 없음)" : p.name);
+        name.setTextColor(TEXT);
+        name.setTextSize(13.5f);
+        UiFont.apply(name, false);
+        text.addView(name);
+        String sub = p.subtitle();
+        if (!sub.isEmpty()) {
+            TextView s = new TextView(mActivity);
+            s.setText(sub);
+            s.setTextColor(HINT);
+            s.setTextSize(10.5f);
+            text.addView(s);
+        }
+        row.addView(text);
+        row.addView(Chrome.icon(mActivity, "right", 16, true, null));
+        return cardRow(row, last);
     }
 
     /** The four fields, edited as one dialog: they are one thing. */
@@ -402,8 +510,57 @@ final class SettingsSheet {
         final android.widget.EditText shell = field(existing.shell, "/data/data/com.termux/files/usr/bin/bash");
         final android.widget.EditText command = field(existing.command, "ssh myhost");
 
+        // The icon is picked, not typed, so it lives in a mutable holder rather than in an
+        // EditText: the dialog reads it when Save is pressed, exactly like the fields.
+        final String[] icon = {existing.icon == null ? "" : existing.icon};
+
         box.addView(label("이름"));
         box.addView(name);
+
+        LinearLayout iconRow = new LinearLayout(mActivity);
+        iconRow.setOrientation(LinearLayout.HORIZONTAL);
+        iconRow.setGravity(Gravity.CENTER_VERTICAL);
+        iconRow.setPadding(0, dp(8), 0, 0);
+        iconRow.setClickable(true);
+        iconRow.setBackground(touchable());
+        LinearLayout iconText = new LinearLayout(mActivity);
+        iconText.setOrientation(LinearLayout.VERTICAL);
+        iconText.setLayoutParams(new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView iconTitle = new TextView(mActivity);
+        iconTitle.setText("아이콘");
+        iconTitle.setTextColor(TEXT);
+        iconTitle.setTextSize(13.5f);
+        UiFont.apply(iconTitle, false);
+        iconText.addView(iconTitle);
+        TextView iconValue = new TextView(mActivity);
+        iconValue.setTextColor(HINT);
+        iconValue.setTextSize(11);
+        iconText.addView(iconValue);
+        iconRow.addView(iconText);
+        // A live preview of the mark beside its name, drawn by the same builder the tab uses.
+        LinearLayout iconPreview = new LinearLayout(mActivity);
+        iconPreview.setGravity(Gravity.CENTER);
+        iconPreview.setLayoutParams(new LinearLayout.LayoutParams(dp(30), dp(30)));
+        iconRow.addView(iconPreview);
+        box.addView(iconRow);
+
+        final Runnable repaintIcon = () -> {
+            String id = icon[0];
+            String shown = id.isEmpty() ? "탭 아이콘과 같음"
+                    : TabIcons.isGlyph(id) ? TabIcons.GLYPH_NAMES[glyphIndexOf(id)]
+                    : id;
+            iconValue.setText(shown);
+            iconPreview.removeAllViews();
+            iconPreview.addView(TabIcons.build(mActivity, id.isEmpty()
+                    ? TabIcons.DEFAULT_ID : id, TEXT));
+        };
+        repaintIcon.run();
+        iconRow.setOnClickListener(v -> pickIcon("프로필 아이콘", icon[0], "없음", id -> {
+            icon[0] = id;
+            repaintIcon.run();
+        }));
+
         box.addView(label("시작 디렉터리 (선택)"));
         box.addView(dir);
         box.addView(label("셸 (선택)"));
@@ -425,7 +582,8 @@ final class SettingsSheet {
                             name.getText().toString().trim(),
                             dir.getText().toString().trim(),
                             shell.getText().toString().trim(),
-                            command.getText().toString().trim());
+                            command.getText().toString().trim(),
+                            icon[0]);
                     java.util.List<Profiles.Profile> list = mHost.profiles();
                     if (isNew || index >= list.size()) {
                         list.add(p);
@@ -527,22 +685,55 @@ final class SettingsSheet {
     }
 
     /**
-     * The Latin face picker. Each candidate is rendered in itself, so the choice is made by
-     * looking rather than by reading a name - the only honest way to pick a monospace face.
+     * The face picker: every fixed-advance font on the device, each rendered in itself.
+     *
+     * <p>Rendered in itself is the whole point - the only honest way to pick a monospace face
+     * is to look at it, and a name tells you nothing about whether "M" is legible at 12dp.
+     *
+     * <p>The list is scanned, not enumerated, and it is long: this device has hundreds of
+     * fonts and a handful are fixed-advance. So the scroll is capped, the current face is
+     * pinned at the top, and there is a way to rescan after the user copies a file in.
      */
     private void chooseFont() {
+        final java.util.List<Fonts.Face> faces = Fonts.catalog(mActivity);
+        String current = mHost.fontFamily();
+
         LinearLayout box = new LinearLayout(mActivity);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(8), dp(4), dp(8), 0);
 
         final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
-        String current = mHost.fontFamily();
-        for (int i = 0; i < Fonts.LATIN_NAMES.length; i++) {
-            final String id = Fonts.LATIN_IDS[i];
+
+        // One row for every way a font arrives, above the list rather than as a fourth dialog
+        // button. An AlertDialog has three buttons and they are already spent on rescan/close;
+        // more importantly, "how do I get a font in here" is the question the list itself
+        // should answer, in the place the new font will appear.
+        LinearLayout install = new LinearLayout(mActivity);
+        install.setOrientation(LinearLayout.HORIZONTAL);
+        install.setGravity(Gravity.CENTER_VERTICAL);
+        install.setPadding(dp(12), dp(12), dp(12), dp(12));
+        install.setBackground(touchable());
+        install.setClickable(true);
+        install.addView(Chrome.icon(mActivity, "folder", 18, false, null));
+        TextView installLabel = new TextView(mActivity);
+        installLabel.setText("글꼴 설치 — Termux에서 받기, 기기에서 고르기");
+        installLabel.setTextColor(ACCENT);
+        installLabel.setTextSize(12.5f);
+        installLabel.setPadding(dp(10), 0, 0, 0);
+        install.addView(installLabel);
+        install.setOnClickListener(v -> {
+            if (holder[0] != null) holder[0].dismiss();
+            installFont();
+        });
+        box.addView(install);
+        box.addView(hairline(dp(12), dp(0)));
+
+        for (int i = 0; i < faces.size(); i++) {
+            final Fonts.Face f = faces.get(i);
             LinearLayout row = new LinearLayout(mActivity);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(12), dp(12), dp(12), dp(12));
+            row.setPadding(dp(12), dp(11), dp(12), dp(11));
             row.setBackground(touchable());
             row.setClickable(true);
 
@@ -550,53 +741,346 @@ final class SettingsSheet {
             sample.setText("Mmm 0123 한");
             sample.setTextSize(15);
             sample.setTextColor(TEXT);
-            sample.setTypeface(previewFace(i));
+            sample.setTypeface(faceFor(f));
+            sample.setSingleLine(true);
             sample.setLayoutParams(new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             row.addView(sample);
 
             TextView name = new TextView(mActivity);
-            name.setText(Fonts.LATIN_NAMES[i]);
+            name.setText(f.label);
             name.setTextSize(11);
-            name.setTextColor(HINT);
+            name.setTextColor(f.id.equals(current) ? ACCENT : HINT);
             name.setPadding(0, 0, dp(10), 0);
             row.addView(name);
 
-            if (id.equals(current)) row.addView(Chrome.icon(mActivity, "check", 16, false, null));
+            if (f.id.equals(current)) row.addView(Chrome.icon(mActivity, "check", 16, false, null));
 
             row.setOnClickListener(v -> {
-                mHost.onFontFamily(id);
+                mHost.onFontFamily(f.id);
                 if (holder[0] != null) holder[0].dismiss();
                 render();
             });
             box.addView(row);
-            if (i < Fonts.LATIN_NAMES.length - 1) box.addView(hairline(dp(12), dp(0)));
+            if (i < faces.size() - 1) box.addView(hairline(dp(12), dp(0)));
         }
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(mActivity);
+        scroll.setFillViewport(true);
+        scroll.addView(box);
+        // A cap, not a full-screen list: the dialog keeps its title and buttons visible while
+        // the user scrolls, and a device with four hundred fonts does not become four hundred
+        // rows of chrome.
+        scroll.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(340)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
                 .setTitle("글꼴")
-                .setView(box)
+                .setView(scroll)
+                .setPositiveButton("다시 찾기", (d, w) -> {
+                    Fonts.rescan();
+                    render();
+                    chooseFont();
+                })
                 .setNegativeButton("닫기", null)
+                .create();
+        holder[0].show();
+    }
+
+    /**
+     * Every way a font gets in, in one dialog.
+     *
+     * <p>There are two real answers and they are not equally easy. The device picker works
+     * but requires the file to already be on the phone, which means the user has to have
+     * downloaded it in a browser first. Termux is the easier one: the daemon already runs
+     * there, it has `curl`, and it can see {@code ~/.fonts} - so a URL typed here is fetched
+     * on that side and handed over, which is one step instead of three apps.
+     *
+     * <p>The list is asked for on a background thread because it is a socket round trip and
+     * a directory scan on the far end; doing it on the UI thread is the freeze that makes a
+     * settings screen feel broken.
+     */
+    private void installFont() {
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(8), dp(6), dp(8), 0);
+
+        LinearLayout status = new LinearLayout(mActivity);
+        status.setOrientation(LinearLayout.VERTICAL);
+        status.setPadding(dp(12), dp(4), dp(12), dp(8));
+        box.addView(status);
+
+        TextView loading = new TextView(mActivity);
+        loading.setText("Termux에서 글꼴을 찾는 중…");
+        loading.setTextColor(HINT);
+        loading.setTextSize(12);
+        status.addView(loading);
+
+        final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
+
+        LinearLayout device = new LinearLayout(mActivity);
+        device.setOrientation(LinearLayout.HORIZONTAL);
+        device.setGravity(Gravity.CENTER_VERTICAL);
+        device.setPadding(dp(12), dp(12), dp(12), dp(12));
+        device.setBackground(touchable());
+        device.setClickable(true);
+        device.addView(Chrome.icon(mActivity, "folder", 16, false, null));
+        TextView deviceLabel = new TextView(mActivity);
+        deviceLabel.setText("이 기기의 파일에서 고르기");
+        deviceLabel.setTextColor(TEXT);
+        deviceLabel.setTextSize(13);
+        deviceLabel.setPadding(dp(10), 0, 0, 0);
+        device.addView(deviceLabel);
+        device.setOnClickListener(v -> {
+            if (holder[0] != null) holder[0].dismiss();
+            fontImport();
+        });
+        box.addView(device);
+        box.addView(hairline(dp(12), dp(0)));
+
+        LinearLayout url = new LinearLayout(mActivity);
+        url.setOrientation(LinearLayout.HORIZONTAL);
+        url.setGravity(Gravity.CENTER_VERTICAL);
+        url.setPadding(dp(12), dp(12), dp(12), dp(12));
+        url.setBackground(touchable());
+        url.setClickable(true);
+        url.addView(Chrome.icon(mActivity, "cloud", 16, false, null));
+        TextView urlLabel = new TextView(mActivity);
+        urlLabel.setText("URL로 받기 (Termux가 대신 내려받음)");
+        urlLabel.setTextColor(TEXT);
+        urlLabel.setTextSize(13);
+        urlLabel.setPadding(dp(10), 0, 0, 0);
+        url.addView(urlLabel);
+        url.setOnClickListener(v -> {
+            if (holder[0] != null) holder[0].dismiss();
+            fontFromUrl();
+        });
+        box.addView(url);
+        box.addView(hairline(dp(12), dp(0)));
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(mActivity);
+        scroll.addView(box);
+        scroll.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(360)));
+
+        holder[0] = new android.app.AlertDialog.Builder(mActivity)
+                .setTitle("글꼴 설치")
+                .setView(scroll)
+                .setNegativeButton("닫기", null)
+                .create();
+        holder[0].show();
+
+        final android.app.AlertDialog dialog = holder[0];
+        new Thread(() -> {
+            final java.util.List<com.termux.terminal.DaemonClient.RemoteFont> remote;
+            final String error;
+            try {
+                remote = com.termux.terminal.DaemonClient.fonts(
+                        mHost.daemonHost(), mHost.daemonPort(), mHost.daemonToken(), 4000);
+                error = null;
+            } catch (com.termux.terminal.DaemonClient.Failure f) {
+                mActivity.runOnUiThread(() -> reportFonts(status, loading, null, f.getMessage()));
+                return;
+            }
+            mActivity.runOnUiThread(() -> reportFonts(status, loading, remote, error));
+        }, "fterm-font-list").start();
+    }
+
+    /**
+     * Replace the "looking…" line with what Termux has, or with why it could not be asked.
+     *
+     * <p>A daemon that cannot be reached is not an error worth a modal: the other two ways in
+     * still work, so the message says so and stays out of the way.
+     */
+    private void reportFonts(LinearLayout status, TextView loading,
+                             java.util.List<com.termux.terminal.DaemonClient.RemoteFont> fonts,
+                             String error) {
+        status.removeAllViews();
+        if (error != null) {
+            TextView t = new TextView(mActivity);
+            t.setText("Termux 글꼴 목록을 가져오지 못했습니다.\n" + error);
+            t.setTextColor(HINT);
+            t.setTextSize(11);
+            status.addView(t);
+            return;
+        }
+        if (fonts == null || fonts.isEmpty()) {
+            TextView t = new TextView(mActivity);
+            t.setText("Termux 쪽에 글꼴이 없습니다. 아래 URL로 받거나, Termux에서 "
+                    + "~/.fonts 에 .ttf를 넣으세요.");
+            t.setTextColor(HINT);
+            t.setTextSize(11);
+            status.addView(t);
+            return;
+        }
+        TextView head = new TextView(mActivity);
+        head.setText("Termux에서 찾은 글꼴 " + fonts.size() + "개");
+        head.setTextColor(HINT);
+        head.setTextSize(11);
+        status.addView(head);
+        for (com.termux.terminal.DaemonClient.RemoteFont f : fonts) {
+            LinearLayout row = new LinearLayout(mActivity);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(12), dp(10), dp(12), dp(10));
+            row.setBackground(touchable());
+            row.setClickable(true);
+
+            TextView name = new TextView(mActivity);
+            name.setText(f.name());
+            name.setTextColor(TEXT);
+            name.setTextSize(12.5f);
+            name.setSingleLine(true);
+            name.setLayoutParams(new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            row.addView(name);
+
+            TextView size = new TextView(mActivity);
+            size.setText((f.size / 1024) + " KB");
+            size.setTextColor(HINT);
+            size.setTextSize(10.5f);
+            row.addView(size);
+
+            row.setOnClickListener(v -> pullFromTermux(f));
+            status.addView(row);
+        }
+    }
+
+    /** Fetch one Termux-side font and install it as if it had been picked locally. */
+    private void pullFromTermux(com.termux.terminal.DaemonClient.RemoteFont f) {
+        android.widget.Toast.makeText(mActivity, f.name() + " 받는 중…",
+                android.widget.Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            final Fonts.Import result;
+            try {
+                byte[] data = com.termux.terminal.DaemonClient.font(
+                        mHost.daemonHost(), mHost.daemonPort(), mHost.daemonToken(),
+                        f.path, 8000);
+                result = Fonts.install(mActivity, f.name(), data);
+            } catch (com.termux.terminal.DaemonClient.Failure e) {
+                mActivity.runOnUiThread(() -> showFontError(e.getMessage()));
+                return;
+            }
+            mActivity.runOnUiThread(() -> applyImported(result));
+        }, "fterm-font-get").start();
+    }
+
+    /** A URL for the daemon to download, because this app has no way to fetch one itself. */
+    private void fontFromUrl() {
+        prompt("글꼴 URL", "", "https://example.com/MyFont.ttf",
+                "Termux가 대신 내려받아 ~/.fonts 에 저장한 뒤 앱으로 넘깁니다. "
+                        + ".ttf/.otf로 끝나는 http(s) 주소여야 합니다.",
+                v -> {
+                    if (v.isEmpty()) return;
+                    if (!v.startsWith("http://") && !v.startsWith("https://")) {
+                        showFontError("http:// 또는 https:// 주소가 아닙니다.");
+                        return;
+                    }
+                    android.widget.Toast.makeText(mActivity, "내려받는 중…",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                    new Thread(() -> {
+                        final Fonts.Import result;
+                        try {
+                            String path = com.termux.terminal.DaemonClient.fetchFont(
+                                    mHost.daemonHost(), mHost.daemonPort(), mHost.daemonToken(),
+                                    v, 12000);
+                            byte[] data = com.termux.terminal.DaemonClient.font(
+                                    mHost.daemonHost(), mHost.daemonPort(), mHost.daemonToken(),
+                                    path, 8000);
+                            String name = path.substring(path.lastIndexOf('/') + 1);
+                            result = Fonts.install(mActivity, name, data);
+                        } catch (com.termux.terminal.DaemonClient.Failure e) {
+                            mActivity.runOnUiThread(() -> showFontError(e.getMessage()));
+                            return;
+                        }
+                        mActivity.runOnUiThread(() -> applyImported(result));
+                    }, "fterm-font-url").start();
+                });
+    }
+
+    private void showFontError(String message) {
+        new android.app.AlertDialog.Builder(mActivity)
+                .setTitle("글꼴")
+                .setMessage(message)
+                .setPositiveButton("확인", null)
                 .show();
     }
 
-    /** The actual face for one candidate, so the sample is the font and not a lookalike. */
-    private Typeface previewFace(int index) {
-        Typeface face = null;
-        if (Fonts.LATIN_PATHS[index] != null) {
+    /** Install a font and select it, or say why it was refused. */
+    private void applyImported(Fonts.Import imported) {
+        if (imported.id == null) {
+            showFontError(imported.reason);
+            return;
+        }
+        mHost.onFontFamily(imported.id);
+        render();
+        chooseFont();
+    }
+
+    /**
+     * Import a font file the user picked, by copying it into app storage.
+     *
+     * <p>A system file picker, not a text field. The previous version asked for an absolute
+     * path, which reads as the more powerful option and was the less capable one: since
+     * Android 11 this app cannot open an arbitrary {@code /sdcard} path, so the field accepted
+     * paths it could never load. The picker hands back a {@code content://} document that the
+     * platform has already granted, and {@link Fonts#importFont} copies it somewhere the
+     * terminal can read forever.
+     *
+     * <p>No separate result plumbing: {@link Activity#startActivityForResult} is deprecated but
+     * the sheet is a Dialog, not a fragment host, and a contract launcher would need the same
+     * hop back through the activity. The activity forwards the result here.
+     */
+    private static final int REQ_IMPORT_FONT = 0x4f4e;
+
+    private void fontImport() {
+        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+        // Any file, not font/*. The system picker resolves a filter against the MIME type
+        // MediaStore recorded for each file, and a .ttf that arrived by adb or a file manager
+        // often has none - filtered to font/*, the folder the user just filled shows as empty.
+        // So the picker shows everything and the font check happens after the copy, where a
+        // wrong pick is refused with a reason instead of never being offered.
+        i.setType("*/*");
+        try {
+            mActivity.startActivityForResult(i, REQ_IMPORT_FONT);
+        } catch (Throwable t) {
+            new android.app.AlertDialog.Builder(mActivity)
+                    .setTitle("글꼴")
+                    .setMessage("파일 선택기를 열 수 없습니다.\n\n" + t)
+                    .setPositiveButton("확인", null)
+                    .show();
+        }
+    }
+
+    /**
+     * The result of {@link #fontImport()}: copy the pick, then apply it.
+     *
+     * <p>Called by the activity. A refused file says why - "nothing happened" after picking a
+     * file is the response that makes a user think the feature is broken.
+     */
+    void onFontImportResult(int requestCode, int resultCode, android.content.Intent data) {
+        if (requestCode != REQ_IMPORT_FONT) return;
+        if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) return;
+        // The reason, not a shrug: a wrong file and a broken picker need different responses
+        // from the user, and "could not read that" reads as the latter.
+        applyImported(Fonts.importFont(mActivity, data.getData()));
+    }
+
+    /** The actual face for one catalog entry, so the sample is the font and not a lookalike. */
+    private Typeface faceFor(Fonts.Face f) {
+        if (f.path == null) {
             try {
-                face = Typeface.createFromFile(Fonts.LATIN_PATHS[index]);
+                return Typeface.createFromAsset(mActivity.getAssets(), Fonts.ASSET_PATH);
+            } catch (Throwable ignored) {
+            }
+        } else {
+            try {
+                return Typeface.createFromFile(f.path);
             } catch (Throwable ignored) {
             }
         }
-        if (face == null) {
-            try {
-                face = Typeface.createFromAsset(mActivity.getAssets(),
-                        Fonts.ASSET_PATH);
-            } catch (Throwable ignored) {
-            }
-        }
-        return face != null ? face : Typeface.MONOSPACE;
+        return Typeface.MONOSPACE;
     }
 
     private void editStartDir() {
@@ -663,7 +1147,7 @@ final class SettingsSheet {
         card.addView(cardRow(sizeRow, false));
 
         card.addView(valueRow("글꼴", "라틴 문자에 쓰는 고정폭 글꼴",
-                Fonts.LATIN_NAMES[Fonts.latinIndexOf(mHost.fontFamily())],
+                Fonts.labelOf(mActivity, mHost.fontFamily()),
                 this::chooseFont, false));
         card.addView(valueRow("색 구성표", "미리보기와 16색 팔레트",
                 Prefs.SCHEME_NAMES[Math.max(0, Math.min(Prefs.SCHEME_NAMES.length - 1,
@@ -678,6 +1162,10 @@ final class SettingsSheet {
                 this::chooseCursor, false));
         card.addView(toggleCardRow("커서 깜빡임", "끄면 항상 보입니다",
                 mHost.cursorBlink(), mHost::onCursorBlink, true));
+        card.addView(valueRow("커서 색", "구성표를 따르지 않고 직접 지정",
+                mHost.cursorColor() == 0 ? "구성표 따름"
+                        : String.format("#%06X", mHost.cursorColor() & 0xffffff),
+                this::chooseCursorColor, false));
         card.addView(valueRow("탭 아이콘", "탭 제목 앞의 작은 표시",
                 TabIcons.isGlyph(mHost.tabIcon())
                         ? TabIcons.GLYPH_NAMES[glyphIndexOf(mHost.tabIcon())]
@@ -701,6 +1189,75 @@ final class SettingsSheet {
                 .show();
     }
 
+    /**
+     * The cursor colour: a hex field plus a chip, and "구성표 따름" to go back.
+     *
+     * <p>Not a colour wheel. The value a user wants is almost always one they read off
+     * something else - a scheme file, a screenshot, another terminal - and that arrives as a
+     * hex code. The chip is the only confirmation needed, and the reset is a named button
+     * rather than an empty field, because "no colour" is a state worth choosing on purpose.
+     */
+    private void chooseCursorColor() {
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(8), dp(20), 0);
+
+        final int current = mHost.cursorColor();
+        int seed = current != 0 ? current : mHost.customSlots()[18];
+
+        final View chip = new View(mActivity);
+        chip.setBackground(Chrome.plate(seed, 4));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(40));
+        clp.bottomMargin = dp(10);
+        chip.setLayoutParams(clp);
+        box.addView(chip);
+
+        final android.widget.EditText hex = new android.widget.EditText(mActivity);
+        hex.setText(current == 0 ? "" : String.format("#%06X", current & 0xffffff));
+        hex.setHint("비우면 구성표를 따릅니다");
+        hex.setHintTextColor(HINT);
+        hex.setSingleLine(true);
+        hex.setTextSize(15);
+        hex.setTypeface(Typeface.MONOSPACE);
+        hex.setTextColor(TEXT);
+        box.addView(hex);
+
+        hex.addTextChangedListener(new android.text.TextWatcher() {
+            public void afterTextChanged(android.text.Editable e) {
+                Integer c = parseHex(e.toString());
+                chip.setBackground(Chrome.plate(c != null ? c : seed, 4));
+            }
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            public void onTextChanged(CharSequence s, int a, int b, int c) {}
+        });
+
+        new android.app.AlertDialog.Builder(mActivity)
+                .setTitle("커서 색")
+                .setView(box)
+                .setPositiveButton("저장", (d, w) -> {
+                    String t = hex.getText().toString().trim();
+                    Integer c = parseHex(t);
+                    if (t.isEmpty() || t.equals("#")) {
+                        mHost.onCursorColor(0);   // empty means "follow the scheme"
+                    } else if (c == null) {
+                        // A typo must not silently do nothing; keeping the old value while
+                        // the sheet reopens is exactly the "the setting is broken" report.
+                        android.widget.Toast.makeText(mActivity, "색 형식이 아닙니다: " + t,
+                                android.widget.Toast.LENGTH_SHORT).show();
+                    } else {
+                        mHost.onCursorColor(c);
+                    }
+                    render();
+                })
+                .setNegativeButton("취소", null)
+                .setNeutralButton("구성표 따름", (d, w) -> {
+                    mHost.onCursorColor(0);
+                    render();
+                })
+                .show();
+    }
+
     private static int glyphIndexOf(String id) {
         for (int i = 0; i < TabIcons.GLYPHS.length; i++) {
             if (TabIcons.GLYPHS[i].equals(id)) return i;
@@ -709,15 +1266,24 @@ final class SettingsSheet {
     }
 
     /**
-     * The tab icon picker: a grid of every glyph, then whatever the user types.
+     * An icon picker: a grid of every glyph, then an option to type one.
      *
-     * <p>A grid, not a list. The set grew to thirty-five because a tab mark is how a glance
-     * tells an ssh session from a database console, and a list that long is a scroll with no
+     * <p>A grid, not a list. The set is thirty-six because a tab mark is how a glance tells
+     * an ssh session from a database console, and a list that long is a scroll with no
      * overview - the whole point of choosing an icon is seeing the candidates at once. Each
      * cell draws the real mark with the same {@link TabIcons#build} the tab strip uses, so
      * nothing here can promise a size the tab will not deliver.
+     *
+     * <p>Shared by the global tab icon and the per-profile icon. The two differ only in what
+     * "no icon" means, which is the {@code clearLabel} parameter: the global setting has a
+     * real default to fall back to, a profile has "use the global one".
+     *
+     * @param current    the value in force, for the tick
+     * @param clearLabel the label for "no icon", or null when there is nothing to clear
+     * @param onPick     called with a glyph id or literal text; the dialog has already closed
      */
-    private void chooseTabIcon() {
+    private void pickIcon(String title, String current, String clearLabel,
+                          java.util.function.Consumer<String> onPick) {
         final int columns = 5;
         // 5 columns at 62dp: wide enough for "데이터베이스" on two lines, narrow enough that
         // the grid still fits a phone dialog without overflowing it.
@@ -728,11 +1294,17 @@ final class SettingsSheet {
             ids.add(TabIcons.GLYPHS[i]);
             names.add(TabIcons.GLYPH_NAMES[i]);
         }
-        // The text default is a cell like any other, at the end. Its label is not the mark
-        // itself - the cell already draws ">_" above the label, and printing it twice reads
-        // as a duplicated row rather than as a name.
+        // The default is a cell like any other, at the end. Its label is not the mark itself -
+        // the cell already draws ">_" above the label, and printing it twice reads as a
+        // duplicated row rather than as a name.
         ids.add(TabIcons.DEFAULT_ID);
         names.add("기본");
+        if (clearLabel != null) {
+            // An empty id. TabIcons.build would draw the default for it, so the cell would
+            // lie about what the choice means; the label carries the meaning instead.
+            ids.add("");
+            names.add(clearLabel);
+        }
 
         LinearLayout grid = new LinearLayout(mActivity);
         grid.setOrientation(LinearLayout.VERTICAL);
@@ -755,8 +1327,10 @@ final class SettingsSheet {
                 grid.addView(line);
             }
             final String id = ids.get(i);
-            boolean chosen = id.equals(mHost.tabIcon())
-                    || (i == ids.size() - 1 && !TabIcons.isGlyph(mHost.tabIcon()));
+            // One comparison covers every case: a glyph id matches only its own cell, ">_"
+            // matches the default cell, "" matches the "no icon" cell, and a user-typed mark
+            // matches nothing - which is honest, since it is not one of the cells on screen.
+            boolean chosen = id.equals(current);
 
             LinearLayout cell = new LinearLayout(mActivity);
             cell.setOrientation(LinearLayout.VERTICAL);
@@ -770,16 +1344,17 @@ final class SettingsSheet {
             cell.setLayoutParams(new LinearLayout.LayoutParams(dp(CELL_DP),
                     ViewGroup.LayoutParams.WRAP_CONTENT));
             cell.setOnClickListener(v -> {
-                mHost.onTabIcon(id);
                 holder[0].dismiss();
-                render();
+                onPick.accept(id);
             });
 
             // The mark sits in a tab-sized slot, so a cell is the tab at a glance.
             LinearLayout slot = new LinearLayout(mActivity);
             slot.setGravity(Gravity.CENTER);
             slot.setLayoutParams(new LinearLayout.LayoutParams(dp(34), dp(34)));
-            slot.addView(TabIcons.build(mActivity, id, chosen ? TEXT : HINT));
+            slot.addView(id.isEmpty()
+                    ? absentMark(chosen)
+                    : TabIcons.build(mActivity, id, chosen ? TEXT : HINT));
             cell.addView(slot);
 
             TextView label = new TextView(mActivity);
@@ -802,23 +1377,44 @@ final class SettingsSheet {
         scroll.addView(grid);
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle("탭 아이콘")
+                .setTitle(title)
                 .setView(scroll)
-                .setPositiveButton("직접 입력", (d, w) -> editTabIcon())
+                .setPositiveButton("직접 입력", (d, w) -> promptIconText(title, current, onPick))
                 .setNegativeButton("취소", null)
                 .create();
         holder[0].show();
     }
 
+    /**
+     * The mark for "no icon": a dashed outline of the slot.
+     *
+     * <p>An empty cell would read as a rendering failure, and the default mark would read as
+     * "this is the mark" - which is the opposite of what choosing it does.
+     */
+    private View absentMark(boolean bright) {
+        View v = new View(mActivity);
+        android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
+        d.setColor(0x00000000);
+        d.setStroke(Math.max(1, dp(1)), bright ? ACCENT : 0xff55595f);
+        d.setCornerRadius(dp(4));
+        v.setBackground(d);
+        v.setLayoutParams(new LinearLayout.LayoutParams(dp(16), dp(20)));
+        return v;
+    }
+
     /** A one-line prompt for a custom mark; the slot clips long text, so the note says so. */
-    private void editTabIcon() {
-        String current = mHost.tabIcon();
-        prompt("탭 아이콘", TabIcons.isGlyph(current) ? "" : current, ">_",
+    private void promptIconText(String title, String current,
+                                java.util.function.Consumer<String> onPick) {
+        prompt(title, TabIcons.isGlyph(current) ? "" : current, ">_",
                 "한두 글자가 가장 잘 맞습니다. 길면 작게 그려집니다.",
-                v -> {
-                    mHost.onTabIcon(v.trim());
-                    render();
-                });
+                v -> onPick.accept(v.trim()));
+    }
+
+    private void chooseTabIcon() {
+        pickIcon("탭 아이콘", mHost.tabIcon(), null, id -> {
+            mHost.onTabIcon(id);
+            render();
+        });
     }
 
     /**

@@ -309,8 +309,14 @@ final class Chrome {
         });
 
         android.widget.ImageView plate = new android.widget.ImageView(mActivity);
-        plate.setImageDrawable(new Glyph(
-                profile == MANAGE ? "pencil" : profile == null ? "terminal" : "ssh", ICON));
+        // The profile's own mark when it has one: a profile is exactly the thing worth
+        // marking, and an ssh glyph on an opencode profile is the wrong signal. "프로필 관리"
+        // and the default profile have no stored icon, so they keep their glyphs.
+        String mark = profile == null ? "terminal"
+                : profile == MANAGE ? "pencil"
+                : profile.icon == null || profile.icon.isEmpty() ? "ssh" : profile.icon;
+        plate.setImageDrawable(TabIcons.isGlyph(mark) ? new Glyph(mark, ICON)
+                : new Glyph("terminal", ICON));
         plate.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
         plate.setBackground(plate(CARD_HI, 6));
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
@@ -529,7 +535,10 @@ final class Chrome {
      */
     static final class Glyph extends android.graphics.drawable.Drawable {
         private final android.graphics.Path p = new android.graphics.Path();
+        private final android.graphics.Path accent = new android.graphics.Path();
         private final android.graphics.Paint paint = new android.graphics.Paint(
+                android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.graphics.Paint accentPaint = new android.graphics.Paint(
                 android.graphics.Paint.ANTI_ALIAS_FLAG);
 
         /** Package-private so the tab chip can draw the same glyph set at its own tint. */
@@ -538,6 +547,16 @@ final class Chrome {
             paint.setStyle(android.graphics.Paint.Style.FILL);
             GlyphPaths.build(name, p);
             if (p.isEmpty()) p.addCircle(12, 12, 7, android.graphics.Path.Direction.CW);
+            // A two-tone source mark: the second path is the darker half of the same shape,
+            // so it is the tint mixed toward the background rather than a second colour. A
+            // separate hue would be a brand colour the caller never asked for, and this
+            // drawable is used at several tints.
+            GlyphPaths.buildAccent(name, accent);
+            if (!accent.isEmpty()) {
+                accentPaint.setColor(color);
+                accentPaint.setStyle(android.graphics.Paint.Style.FILL);
+                accentPaint.setAlpha(0x55);
+            }
         }
 
         @Override public void draw(android.graphics.Canvas c) {
@@ -551,10 +570,14 @@ final class Chrome {
             c.translate(dx, dy);
             c.scale(s, s);
             c.drawPath(p, paint);
+            if (!accent.isEmpty()) c.drawPath(accent, accentPaint);
             c.restore();
         }
 
-        @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); }
+        @Override public void setAlpha(int alpha) {
+            paint.setAlpha(alpha);
+            if (!accent.isEmpty()) accentPaint.setAlpha(alpha * 0x55 / 0xff);
+        }
         @Override public void setColorFilter(android.graphics.ColorFilter cf) {
             paint.setColorFilter(cf);
         }

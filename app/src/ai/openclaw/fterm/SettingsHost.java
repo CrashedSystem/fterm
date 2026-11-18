@@ -21,8 +21,22 @@ final class SettingsHost implements SettingsSheet.Host {
     @Override public int fontSizeDp() { return a.mFontDp; }
     @Override public void onFontSize(int dp) { a.applyFontSize(dp); }
 
+    @Override public String daemonHost() { return a.mPrefs.host(); }
+    @Override public int daemonPort() { return a.mPrefs.port(); }
+    @Override public String daemonToken() { return a.mPrefs.token(); }
+
     @Override public int scheme() { return a.mScheme; }
     @Override public void onScheme(int index) { a.applyScheme(index); }
+
+    @Override public int cursorColor() { return a.mPrefs.cursorColor(); }
+
+    @Override public void onCursorColor(int color) {
+        a.mPrefs.setCursorColor(color);
+        // applyScheme() is what pushes a palette into the emulator, and the cursor colour is
+        // written into that palette on the way. Re-applying only the cursor shape would leave
+        // the old colour on screen until the next scheme change.
+        a.applyScheme(a.mScheme);
+    }
 
     @Override public int cursorStyle() { return a.mPrefs.cursorStyle(); }
     @Override public void onCursorStyle(int style) {

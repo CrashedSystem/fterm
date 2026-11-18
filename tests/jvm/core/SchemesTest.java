@@ -32,7 +32,7 @@ public class SchemesTest {
         return 0xff000000 | (r << 16) | (g << 8) | b;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         // mterm/public/js/core/appearance.js ONE_HALF_DARK, verbatim.
         Map<Integer, Integer> oneHalfDark = new HashMap<>();
         oneHalfDark.put(0, rgb(0x28, 0x2c, 0x34));
@@ -134,8 +134,41 @@ public class SchemesTest {
                     "hasBackgroundImage(" + i + ")");
         }
 
+        // --- cursor colour override -------------------------------------------
+        // The override is applied in MainActivity on top of whatever palette won, so what is
+        // pinned here is the rule, not the plumbing: zero means "follow the scheme", and any
+        // other value is written into the cursor slot of the live table.
+        String activity = read("app/src/ai/openclaw/fterm/MainActivity.java");
+        check(activity.contains("mPrefs.cursorColor()"),
+                "the palette application reads the cursor override");
+        check(activity.contains("if (cursor != 0)"),
+                "and zero is the sentinel for no override, not a colour");
+        check(activity.contains("COLOR_INDEX_CURSOR] = cursor"),
+                "the override lands in the cursor slot of the live colours");
+
+        String prefs = read("app/src/ai/openclaw/fterm/Prefs.java");
+        check(prefs.contains("getInt(\"cursor_color\", 0)"),
+                "no override is stored as zero, so a fresh install follows the scheme");
+        check(prefs.contains("setCursorColor"),
+                "and the override survives a restart");
+
+        String sheet = read("app/src/ai/openclaw/fterm/SettingsSheet.java");
+        check(sheet.contains("커서 색"),
+                "the setting is reachable by name in 모양");
+        check(sheet.contains("구성표 따름"),
+                "with a named way back to the scheme's own colour");
+        check(sheet.contains("onCursorColor(0)"),
+                "which clears the override rather than writing black");
+        check(sheet.contains("parseHex"),
+                "and takes a hex code, the form every scheme file is written in");
+
         System.out.println("ok  " + pass + " scheme assertions");
         System.out.println("ALL OK");
+    }
+
+    /** Whole-file read for the source assertions; the rule lives in code, not in a table. */
+    static String read(String path) throws Exception {
+        return new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)), "UTF-8");
     }
 
     static double luminance(int color, boolean unused) {

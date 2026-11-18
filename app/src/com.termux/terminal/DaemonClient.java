@@ -21,7 +21,13 @@ public final class DaemonClient {
 
     private static final int C_HELLO = 0x01;
     private static final int C_SYNC = 0x09;
+    private static final int C_FONT_LIST = 0x1A;
+    private static final int C_FONT_GET = 0x1B;
+    private static final int C_FONT_FETCH = 0x1C;
     private static final int S_HELLO_OK = 0x80;
+    private static final int S_FONT_LIST = 0x9A;
+    private static final int S_FONT_DATA = 0x9B;
+    private static final int S_FONT_FETCHED = 0x9C;
     private static final int S_SYNCED = 0x9E;
     private static final int S_ERROR = 0x9F;
 
@@ -87,6 +93,237 @@ public final class DaemonClient {
                 s.close();
             } catch (IOException ignored) {
             }
+        }
+    }
+
+    /** One font the daemon can serve, as it appears in the picker. */
+    public static final class RemoteFont {
+        public final String path;
+        public final long size;
+
+        RemoteFont(String path, long size) {
+            this.path = path;
+            this.size = size;
+        }
+
+        /** The file name alone, which is what a list row shows. */
+        public String name() {
+            int slash = path.lastIndexOf('/');
+            return slash >= 0 ? path.substring(slash + 1) : path;
+        }
+    }
+
+    /**
+     * The fonts the Termux side can hand over.
+     *
+     * <p>This is the answer to "installing a font is too hard". The app cannot read
+     * {@code /sdcard} since Android 11 and has no URL fetcher, but Termux can do both - so the
+     * daemon, which already runs there, lists what it sees in {@code ~/.fonts} and the shared
+     * download folder. A user runs {@code curl -O ~/.fonts/...} once and the font appears here.
+     */
+    public static List<RemoteFont> fonts(String host, int port, String token, int timeoutMs)
+            throws Failure {
+        Socket s = new Socket();
+        try {
+            s.setTcpNoDelay(true);
+            s.connect(new InetSocketAddress(host, port), timeoutMs);
+            s.setSoTimeout(timeoutMs);
+            OutputStream out = s.getOutputStream();
+            DataInputStream in = new DataInputStream(
+                    new BufferedInputStream(s.getInputStream(), 8192));
+            hello(out, in, token);
+            send(out, C_FONT_LIST, new byte[0]);
+            while (true) {
+                int type = in.readUnsignedByte();
+                int len = readIntLE(in);
+                if (len < 0 || len > (1 << 20)) throw new Failure("데몬 프레임 오류");
+                byte[] p = new byte[len];
+                in.readFully(p);
+                if (type == S_ERROR) throw errorOf(p);
+                if (type == S_FONT_LIST) return parseFontList(p);
+            }
+        } catch (IOException e) {
+            throw new Failure("Termux 데몬에 연결할 수 없습니다: " + e.getMessage());
+        } finally {
+            close(s);
+        }
+    }
+
+    /**
+     * One font's bytes, reassembled from the daemon's chunks.
+     *
+     * <p>Chunked because a frame is capped at 1 MiB and Iosevka is larger than that. The
+     * chunks carry their own offset, so a duplicate or a reorder is detectable rather than
+     * silently producing a corrupt font file.
+     */
+    public static byte[] font(String host, int port, String token, String path, int timeoutMs)
+            throws Failure {
+        Socket s = new Socket();
+        try {
+            s.setTcpNoDelay(true);
+            s.connect(new InetSocketAddress(host, port), timeoutMs);
+            // A larger read timeout than the listing: a 4 MiB font is four frames and the
+            // daemon writes each one whole, but a starved device can still pause between them.
+            s.setSoTimeout(Math.max(timeoutMs, 15000));
+            OutputStream out = s.getOutputStream();
+            DataInputStream in = new DataInputStream(
+                    new BufferedInputStream(s.getInputStream(), 65536));
+            hello(out, in, token);
+            byte[] pb = path.getBytes(StandardCharsets.UTF_8);
+            java.io.ByteArrayOutputStream req = new java.io.ByteArrayOutputStream();
+            req.write(pb.length & 0xff);
+            req.write((pb.length >> 8) & 0xff);
+            req.write(pb, 0, pb.length);
+            send(out, C_FONT_GET, req.toByteArray());
+
+            byte[] data = null;
+            int got = 0;
+            while (true) {
+                int type = in.readUnsignedByte();
+                int len = readIntLE(in);
+                if (len < 0 || len > (1 << 20)) throw new Failure("데몬 프레임 오류");
+                byte[] p = new byte[len];
+                in.readFully(p);
+                if (type == S_ERROR) throw errorOf(p);
+                if (type != S_FONT_DATA) continue;
+                if (p.length < 10) throw new Failure("글꼴 프레임 오류");
+                int total = (int) le32(p, 0);
+                int off = (int) le32(p, 4);
+                int nlen = (p[8] & 0xff) | ((p[9] & 0xff) << 8);
+                int start = 10 + nlen;
+                if (total <= 0 || total > (32 << 20) || start > p.length) {
+                    throw new Failure("글꼴 프레임 오류");
+                }
+                if (data == null) data = new byte[total];
+                int n = Math.min(p.length - start, total - off);
+                if (n < 0 || off + n > total) throw new Failure("글꼴 프레임 오류");
+                System.arraycopy(p, start, data, off, n);
+                got += n;
+                if (got >= total) return data;
+            }
+        } catch (IOException e) {
+            throw new Failure("글꼴을 받지 못했습니다: " + e.getMessage());
+        } finally {
+            close(s);
+        }
+    }
+
+    /**
+     * Ask the daemon to download a font, and return where it saved it.
+     *
+     * <p>The download happens on the Termux side on purpose: that process has a network stack
+     * and a writable home directory, and this app has neither a URL client nor a folder it may
+     * open. One URL in, one path out, and the path is then fetched with {@link #font}.
+     *
+     * @return the absolute path the daemon wrote, or a {@link Failure} whose message is the
+     *         daemon's own refusal ("주소가 .ttf/.otf로 끝나지 않습니다")
+     */
+    public static String fetchFont(String host, int port, String token, String url, int timeoutMs)
+            throws Failure {
+        Socket s = new Socket();
+        try {
+            s.setTcpNoDelay(true);
+            s.connect(new InetSocketAddress(host, port), timeoutMs);
+            // A download is bounded by the remote server, not by this device, so the wait is
+            // longer than a local listing.
+            s.setSoTimeout(Math.max(timeoutMs, 45000));
+            OutputStream out = s.getOutputStream();
+            DataInputStream in = new DataInputStream(
+                    new BufferedInputStream(s.getInputStream(), 8192));
+            hello(out, in, token);
+            byte[] ub = url.getBytes(StandardCharsets.UTF_8);
+            java.io.ByteArrayOutputStream req = new java.io.ByteArrayOutputStream();
+            req.write(ub.length & 0xff);
+            req.write((ub.length >> 8) & 0xff);
+            req.write(ub, 0, ub.length);
+            send(out, C_FONT_FETCH, req.toByteArray());
+            while (true) {
+                int type = in.readUnsignedByte();
+                int len = readIntLE(in);
+                if (len < 0 || len > (1 << 20)) throw new Failure("데몬 프레임 오류");
+                byte[] p = new byte[len];
+                in.readFully(p);
+                if (type == S_ERROR) throw errorOf(p);
+                if (type != S_FONT_FETCHED) continue;
+                if (p.length < 2) throw new Failure("글꼴 응답 오류");
+                int plen = (p[0] & 0xff) | ((p[1] & 0xff) << 8);
+                if (plen == 0) {
+                    if (p.length < 4) throw new Failure("글꼴 다운로드 실패");
+                    int mlen = (p[2] & 0xff) | ((p[3] & 0xff) << 8);
+                    int at = 4;
+                    String msg = mlen > 0 && at + mlen <= p.length
+                            ? new String(p, at, mlen, StandardCharsets.UTF_8) : "글꼴 다운로드 실패";
+                    throw new Failure(msg);
+                }
+                if (2 + plen > p.length) throw new Failure("글꼴 응답 오류");
+                return new String(p, 2, plen, StandardCharsets.UTF_8);
+            }
+        } catch (IOException e) {
+            throw new Failure("글꼴을 받지 못했습니다: " + e.getMessage());
+        } finally {
+            close(s);
+        }
+    }
+
+    private static void hello(OutputStream out, DataInputStream in, String token)
+            throws IOException, Failure {
+        byte[] tok = token.getBytes(StandardCharsets.UTF_8);
+        java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+        b.write(1);
+        b.write(tok.length & 0xff);
+        b.write((tok.length >> 8) & 0xff);
+        b.write(tok, 0, tok.length);
+        send(out, C_HELLO, b.toByteArray());
+        int type = in.readUnsignedByte();
+        int len = readIntLE(in);
+        if (len < 0 || len > (1 << 20)) throw new Failure("데몬 프레임 오류");
+        byte[] p = new byte[len];
+        in.readFully(p);
+        if (type == S_ERROR) throw errorOf(p);
+        if (type != S_HELLO_OK) throw new Failure("데몬 응답 오류 (type " + type + ")");
+    }
+
+    private static Failure errorOf(byte[] p) {
+        int code = p.length >= 1 ? (p[0] & 0xff) : 0;
+        return new Failure(code == 3
+                ? "토큰이 틀렸습니다 — Termux에서 ftermd token 을 확인하세요"
+                : "데몬 오류 (code " + code + ")");
+    }
+
+    private static List<RemoteFont> parseFontList(byte[] p) throws Failure {
+        List<RemoteFont> out = new ArrayList<>();
+        if (p.length < 2) return out;
+        int count = (p[0] & 0xff) | ((p[1] & 0xff) << 8);
+        int at = 2;
+        for (int i = 0; i < count; i++) {
+            if (at + 2 > p.length) break;
+            int nlen = (p[at] & 0xff) | ((p[at + 1] & 0xff) << 8);
+            at += 2;
+            if (at + nlen + 4 + 2 > p.length) break;
+            String name = new String(p, at, nlen, StandardCharsets.UTF_8);
+            at += nlen;
+            long size = le32(p, at);
+            at += 4;
+            int plen = (p[at] & 0xff) | ((p[at + 1] & 0xff) << 8);
+            at += 2;
+            if (at + plen > p.length) break;
+            String path = new String(p, at, plen, StandardCharsets.UTF_8);
+            at += plen;
+            out.add(new RemoteFont(path, size));
+            if (name.isEmpty()) { /* name is derived from the path; nothing to do */ }
+        }
+        return out;
+    }
+
+    private static long le32(byte[] b, int off) {
+        return (b[off] & 0xffL) | ((b[off + 1] & 0xffL) << 8)
+                | ((b[off + 2] & 0xffL) << 16) | ((b[off + 3] & 0xffL) << 24);
+    }
+
+    private static void close(Socket s) {
+        try {
+            s.close();
+        } catch (IOException ignored) {
         }
     }
 

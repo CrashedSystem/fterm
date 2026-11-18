@@ -608,7 +608,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     private void addTabChip(Tab tab) {
-        TabStrip.Chip chip = new TabStrip(this, mPrefs.tabIcon()).create(tab.title,
+        TabStrip.Chip chip = new TabStrip(this, tabIconFor(tab)).create(tab.title,
                 () -> activate(tab), () -> confirmClose(tab));
         tab.plate = chip.plate;
         tab.chip = chip.title;
@@ -623,11 +623,25 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         for (Tab t : mTabs) updateChip(t);
     }
 
+    /**
+     * The mark a tab should carry: its profile's own icon, or the global tab icon.
+     *
+     * <p>The fallback is per tab rather than resolved once at open time so that changing the
+     * global icon still moves every tab that did not ask for something else - a profile icon
+     * is an override, not a snapshot.
+     */
+    private String tabIconFor(Tab tab) {
+        if (tab.profile != null && tab.profile.icon != null && !tab.profile.icon.isEmpty()) {
+            return tab.profile.icon;
+        }
+        return mPrefs.tabIcon();
+    }
+
     /** Repaint one tab; the strip owns the shapes and the activity owns which tab is active. */
     private void updateChip(Tab tab) {
         if (tab.chipView == null) return;
         int[] palette = Schemes.colors(mScheme, mCustom);
-        new TabStrip(this, mPrefs.tabIcon()).paint(tab.chipView, tab.title, tab == mActive,
+        new TabStrip(this, tabIconFor(tab)).paint(tab.chipView, tab.title, tab == mActive,
                 palette[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND],
                 Schemes.isOled(mScheme, mCustom));
     }
@@ -710,7 +724,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             probe.setTextSize(px);
             cell = probe.measureText("M");
         }
-        mFonts = Fonts.load(this, cell, px, Fonts.latinIndexOf(mPrefs.fontFamily()));
+        mFonts = Fonts.load(this, cell, px, mPrefs.fontFamily());
         mTermView.setFaceSelector(new TerminalRenderer.FaceSelector() {
             @Override
             public Typeface typefaceFor(int codePoint) {
@@ -790,6 +804,14 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         int[] table = Schemes.colors(mScheme, mCustom);
         System.arraycopy(table, 0, TerminalColors.COLOR_SCHEME.mDefaultColors, 0, table.length);
         System.arraycopy(table, 0, colors.mCurrentColors, 0, table.length);
+        // The override is applied on top of whichever palette won, here rather than in
+        // Schemes: it is an app setting, not part of any scheme, and putting it in the palette
+        // table would make every scheme's stored slots disagree with what is on screen.
+        final int cursor = mPrefs.cursorColor();
+        if (cursor != 0) {
+            TerminalColors.COLOR_SCHEME.mDefaultColors[com.termux.terminal.TextStyle.COLOR_INDEX_CURSOR] = cursor;
+            colors.mCurrentColors[com.termux.terminal.TextStyle.COLOR_INDEX_CURSOR] = cursor;
+        }
         // Only the Miku scheme has a picture; the others must clear it or the last one
         // stays behind the new palette.
         mTermView.setBackgroundImage(
@@ -838,6 +860,19 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 })
                 .setNegativeButton("취소", null)
                 .show();
+    }
+
+    /**
+     * The font importer is the one place the app still leaves for another activity.
+     *
+     * <p>A document picker cannot be replaced by anything in-process: the grant on the picked
+     * file only exists on the returned intent, so the result has to come back here and be
+     * handed to the sheet.
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (mSettings != null) mSettings.onFontImportResult(requestCode, resultCode, data);
     }
 
     private void showSettings() {
