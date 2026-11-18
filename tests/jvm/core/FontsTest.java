@@ -56,13 +56,42 @@ public class FontsTest {
         check(ai.openclaw.fterm.Fonts.isHangul(0xD55C), "한 is scaled");
         check(!ai.openclaw.fterm.Fonts.isHangul('x'), "x is not scaled");
 
+        // 5b. The Latin face is chosen by id, and an unknown id means the default rather
+        // than a crash: a prefs file written by a future build must not break this one.
+        check(ai.openclaw.fterm.Fonts.latinIndexOf("iosevka") == 0, "iosevka is slot 0");
+        check(ai.openclaw.fterm.Fonts.latinIndexOf("droid") == 1, "droid is slot 1");
+        check(ai.openclaw.fterm.Fonts.latinIndexOf("cutive") == 2, "cutive is slot 2");
+        check(ai.openclaw.fterm.Fonts.latinIndexOf("comic-sans") == 0,
+                "an unknown id falls back to the default");
+        check(ai.openclaw.fterm.Fonts.latinIndexOf(null) == 0, "and null does too");
+        check(ai.openclaw.fterm.Fonts.LATIN_NAMES.length
+                == ai.openclaw.fterm.Fonts.LATIN_IDS.length, "names and ids stay in step");
+        check(ai.openclaw.fterm.Fonts.LATIN_PATHS.length
+                == ai.openclaw.fterm.Fonts.LATIN_IDS.length, "and paths too");
+        check(ai.openclaw.fterm.Fonts.LATIN_PATHS[0] == null,
+                "slot 0 is the bundled asset, not a system file");
+
         // 6. The app must install the selector, or the stack never reaches the renderer.
         String main = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("main.src",
                         "app/src/ai/openclaw/fterm/MainActivity.java"))), "UTF-8");
         check(main.contains("setFaceSelector"), "MainActivity installs the face selector");
         check(main.contains("Fonts.load("), "and builds it from Fonts");
-        check(main.contains("fonts/Iosevka.ttf") || true, "the assets it names");
+        // The chosen face has to reach Fonts.load(), or the setting is decorative.
+        check(main.contains("mPrefs.fontFamily()"), "MainActivity passes the chosen face");
+        check(main.contains("mFonts = Fonts.load("), "and rebuilds the stack on change");
+
+        // The real Fonts and the stub must agree on the table, or the test above proves
+        // nothing about the shipped code.
+        String fonts = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get(System.getProperty("fonts.src",
+                        "app/src/ai/openclaw/fterm/Fonts.java"))), "UTF-8");
+        for (String name : ai.openclaw.fterm.Fonts.LATIN_NAMES) {
+            check(fonts.contains("\"" + name + "\""), "real Fonts names " + name);
+        }
+        for (String id : ai.openclaw.fterm.Fonts.LATIN_IDS) {
+            check(fonts.contains("\"" + id + "\""), "real Fonts knows id " + id);
+        }
 
         System.out.println("ok  " + pass + " font routing assertions");
         System.out.println("ALL OK");

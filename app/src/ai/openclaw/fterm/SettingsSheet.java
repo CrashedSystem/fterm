@@ -52,6 +52,11 @@ final class SettingsSheet {
 
         void onCustomSlot(int slot, int color);
 
+        /** The Latin face id; see Fonts.LATIN_IDS. */
+        String fontFamily();
+
+        void onFontFamily(String id);
+
         /** The directory new sessions start in; empty means the daemon's home. */
         String startDir();
 
@@ -353,6 +358,79 @@ final class SettingsSheet {
                 .show();
     }
 
+    /**
+     * The Latin face picker. Each candidate is rendered in itself, so the choice is made by
+     * looking rather than by reading a name - the only honest way to pick a monospace face.
+     */
+    private void chooseFont() {
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(8), dp(4), dp(8), 0);
+
+        final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
+        String current = mHost.fontFamily();
+        for (int i = 0; i < Fonts.LATIN_NAMES.length; i++) {
+            final String id = Fonts.LATIN_IDS[i];
+            LinearLayout row = new LinearLayout(mActivity);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(12), dp(12), dp(12), dp(12));
+            row.setBackground(touchable());
+            row.setClickable(true);
+
+            TextView sample = new TextView(mActivity);
+            sample.setText("Mmm 0123 한");
+            sample.setTextSize(15);
+            sample.setTextColor(TEXT);
+            sample.setTypeface(previewFace(i));
+            sample.setLayoutParams(new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            row.addView(sample);
+
+            TextView name = new TextView(mActivity);
+            name.setText(Fonts.LATIN_NAMES[i]);
+            name.setTextSize(11);
+            name.setTextColor(HINT);
+            name.setPadding(0, 0, dp(10), 0);
+            row.addView(name);
+
+            if (id.equals(current)) row.addView(Chrome.icon(mActivity, "check", 16, false, null));
+
+            row.setOnClickListener(v -> {
+                mHost.onFontFamily(id);
+                if (holder[0] != null) holder[0].dismiss();
+                render();
+            });
+            box.addView(row);
+            if (i < Fonts.LATIN_NAMES.length - 1) box.addView(hairline(dp(12), dp(0)));
+        }
+
+        holder[0] = new android.app.AlertDialog.Builder(mActivity)
+                .setTitle("글꼴")
+                .setView(box)
+                .setNegativeButton("닫기", null)
+                .show();
+    }
+
+    /** The actual face for one candidate, so the sample is the font and not a lookalike. */
+    private Typeface previewFace(int index) {
+        Typeface face = null;
+        if (Fonts.LATIN_PATHS[index] != null) {
+            try {
+                face = Typeface.createFromFile(Fonts.LATIN_PATHS[index]);
+            } catch (Throwable ignored) {
+            }
+        }
+        if (face == null) {
+            try {
+                face = Typeface.createFromAsset(mActivity.getAssets(),
+                        Fonts.ASSET_PATH);
+            } catch (Throwable ignored) {
+            }
+        }
+        return face != null ? face : Typeface.MONOSPACE;
+    }
+
     private void editStartDir() {
         prompt("시작 디렉터리", mHost.startDir(), "/data/data/com.termux/files/home",
                 "비우면 데몬의 홈 디렉터리에서 시작합니다. 존재하지 않는 경로를 적으면 "
@@ -416,6 +494,9 @@ final class SettingsSheet {
         sizeRow.addView(size);
         card.addView(cardRow(sizeRow, false));
 
+        card.addView(valueRow("글꼴", "라틴 문자에 쓰는 고정폭 글꼴",
+                Fonts.LATIN_NAMES[Fonts.latinIndexOf(mHost.fontFamily())],
+                this::chooseFont, false));
         card.addView(valueRow("색 구성표", "미리보기와 16색 팔레트",
                 Prefs.SCHEME_NAMES[Math.max(0, Math.min(Prefs.SCHEME_NAMES.length - 1,
                         mHost.scheme()))],

@@ -89,6 +89,12 @@ public final class Prefs {
     public boolean keyBarVisible() { return sp().getBoolean("keybar", true); }
     public void setKeyBarVisible(boolean v) { sp().edit().putBoolean("keybar", v).apply(); }
 
+    /** The Latin face for the terminal: an id from {@link Fonts#LATIN_IDS}. */
+    public String fontFamily() { return sp().getString("font_family", "iosevka"); }
+    public void setFontFamily(String v) {
+        sp().edit().putString("font_family", v == null ? "iosevka" : v).apply();
+    }
+
     /** Where a new session starts; "" means the daemon's home directory. */
     public String startDir() { return sp().getString("start_dir", ""); }
     public void setStartDir(String v) { sp().edit().putString("start_dir", v == null ? "" : v).apply(); }

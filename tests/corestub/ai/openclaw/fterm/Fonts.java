@@ -13,7 +13,21 @@ public final class Fonts {
     /** mterm's measured size-adjust for the Hangul face. */
     public static final float HANGUL_SIZE_ADJUST_PCT = 115.85f;
 
+    /** The Latin faces, mirrored from the real class for the routing test. */
+    public static final String[] LATIN_NAMES = {"Iosevka", "Droid Sans Mono", "Cutive Mono"};
+    public static final String[] LATIN_IDS = {"iosevka", "droid", "cutive"};
+    public static final String[] LATIN_PATHS = {
+            null, "/system/fonts/DroidSansMono.ttf", "/system/fonts/CutiveMono.ttf"
+    };
+
     private Fonts() {}
+
+    public static int latinIndexOf(String id) {
+        for (int i = 0; i < LATIN_IDS.length; i++) {
+            if (LATIN_IDS[i].equals(id)) return i;
+        }
+        return 0;
+    }
 
     public static boolean isHangul(int c) {
         return (c >= 0x1100 && c <= 0x11FF)

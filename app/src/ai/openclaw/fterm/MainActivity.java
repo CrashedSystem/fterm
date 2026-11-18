@@ -737,7 +737,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             probe.setTextSize(px);
             cell = probe.measureText("M");
         }
-        mFonts = Fonts.load(this, cell, px);
+        mFonts = Fonts.load(this, cell, px, Fonts.latinIndexOf(mPrefs.fontFamily()));
         mTermView.setFaceSelector(new TerminalRenderer.FaceSelector() {
             @Override
             public Typeface typefaceFor(int codePoint) {
@@ -763,6 +763,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         if (mTermView.getCurrentSession() != null) {
             mTermView.setTextSize(fontPx());
         }
+    }
+
+    /** Switch the Latin face; loadFonts() recomputes the cell width the face implies. */
+    private void applyFontFamily(String id) {
+        mPrefs.setFontFamily(id);
+        loadFonts();
     }
 
     private void applyScheme(int index) {
@@ -846,6 +852,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 @Override public void onFontSize(int dp) { applyFontSize(dp); }
                 @Override public int scheme() { return mScheme; }
                 @Override public void onScheme(int index) { applyScheme(index); }
+                @Override public String fontFamily() { return mPrefs.fontFamily(); }
+                @Override public void onFontFamily(String id) { applyFontFamily(id); }
                 @Override public String startDir() { return mPrefs.startDir(); }
                 @Override public void onStartDir(String dir) { mPrefs.setStartDir(dir); }
                 @Override public String startShell() { return mPrefs.startShell(); }

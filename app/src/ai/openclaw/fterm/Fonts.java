@@ -33,6 +33,33 @@ final class Fonts {
     /** mterm: iosevka 500/1000 em, recommendation for the Hangul face's size-adjust. */
     static final float HANGUL_SIZE_ADJUST_PCT = 115.85f;
 
+    /**
+     * The Latin faces a user may pick, in menu order.
+     *
+     * <p>All three are monospaced with a whole-pixel cell, which is the only property the
+     * renderer actually requires: a proportional face would break the grid, and a face whose
+     * advance is fractional would make columns drift apart over eighty cells. Two of them
+     * ship with the system, so the list costs nothing to the APK.
+     */
+    static final String[] LATIN_NAMES = {"Iosevka", "Droid Sans Mono", "Cutive Mono"};
+    static final String[] LATIN_IDS = {"iosevka", "droid", "cutive"};
+    /** The bundled fallback face, named once so the settings preview loads the same file. */
+    static final String ASSET_PATH = "fonts/Iosevka.ttf";
+
+    static final String[] LATIN_PATHS = {
+            null,                                   // asset, handled separately
+            "/system/fonts/DroidSansMono.ttf",
+            "/system/fonts/CutiveMono.ttf"
+    };
+
+    /** The index for a stored id, or 0 (Iosevka) when the id is unknown. */
+    static int latinIndexOf(String id) {
+        for (int i = 0; i < LATIN_IDS.length; i++) {
+            if (LATIN_IDS[i].equals(id)) return i;
+        }
+        return 0;
+    }
+
     private final Typeface mIosevka;
     private final Typeface mHangul;
     private final Typeface mSymbols;
@@ -52,13 +79,31 @@ final class Fonts {
      *                    by the caller from the renderer's own Paint so the two cannot drift.
      */
     static Fonts load(Context context, float latinCellPx, float textSizePx) {
-        Typeface mono = Typeface.MONOSPACE;
+        return load(context, latinCellPx, textSizePx, 0);
+    }
+
+    /**
+     * As {@link #load(Context, float, float)}, with the Latin face chosen by index into
+     * {@link #LATIN_IDS}. An index whose font is missing falls back to the asset face, so a
+     * system image without Cutive Mono still opens a terminal.
+     */
+    static Fonts load(Context context, float latinCellPx, float textSizePx, int latinIndex) {
+        Typeface mono = null;
         Typeface hangul = null;
         Typeface symbols = null;
-        try {
-            mono = Typeface.createFromAsset(context.getAssets(), "fonts/Iosevka.ttf");
-        } catch (Throwable ignored) {
+        if (latinIndex > 0 && latinIndex < LATIN_PATHS.length && LATIN_PATHS[latinIndex] != null) {
+            try {
+                mono = Typeface.createFromFile(LATIN_PATHS[latinIndex]);
+            } catch (Throwable ignored) {
+            }
         }
+        if (mono == null) {
+            try {
+                mono = Typeface.createFromAsset(context.getAssets(), ASSET_PATH);
+            } catch (Throwable ignored) {
+            }
+        }
+        if (mono == null) mono = Typeface.MONOSPACE;
         try {
             hangul = Typeface.createFromAsset(context.getAssets(), "fonts/PretendardHangul.ttf");
         } catch (Throwable ignored) {
@@ -68,18 +113,28 @@ final class Fonts {
         } catch (Throwable ignored) {
         }
 
+        // Measure the cell from the chosen face rather than trusting the caller's number:
+        // the caller's is the previous face's width, and switching faces is exactly when it
+        // is wrong. A face's own "M" is the cell the renderer will use anyway.
+        float cell = latinCellPx;
+        Paint latinPaint = new Paint();
+        latinPaint.setTypeface(mono);
+        latinPaint.setTextSize(textSizePx);
+        float measured = latinPaint.measureText("M");
+        if (measured > 0f) cell = measured;
+
         // Measure the Hangul advance at the same text size and derive the multiplier that
-        // makes one syllable exactly two Iosevka cells. mterm's 115.85% is what that
-        // arithmetic produced for a 6 px cell; deriving it keeps a different font size
-        // honest instead of 1.5% off.
+        // makes one syllable exactly two Latin cells. mterm's 115.85% is what that
+        // arithmetic produced for a 6 px Iosevka cell; deriving it keeps a different face
+        // and size honest instead of 1.5% off.
         float adjust = HANGUL_SIZE_ADJUST_PCT / 100f;
-        if (hangul != null && latinCellPx > 0f) {
+        if (hangul != null && cell > 0f) {
             Paint p = new Paint();
             p.setTypeface(hangul);
             p.setTextSize(textSizePx);
             float syllable = p.measureText("\uD55C");
             if (syllable > 0f) {
-                float target = 2f * latinCellPx;
+                float target = 2f * cell;
                 adjust = target / syllable;
                 // A face that is already two cells wide must not be scaled at all; a value
                 // far from mterm's means the measurement failed and the constant is safer.
