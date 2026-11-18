@@ -1322,7 +1322,7 @@ public final class TerminalView extends View {
         // across the room rather than the fine texture WT has.
         float scale = Math.max(1f, getResources().getDisplayMetrics().density);
         float sigma = 2f * scale;
-        mRetroEffect = mRetroOverlay.effectFor(w, h, scale, sigma);
+        mRetroEffect = mRetroOverlay.effectFor(w, h, scale, sigma, mBackgroundImage != null);
         mRetroEffectW = w;
         mRetroEffectH = h;
         setRenderEffect(mRetroEffect);
@@ -1331,6 +1331,11 @@ public final class TerminalView extends View {
     public void setBackgroundImage(Drawable image) {
         mBackgroundImage = image;
         if (image != null) image.setBounds(0, 0, getWidth(), getHeight());
+        // The retro strength depends on whether a picture is behind the text, so the shader
+        // has to be rebuilt when that changes - a stale effect keeps the old depth.
+        mRetroEffect = null;
+        mRetroEffectW = mRetroEffectH = 0;
+        if (mRetroOverlay != null) ensureRetroEffect();
         invalidate();
     }
 
@@ -1358,7 +1363,8 @@ public final class TerminalView extends View {
 
             if (mRetroOverlay != null) {
                 mRetroOverlay.draw(canvas, getWidth(), getHeight(),
-                        Math.max(1f, getResources().getDisplayMetrics().density));
+                        Math.max(1f, getResources().getDisplayMetrics().density),
+                        mBackgroundImage != null);
             }
         }
     }

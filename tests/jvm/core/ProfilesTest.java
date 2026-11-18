@@ -64,6 +64,37 @@ public class ProfilesTest {
         check(new ai.openclaw.fterm.Profiles.Profile("x", "/sdcard", "", "").subtitle()
                 .equals("/sdcard"), "then the directory");
 
+        // 6. The default profile is named after the shell that actually starts.
+        check(ai.openclaw.fterm.Profiles.DEFAULT_NAME.equals("bash"),
+                "the unnamed profile is bash, because that is what the daemon starts");
+
+        // 7. A list handled by index survives an edit and a delete.
+        //
+        //    This is the bug the settings sheet had: profiles() decodes the stored string
+        //    into fresh objects each call, so a dialog that held one of those objects and
+        //    asked "is this the same instance?" never matched, and the save or the delete
+        //    quietly did nothing. Reference equality across a decode boundary is a trap, so
+        //    the index is the handle - and here is the round trip that proves it works.
+        java.util.List<ai.openclaw.fterm.Profiles.Profile> work = new java.util.ArrayList<>();
+        work.add(new ai.openclaw.fterm.Profiles.Profile("a", "", "", ""));
+        work.add(new ai.openclaw.fterm.Profiles.Profile("b", "", "", ""));
+        work.add(new ai.openclaw.fterm.Profiles.Profile("c", "", "", ""));
+
+        // Delete the middle one by index, as the sheet now does.
+        work.remove(1);
+        java.util.List<ai.openclaw.fterm.Profiles.Profile> afterDelete =
+                ai.openclaw.fterm.Profiles.decode(ai.openclaw.fterm.Profiles.encode(work));
+        check(afterDelete.size() == 2, "a delete by index actually removes one");
+        check(afterDelete.get(1).name.equals("c"), "and removes the right one");
+
+        // Replace by index, which is how an edit is stored.
+        afterDelete.set(0, new ai.openclaw.fterm.Profiles.Profile("A", "/tmp", "", ""));
+        java.util.List<ai.openclaw.fterm.Profiles.Profile> afterEdit =
+                ai.openclaw.fterm.Profiles.decode(ai.openclaw.fterm.Profiles.encode(afterDelete));
+        check(afterEdit.get(0).name.equals("A"), "an edit by index replaces in place");
+        check(afterEdit.get(0).dir.equals("/tmp"), "and keeps the other fields it was given");
+        check(afterEdit.get(1).name.equals("c"), "without disturbing the neighbours");
+
         System.out.println("ok  " + pass + " profile assertions");
         System.out.println("ALL OK");
     }

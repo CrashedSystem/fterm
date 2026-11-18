@@ -43,14 +43,28 @@ public final class RetroShader {
      */
     public static final float GLOW_STRENGTH = 0.1f;
 
+    /**
+     * The scanline depth used when a background picture is behind the text.
+     *
+     * <p>WT's 0.5 multiplies a nearly-black background down another half, which is invisible
+     * where there is nothing to dim and subtle where there is. A photograph inverts that
+     * relationship: the same multiply lays 4px stripes across a lit image and the effect stops
+     * reading as "CRT" and starts reading as "the screen is broken". So on top of a picture
+     * the lines go to a third of WT's depth - present as texture, not as a pattern.
+     */
+    public static final float SCANLINE_FACTOR_ON_IMAGE = 0.16f;
+
+    /** The glow is halved over a picture for the same reason: it is a bloom on glyphs. */
+    public static final float GLOW_STRENGTH_ON_IMAGE = 0.05f;
+
     /** The AGSL text. {@code resolution} is needed only to clamp edge samples. */
     public static final String SOURCE =
             "uniform shader content;\n"
             + "uniform float2 resolution;\n"
             + "uniform float scale;\n"
             + "uniform float sigma;\n"
-            + "const float SCANLINE_FACTOR = " + SCANLINE_FACTOR + ";\n"
-            + "const float GLOW_STRENGTH = " + GLOW_STRENGTH + ";\n"
+            + "uniform float scanlineFactor;\n"
+            + "uniform float glowStrength;\n"
             + "\n"
             + "float4 sampleAt(float2 at) {\n"
             + "    float2 p = clamp(at, float2(0.0), resolution - 1.0);\n"
@@ -70,8 +84,8 @@ public final class RetroShader {
             + "            weightSum += w;\n"
             + "        }\n"
             + "    }\n"
-            + "    color += (sum / weightSum) * GLOW_STRENGTH;\n"
-            + "    float wave = 1.0 - mod(floor(fragCoord.y / scale), 2.0) * SCANLINE_FACTOR;\n"
+            + "    color += (sum / weightSum) * glowStrength;\n"
+            + "    float wave = 1.0 - mod(floor(fragCoord.y / scale), 2.0) * scanlineFactor;\n"
             + "    color *= wave;\n"
             + "    return half4(clamp(color.rgb, 0.0, 1.0), 1.0);\n"
             + "}\n";

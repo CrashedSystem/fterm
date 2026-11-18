@@ -27,23 +27,30 @@ public class RetroTest {
         check(ai.openclaw.fterm.RetroShader.GLOW_STRENGTH == 0.1f,
                 "glow is the tuned-down 0.1, not WT's 0.3");
 
-        // 2. Both constants reach the shader text; a constant nobody uses is a lie.
-        check(src.contains("const float SCANLINE_FACTOR = 0.5"), "scanline constant is in the shader");
-        check(src.contains("const float GLOW_STRENGTH = 0.1"), "glow constant is in the shader");
+        // 2. Both strengths reach the shader as uniforms, not as baked-in constants.
+        //    A background picture needs a different depth for the same effect (see the
+        //    ON_IMAGE constants), so the values are uniform inputs and one compiled shader
+        //    serves both cases. A constant nobody uses is a lie; so is one that cannot vary.
+        check(src.contains("uniform float scanlineFactor"), "the scanline depth is a uniform");
+        check(src.contains("uniform float glowStrength"), "the glow strength is a uniform");
+        check(ai.openclaw.fterm.RetroShader.SCANLINE_FACTOR_ON_IMAGE == 0.16f,
+                "over a picture the scanline drops to a third of WT's depth");
+        check(ai.openclaw.fterm.RetroShader.GLOW_STRENGTH_ON_IMAGE == 0.05f,
+                "and the glow halves, because a bloom over a photo reads as haze");
 
         // 3. The glow is ADDED to the frame - that is what makes it a glow.
-        check(src.contains("color += (sum / weightSum) * GLOW_STRENGTH"),
+        check(src.contains("color += (sum / weightSum) * glowStrength"),
                 "the blurred frame is added, not mixed in");
 
         // 4. The scanline is WT's expression: every other scale-row multiplied down.
-        check(src.contains("1.0 - mod(floor(fragCoord.y / scale), 2.0) * SCANLINE_FACTOR"),
+        check(src.contains("1.0 - mod(floor(fragCoord.y / scale), 2.0) * scanlineFactor"),
                 "the scanline is WT's multiply, not an added bright line");
         check(!src.contains("+ wave") && !src.contains("color +=") || !src.contains("wave *"),
                 "no additive scanline branch");
 
         // 5. Order: glow first, scanline second. WT does the multiply on the glowing frame,
         //    so reversing them halves the glow as well.
-        int glow = src.indexOf("GLOW_STRENGTH");
+        int glow = src.indexOf("glowStrength");
         int scan = src.indexOf("float wave");
         check(glow > 0 && scan > glow, "the glow is applied before the scanline multiply");
 

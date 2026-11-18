@@ -286,7 +286,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         TextView closeBox;
         /** The plate, title and close box as one object; see TabStrip. */
         TabStrip.Chip chipView;
-        String title = "shell";
+        String title = Profiles.DEFAULT_NAME;
         /** Set once the user renames the tab; the shell's OSC title stops winning. */
         boolean userTitled;
         /** The profile this tab was opened from, or null for the default profile. */
@@ -447,7 +447,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         tab.profile = profile;
         tab.id = nextSessionId();
         // The profile names the tab before the chip is built, not after: the chip is drawn
-        // once from tab.title, and a title set later would leave the tab reading "shell".
+        // once from tab.title, and a title set later would leave the tab reading the default.
         if (profile != null && !profile.name.isEmpty()) {
             tab.title = profile.name;
             tab.userTitled = true;   // the profile names the tab; OSC must not rename it
@@ -488,7 +488,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         tab.pendingCommand = profile != null && Profiles.commandIsOneLine(profile.command)
                 && !profile.command.isEmpty() ? profile.command : null;
         session.mSessionName = profile != null && !profile.name.isEmpty()
-                ? profile.name : "shell " + tab.id;
+                ? profile.name : Profiles.DEFAULT_NAME + " " + tab.id;
 
         if (mActive == tab) {
             restoreTerminalView();   // remove any "connecting…" splash still in the frame
@@ -1239,7 +1239,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             if (t.session == changedSession) {
                 if (t.userTitled) return;
                 String title = changedSession.getTitle();
-                t.title = (title == null || title.trim().isEmpty()) ? "shell" : title.trim();
+                t.title = (title == null || title.trim().isEmpty())
+                        ? Profiles.DEFAULT_NAME : title.trim();
                 updateChip(t);
             }
         }

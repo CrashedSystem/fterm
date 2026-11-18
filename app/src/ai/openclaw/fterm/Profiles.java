@@ -21,6 +21,16 @@ import java.util.List;
  */
 public final class Profiles {
 
+    /**
+     * The name of the default profile - the one that is not in the user's list because it
+     * is what a tab is when nothing else was chosen.
+     *
+     * <p>It is the shell the daemon actually starts, not a generic word: the daemon's
+     * {@code default_shell()} resolves to bash in Termux, and a dropdown that says "shell"
+     * while the prompt says bash is a small lie told every time the menu opens.
+     */
+    public static final String DEFAULT_NAME = "bash";
+
     private static final char UNIT = '\u001f';
     private static final char RECORD = '\u001e';
 

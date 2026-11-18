@@ -359,14 +359,15 @@ final class SettingsSheet {
             card.addView(empty);
         } else {
             for (int i = 0; i < list.size(); i++) {
+                final int index = i;
                 final Profiles.Profile p = list.get(i);
                 card.addView(valueRow(p.name.isEmpty() ? "(이름 없음)" : p.name, p.subtitle(),
-                        null, () -> editProfile(p, false), i == list.size() - 1));
+                        null, () -> editProfile(index, false), i == list.size() - 1));
             }
         }
 
         card.addView(valueRow("프로필 추가", "예: ssh 서버 이름과 명령", "+",
-                () -> editProfile(new Profiles.Profile("", "", "", ""), true), true));
+                () -> editProfile(-1, true), true));
 
         hint(col, "줄을 누르면 편집합니다. 탭을 열 때는 왼쪽 위 메뉴 첫 블록에서 "
                 + "프로필을 고르세요. 명령은 셸이 뜬 뒤에 입력되므로 ssh가 로그인 셸의 키와 "
@@ -374,7 +375,19 @@ final class SettingsSheet {
     }
 
     /** The four fields, edited as one dialog: they are one thing. */
-    private void editProfile(final Profiles.Profile existing, final boolean isNew) {
+    /**
+     * Edit or create the profile at {@code index}; {@code -1} means a new one.
+     *
+     * <p>The index, not the object, is the handle. {@link SettingsHost#profiles()} decodes the
+     * stored string afresh on every call, so the instance this dialog was built from is never
+     * the instance the save path sees - identity comparison there silently did nothing, and a
+     * deleted profile reappeared on the next render.
+     */
+    private void editProfile(final int index, final boolean isNew) {
+        java.util.List<Profiles.Profile> current = mHost.profiles();
+        if (!isNew && (index < 0 || index >= current.size())) return;
+        final Profiles.Profile existing = isNew ? new Profiles.Profile() : current.get(index);
+
         LinearLayout box = new LinearLayout(mActivity);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(20), dp(4), dp(20), 0);
@@ -409,13 +422,11 @@ final class SettingsSheet {
                             shell.getText().toString().trim(),
                             command.getText().toString().trim());
                     java.util.List<Profiles.Profile> list = mHost.profiles();
-                    if (isNew) {
+                    if (isNew || index >= list.size()) {
                         list.add(p);
                     } else {
                         // Editing in place keeps the menu order the user built.
-                        for (int i = 0; i < list.size(); i++) {
-                            if (list.get(i) == existing) { list.set(i, p); break; }
-                        }
+                        list.set(index, p);
                     }
                     mHost.onProfiles(list);
                     render();
@@ -424,9 +435,7 @@ final class SettingsSheet {
         if (!isNew) {
             b.setNeutralButton("삭제", (d, w) -> {
                 java.util.List<Profiles.Profile> list = mHost.profiles();
-                for (int i = 0; i < list.size(); i++) {
-                    if (list.get(i) == existing) { list.remove(i); break; }
-                }
+                if (index < list.size()) list.remove(index);
                 mHost.onProfiles(list);
                 render();
             });
@@ -458,7 +467,8 @@ final class SettingsSheet {
     private void startPage(LinearLayout col) {
         LinearLayout card = card(col);
 
-        card.addView(valueRow("기본 프로필", "새 탭을 열 때 쓰는 프로필", "shell", null, false));
+        card.addView(valueRow("기본 프로필", "새 탭을 열 때 쓰는 프로필",
+                Profiles.DEFAULT_NAME, null, false));
         card.addView(valueRow("시작 디렉터리", "새 세션이 시작하는 위치",
                 mHost.startDir().isEmpty() ? "홈" : mHost.startDir(),
                 this::editStartDir, false));

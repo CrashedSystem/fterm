@@ -29,9 +29,17 @@ import android.graphics.RuntimeShader;
 public final class RetroOverlay {
 
     private Bitmap mScanlines;
+    private float mScanlineStrength;
 
-    /** Build (or reuse) whatever this device can do, and hand the view its effect. */
-    public RenderEffect effectFor(int width, int height, float scale, float sigma) {
+    /**
+     * Build (or reuse) whatever this device can do, and hand the view its effect.
+     *
+     * @param overImage true when a background picture sits behind the text. The strength
+     *                  uniforms drop in that case: see RetroShader's ON_IMAGE constants for
+     *                  why a photograph changes what the same multiply looks like.
+     */
+    public RenderEffect effectFor(int width, int height, float scale, float sigma,
+                                 boolean overImage) {
         if (width <= 0 || height <= 0) return null;
         if (android.os.Build.VERSION.SDK_INT < 33) return null;   // bitmap path, see draw()
         try {
@@ -39,6 +47,10 @@ public final class RetroOverlay {
             shader.setFloatUniform("resolution", (float) width, (float) height);
             shader.setFloatUniform("scale", Math.max(1f, scale));
             shader.setFloatUniform("sigma", Math.max(0.5f, sigma));
+            shader.setFloatUniform("scanlineFactor", overImage
+                    ? RetroShader.SCANLINE_FACTOR_ON_IMAGE : RetroShader.SCANLINE_FACTOR);
+            shader.setFloatUniform("glowStrength", overImage
+                    ? RetroShader.GLOW_STRENGTH_ON_IMAGE : RetroShader.GLOW_STRENGTH);
             return RenderEffect.createRuntimeShaderEffect(shader, "content");
         } catch (Throwable t) {
             // A shader that fails to compile must not take the terminal with it; the bitmap
@@ -48,12 +60,17 @@ public final class RetroOverlay {
     }
 
     /** The API 26-32 fallback: draw the cached dark-row scanlines over the frame. */
-    public void draw(Canvas canvas, int width, int height, float scale) {
+    public void draw(Canvas canvas, int width, int height, float scale, boolean overImage) {
         if (width <= 0 || height <= 0) return;
         if (android.os.Build.VERSION.SDK_INT >= 33) return;   // the RenderEffect already did it
+        float strength = overImage
+                ? RetroShader.SCANLINE_FACTOR_ON_IMAGE : RetroShader.SCANLINE_FACTOR;
         if (mScanlines == null || mScanlines.getWidth() != width
-                || mScanlines.getHeight() != Math.max(1, (int) scale)) {
-            mScanlines = buildScanlineTile(width, Math.max(1, (int) scale));
+                || mScanlines.getHeight() != Math.max(1, (int) scale)
+                || mScanlineStrength != strength) {
+            if (mScanlines != null) mScanlines.recycle();
+            mScanlines = buildScanlineTile(width, Math.max(1, (int) scale), strength);
+            mScanlineStrength = strength;
         }
         if (mScanlines == null) return;
         canvas.drawBitmap(mScanlines, null,
@@ -64,6 +81,7 @@ public final class RetroOverlay {
     public void invalidate() {
         if (mScanlines != null) mScanlines.recycle();
         mScanlines = null;
+        mScanlineStrength = 0f;
     }
 
     /**
@@ -73,14 +91,14 @@ public final class RetroOverlay {
      * done in the one way a software Canvas can: a translucent black row leaves the lit row
      * untouched and halves the dim one.
      */
-    private static Bitmap buildScanlineTile(int width, int period) {
+    private static Bitmap buildScanlineTile(int width, int period, float strength) {
         try {
             Bitmap tile = Bitmap.createBitmap(width, period, Bitmap.Config.ARGB_8888);
             Canvas c = new Canvas(tile);
             c.drawColor(0x00000000);
             Paint p = new Paint();
             p.setColor(0xff000000);
-            p.setAlpha(Math.round(255 * RetroShader.SCANLINE_FACTOR));
+            p.setAlpha(Math.round(255 * strength));
             c.drawRect(0, period - 1, width, period, p);
             return tile;
         } catch (OutOfMemoryError e) {

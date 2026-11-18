@@ -326,7 +326,8 @@ final class Chrome {
         text.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView name = new TextView(mActivity);
-        name.setText(profile == null ? "shell" : profile.name.isEmpty() ? "(이름 없음)" : profile.name);
+        name.setText(profile == null ? Profiles.DEFAULT_NAME
+                : profile.name.isEmpty() ? "(이름 없음)" : profile.name);
         name.setTextColor(TEXT);
         name.setTextSize(13.5f);
         UiFont.apply(name, true);
