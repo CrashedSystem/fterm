@@ -15,6 +15,10 @@ echo "=== python protocol"
 python3 test_client.py
 
 echo
+echo "=== mode tracker"
+python3 "$ROOT/tests/test_modes.py"
+
+echo
 echo "=== java transport"
 rm -rf "$T"; mkdir -p "$T/out"
 javac -d "$T/out" \

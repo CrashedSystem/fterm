@@ -30,8 +30,20 @@ Android 단독으로 쓰는 터미널. Termux의 셸을 그대로 물려 쓰고,
 `ftermd` 의 `Modes` 가 출력에서 그 선언들을 뽑아 마지막 상태를 들고 있다가, 재접속한
 클라이언트에게 ring보다 **먼저** 되돌려준다. 전체 화면 프로그램이 떠 있었으면 창 크기를
 1칸 줄였다 되돌려 `SIGWINCH` 를 보내 화면을 다시 그리게 한다. 앱은 그 선언을 그대로
-에뮬레이터에 먹이므로 따로 할 일이 없다. 테스트는 `test_client.py` 의 `test_mode_restore`
-(링 밖으로 밀어낸 뒤 재접속해 복원 확인, 끈 모드는 복원되지 않는지 확인).
+에뮬레이터에 먹이므로 따로 할 일이 없다.
+
+추적기는 스트림이 임의의 바이트 경계에서 끊기는 것을 전제로 한다. `ESC[?1000;10` 까지
+읽고 다음 `06h` 가 다음 read에 오는 경우가 실제로 있고, 그때 선언을 놓치면 고친 버그가
+그대로 돌아온다. 반대로 끝나지 않는 파라미터 열(깨진 출력)을 무한히 붙들고 있으면
+`carry` 가 출력량을 따라 자라므로 64바이트에서 자른다. 이 두 경계는 `tests/test_modes.py`
+가 데몬이나 pty 없이 `Modes` 만 떼어내 검사한다(분할 17종, 결합 파라미터, 무관한 CSI,
+마지막 선언 우선, carry 상한).
+
+클라이언트 쪽 절반도 따로 검증한다. `tests/jvm/core/ModeRestoreTest.java` 는 실제
+`TerminalEmulator` 에 복원 문자열을 먹이고, 터치 핸들러가 묻는 것과 같은
+`isMouseTrackingActive()` 가 참이 되는지 본다 — 화면이 맞는 것과 터치가 가는 것은
+다른 문제이기 때문이다. `test_client.py` 의 `test_mode_restore` 는 실제 pty 위의
+curses 프로그램으로 같은 것을 본다.
 
 ## 설치 (기기에서 직접)
 
@@ -405,6 +417,8 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 | 검증 | 방법 | 결과 |
 |---|---|---|
 | 데몬 프로토콜 9종 (인증 거부, 에코, 한글, resize, replay, close, OPEN 문자열, 링 밖 터미널 모드 복원, 끈 모드 유지) | `tests/run_all.sh` 의 python 파트 | 통과 |
+| 모드 추적기 41종 (바이트 분할 17종, 결합 파라미터, 무관한 CSI, 마지막 선언 우선, carry 상한) | `tests/test_modes.py` | 통과 |
+| 복원된 모드가 에뮬레이터에서 실제 마우스 ON이 되는지 7종 | `tests/jvm/core/ModeRestoreTest.java` | 통과 |
 | Java `SocketTransport` 9종 (토큰 오류, 왕복, 한글, resize, pid, replay, close, 세션 분리) | 실제 `ftermd` 에 JVM으로 접속 | 통과 |
 | `DaemonClient` SYNC 5종 (빈 데몬, 목록, 토큰 오류, 포트 거부, 종료 후 제거) | 같음 | 통과 |
 | 폭 계산 15종 (한글 음절 2칸, 자모, emoji, 결합문자, zero-width) | `tests/run_core.sh` | 통과 |

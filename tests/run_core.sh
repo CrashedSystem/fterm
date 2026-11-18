@@ -55,7 +55,8 @@ javac -nowarn -d "$OUT" \
   "$ROOT/app/src/ai/openclaw/fterm/FontCoverage.java" \
   "$ROOT/app/src/ai/openclaw/fterm/FontZoom.java" \
   "$ROOT/tests/jvm/core/FontCoverageTest.java" \
-  "$ROOT/tests/jvm/core/FontZoomTest.java"
+  "$ROOT/tests/jvm/core/FontZoomTest.java" \
+  "$ROOT/tests/jvm/core/ModeRestoreTest.java"
 
 
 echo "[2/2] 실행"
@@ -87,3 +88,4 @@ java -Dhangul.src="$ROOT/assets/fonts/PretendardHangul.ttf" \
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
      -Drenderer.src="$ROOT/app/src/com.termux/view/TerminalRenderer.java" \
      -cp "$OUT" FontZoomTest
+java -cp "$OUT" com.termux.terminal.ModeRestoreTest
