@@ -78,6 +78,18 @@ echo "=== terminal modes over the wire (tests/test_modes.py --daemon)"
 python3 "$ROOT/tests/test_modes.py" --daemon || rc=1
 
 echo
+# The three defects the Rust daemon exists to remove. They fail on the Python daemon by design -
+# that failure is the bug - so this runs only against a daemon that says it is the Rust one.
+if "${DAEMON[@]}" version 2>/dev/null | grep -q rust; then
+  echo "=== daemon hardening (stale pidfile, slow client, blocked tab)"
+  python3 "$ROOT/tests/test_daemon_hardening.py" "${DAEMON[@]}" || rc=1
+else
+  echo "=== daemon hardening: skipped for this daemon"
+  echo "    tests/test_daemon_hardening.py fails on the Python daemon by design: the three"
+  echo "    checks are the defects the Rust daemon removes."
+fi
+
+echo
 if [ "$rc" -eq 0 ]; then
   echo "DAEMON SUITES OK (${DAEMON[*]})"
 else

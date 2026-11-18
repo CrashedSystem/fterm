@@ -1,0 +1,29 @@
+[package]
+name = "ftermd"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.75"
+publish = false
+description = "ftermd in Rust: the same PTY daemon protocol as termux/ftermd, with the selector loop's blocking calls and unbounded output buffer removed"
+
+# Two crates, both already in Termux's own dependency footprint: tokio for the per-session and
+# per-client tasks, libc for forkpty/ioctl/kill. No HTTP client, no async runtime exotica -
+# `cargo build` on Termux must not need a C toolchain beyond what pkg already has.
+[dependencies]
+libc = "0.2"
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "net",
+    "io-util",
+    "sync",
+    "time",
+    "macros",
+    "signal",
+] }
+
+# The daemon is a long-lived process on a phone: keep the binary small and the build plain.
+[profile.release]
+opt-level = "z"
+codegen-units = 1
+panic = "abort"
+strip = true
