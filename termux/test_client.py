@@ -104,14 +104,15 @@ def test_open_and_echo():
     f = c.hello()
     assert err_code(f) is None, f
     assert any(t == S_HELLO_OK for t, _ in f), f
-    c.frame(C_OPEN, struct.pack("<HHH", 1, 80, 24))
+    sid = free_sid(c)
+    c.frame(C_OPEN, struct.pack("<HHH", sid, 80, 24))
     f = c.collect(1.5)
     opened = [(t, p) for t, p in f if t == S_OPENED]
     assert opened, ("no OPENED", [t for t, _ in f], err_code(f))
-    sid, pid = struct.unpack_from("<Hi", opened[0][1], 0)
-    assert sid == 1 and pid > 0, (sid, pid)
+    got_sid, pid = struct.unpack_from("<Hi", opened[0][1], 0)
+    assert got_sid == sid and pid > 0, (got_sid, pid)
 
-    c.frame(C_INPUT, struct.pack("<H", 1) + struct.pack("<I", 22) +
+    c.frame(C_INPUT, struct.pack("<H", sid) + struct.pack("<I", 22) +
             b"echo MARKER-$((40+2))\n")
     text = b""
     for typ, pay in c.collect(2.0):
@@ -120,15 +121,15 @@ def test_open_and_echo():
             text += pay[6:6 + ln]
     assert b"MARKER-42" in text, text[-400:]
     print("ok  open -> shell, echo round-trip (pid %d)" % pid)
-    return c
+    return c, sid
 
 
-def test_hangul(c):
+def test_hangul(c, sid):
     msg = "한글출력".encode()
-    c.frame(C_INPUT, struct.pack("<H", 1) + struct.pack("<I", len(msg) + 6) +
+    c.frame(C_INPUT, struct.pack("<H", sid) + struct.pack("<I", len(msg) + 6) +
             msg)
     time.sleep(0.2)
-    c.frame(C_INPUT, struct.pack("<H", 1) + struct.pack("<I", 1) + b"\r")
+    c.frame(C_INPUT, struct.pack("<H", sid) + struct.pack("<I", 1) + b"\r")
     text = b""
     for typ, pay in c.collect(1.5):
         if typ == S_OUTPUT:
@@ -138,11 +139,11 @@ def test_hangul(c):
     print("ok  hangul utf-8 round-trip")
 
 
-def test_resize(c):
-    c.frame(C_RESIZE, struct.pack("<HHH", 1, 41, 13))
+def test_resize(c, sid):
+    c.frame(C_RESIZE, struct.pack("<HHH", sid, 41, 13))
     time.sleep(0.2)
     cmd = b"stty size\n"
-    c.frame(C_INPUT, struct.pack("<H", 1) + struct.pack("<I", len(cmd) + 6) + cmd)
+    c.frame(C_INPUT, struct.pack("<H", sid) + struct.pack("<I", len(cmd) + 6) + cmd)
     text = b""
     for typ, pay in c.collect(1.5):
         if typ == S_OUTPUT:
@@ -152,15 +153,15 @@ def test_resize(c):
     print("ok  resize reaches the pty (stty says 13 41)")
 
 
-def test_replay(c):
-    c.frame(C_INPUT, struct.pack("<H", 1) + struct.pack("<I", 6 + 12) +
+def test_replay(c, sid):
+    c.frame(C_INPUT, struct.pack("<H", sid) + struct.pack("<I", 6 + 12) +
             b"echo RPLY-99\n")
     c.collect(0.8)
     c.close()
     time.sleep(0.3)
     c2 = Conn()
     c2.hello()
-    c2.frame(C_OPEN, struct.pack("<HHH", 1, 41, 13))
+    c2.frame(C_OPEN, struct.pack("<HHH", sid, 41, 13))
     frames = c2.collect(1.5)
     replays = [(t, p) for t, p in frames if t == S_REPLAY]
     assert replays, [t for t, _ in frames]
@@ -168,6 +169,21 @@ def test_replay(c):
     assert b"RPLY-99" in blob, blob[-300:]
     print("ok  reconnect replays scrollback (%d bytes)" % len(blob))
     return c2
+
+
+def free_sid(c):
+    """An unused session id.
+
+    OPEN on an id that already exists attaches to that session instead of spawning one, so
+    a test that hardcodes "1" types its commands into whatever the app is running when the
+    app happens to own id 1. That is exactly the flake this replaces: the tests below run
+    against the same daemon the phone's tabs use.
+    """
+    live = set(sync_ids(c) or [])
+    sid = 200
+    while sid in live:
+        sid += 1
+    return sid
 
 
 def sync_ids(c):
@@ -179,15 +195,15 @@ def sync_ids(c):
     return None
 
 
-def test_close_and_sync(c):
-    # A daemon may be shared with other clients, so the check is "id 1 is gone",
+def test_close_and_sync(c, sid):
+    # A daemon is shared with the app's tabs, so the check is "this id is gone",
     # not "the daemon is empty".
     before = sync_ids(c)
-    c.frame(C_CLOSE, struct.pack("<H", 1))
+    c.frame(C_CLOSE, struct.pack("<H", sid))
     time.sleep(0.4)
     after = sync_ids(c)
     assert after is not None, "no SYNCED reply"
-    assert 1 not in after, ("session 1 must be gone after CLOSE", after)
+    assert sid not in after, ("session %d must be gone after CLOSE" % sid, after)
     print("ok  close kills the session (SYNC before %s, after %s)" % (before, after))
 
 
@@ -236,9 +252,10 @@ def test_open_strings():
     """OPEN may carry a shell and a directory; both are optional and both validated."""
     c = Conn()
     c.hello()
+    s1, s2, s3 = free_sid(c), None, None
     shell = "/data/data/com.termux/files/usr/bin/sh"
     cwd = "/data/data/com.termux/files/usr"
-    payload = struct.pack("<HHH", 2, 80, 24)
+    payload = struct.pack("<HHH", s1, 80, 24)
     for text in (shell, cwd):
         raw = text.encode()
         payload += struct.pack("<H", len(raw)) + raw
@@ -247,7 +264,7 @@ def test_open_strings():
     assert any(t == S_OPENED for t, _ in frames), [t for t, _ in frames]
     # $0 is the realpath of what was asked for - sh is a symlink to dash here - so the
     # assertion is the directory it runs from plus "not the daemon's own bash".
-    out = run(c, 2, "echo CWD-$(pwd); echo ZERO-$0\n")
+    out = run(c, s1, "echo CWD-$(pwd); echo ZERO-$0\n")
     assert b"CWD-/data/data/com.termux/files/usr" in out, out[-300:]
     zero = [ln for ln in out.replace(b"\r", b"").split(b"\n") if ln.startswith(b"ZERO-")]
     assert zero and b"bash" not in zero[0], (zero, out[-300:])
@@ -257,29 +274,100 @@ def test_open_strings():
     # the check uses something the daemon has no business execing.
     c2 = Conn()
     c2.hello()
+    s2 = free_sid(c2)
     bad = b"/data/data/com.termux/files/usr/bin/../bin/../../../../system/bin/toybox"
-    payload = struct.pack("<HHH", 3, 80, 24) + struct.pack("<H", len(bad)) + bad
+    payload = struct.pack("<HHH", s2, 80, 24) + struct.pack("<H", len(bad)) + bad
     payload += struct.pack("<H", 0)
     c2.frame(C_OPEN, payload)
     frames = c2.collect(1.5)
     assert any(t == S_OPENED for t, _ in frames), [t for t, _ in frames]
-    out = run(c2, 3, "echo SH-$(basename $0)\n")
+    out = run(c2, s2, "echo SH-$(basename $0)\n")
     assert b"SH-toybox" not in out, ("disallowed shell must not run", out[-300:])
     print("ok  OPEN ignores a shell outside the allowlist")
-    c2.frame(C_CLOSE, struct.pack("<H", 3))
+    c2.frame(C_CLOSE, struct.pack("<H", s2))
     time.sleep(0.3)
     c2.close()
 
     # Six-byte OPEN (no strings) is what an older client sends and must still work.
-    c.frame(C_CLOSE, struct.pack("<H", 2))
+    c.frame(C_CLOSE, struct.pack("<H", s1))
     time.sleep(0.3)
-    c.frame(C_OPEN, struct.pack("<HHH", 4, 80, 24))
+    s3 = free_sid(c)
+    c.frame(C_OPEN, struct.pack("<HHH", s3, 80, 24))
     frames = c.collect(1.5)
     assert any(t == S_OPENED for t, _ in frames), [t for t, _ in frames]
     print("ok  six-byte OPEN still opens a session")
-    c.frame(C_CLOSE, struct.pack("<H", 4))
+    c.frame(C_CLOSE, struct.pack("<H", s3))
     time.sleep(0.3)
     c.close()
+
+
+def test_mode_restore():
+    """A reattached client must learn the terminal modes the program set long ago.
+
+    A TUI declares DECSET 1000/1006 once at startup and never repeats it. If that
+    declaration has scrolled out of the ring by the time the app's process is recreated,
+    the new emulator starts with mouse reporting off while the shell still reports it on:
+    swipes become history scrolling and taps never reach the program. The daemon therefore
+    tracks the modes per session and replays them ahead of the ring.
+    """
+    # A session id of its own: the app may be running, and reusing one of its tab ids
+    # would type this test's commands into whatever TUI that tab is hosting.
+    sid = 77
+    c = Conn()
+    c.hello()
+    c.frame(C_OPEN, struct.pack("<HHH", sid, 100, 30))
+    assert any(t == S_OPENED for t, _ in c.collect(1.5)), "no OPENED"
+    # Turn mouse reporting on, then bury it under more output than the ring holds.
+    decl = b"printf '\\033[?1000h\\033[?1006h'\n"
+    c.frame(C_INPUT, struct.pack("<H", sid) + struct.pack("<I", len(decl) + 6) + decl)
+    c.collect(1.0)
+    fill = 300 * 1024
+    bury = ("head -c %d /dev/zero | tr '\\0' x\n" % fill).encode()
+    c.frame(C_INPUT, struct.pack("<H", sid) + struct.pack("<I", len(bury) + 6) + bury)
+    c.collect(6.0)
+    c.close()
+    time.sleep(0.5)
+
+    c2 = Conn()
+    c2.hello()
+    c2.frame(C_OPEN, struct.pack("<HHH", sid, 100, 30))
+    frames = c2.collect(3.0)
+    replay = b"".join(p[2:] for t, p in frames if t == S_REPLAY)
+    pre = b""
+    for t, p in frames:
+        if t == S_REPLAY:
+            break
+        if t == S_OUTPUT:
+            _, ln = struct.unpack_from("<HI", p, 0)
+            pre += p[6:6 + ln]
+    # The ring must have lost the declaration, or the test proves nothing.
+    assert b"\x1b[?1000h" not in replay, "ring still holds the mode sequence"
+    assert b"\x1b[?1000h" in pre, ("modes must precede the ring", pre[:200])
+    assert b"\x1b[?1006h" in pre, ("SGR must be restored too", pre[:200])
+    print("ok  terminal modes survive a replay that outgrew the ring")
+
+    # A mode the program turned off must not be restored.
+    off = b"printf '\\033[?1000l'\n"
+    c2.frame(C_INPUT, struct.pack("<H", sid) + struct.pack("<I", len(off) + 6) + off)
+    c2.collect(0.8)
+    c2.close()
+    time.sleep(0.4)
+    c3 = Conn()
+    c3.hello()
+    c3.frame(C_OPEN, struct.pack("<HHH", sid, 100, 30))
+    frames = c3.collect(2.0)
+    pre = b""
+    for t, p in frames:
+        if t in (S_REPLAY,):
+            break
+        if t == S_OUTPUT:
+            _, ln = struct.unpack_from("<HI", p, 0)
+            pre += p[6:6 + ln]
+    assert b"\x1b[?1000h" not in pre, ("a reset mode came back", pre[:200])
+    c3.frame(C_CLOSE, struct.pack("<H", sid))
+    time.sleep(0.3)
+    c3.close()
+    print("ok  a mode the program cleared stays cleared")
 
 
 if __name__ == "__main__":
@@ -287,11 +375,12 @@ if __name__ == "__main__":
         interactive()
         sys.exit(0)
     test_auth()
-    c = test_open_and_echo()
-    test_hangul(c)
-    test_resize(c)
-    c = test_replay(c)
-    test_close_and_sync(c)
+    c, sid = test_open_and_echo()
+    test_hangul(c, sid)
+    test_resize(c, sid)
+    c = test_replay(c, sid)
+    test_close_and_sync(c, sid)
     c.close()
     test_open_strings()
+    test_mode_restore()
     print("ALL OK")

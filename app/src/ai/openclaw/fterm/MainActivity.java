@@ -90,7 +90,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     int mScheme;
     /** The custom scheme's 19 editable slots, loaded once and kept in step with Prefs. */
     int[] mCustom;
-    private float mScale = 1f;
+    /** Fractional font size in dp, so a pinch accumulates instead of rounding every event away. */
+    private float mZoomDp;
 
     private boolean mFn;
     private boolean mShowKeyboardOnce = true;
@@ -102,6 +103,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         super.onCreate(savedInstanceState);
         mPrefs = new Prefs(this);
         mFontDp = mPrefs.fontSizeDp();
+        mZoomDp = mFontDp;
         mScheme = mPrefs.scheme();
         mCustom = mPrefs.customSlots();
 
@@ -726,14 +728,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         }
         mFonts = Fonts.load(this, cell, px, mPrefs.fontFamily(), mPrefs.hangulFamily());
         mTermView.setFaceSelector(new TerminalRenderer.FaceSelector() {
-            @Override
-            public Typeface typefaceFor(int codePoint) {
-                return mFonts.typefaceFor(codePoint);
-            }
-
-            @Override
-            public float scaleFor(int codePoint) {
-                return mFonts.scaleFor(codePoint);
+            @Override public Typeface typefaceFor(int cp) { return mFonts.typefaceFor(cp); }
+            @Override public float scaleFor(int cp) { return mFonts.scaleFor(cp); }
+            @Override public float shiftFor(int cp) {
+                // Read the size live: a pinch changes it without reloading the faces, and the
+                // shift is a fraction of the em, so a stale px would drift with every zoom.
+                return mFonts.isHangul(cp) ? mFonts.hangulShift(fontPx()) : 0f;
             }
         });
         mTermView.setTypeface(mFonts.latin());
@@ -745,11 +745,15 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     void applyFontSize(int dp) {
-        mFontDp = Math.max(6, Math.min(28, dp));
+        setZoom(FontZoom.dp(dp));
+    }
+
+    /** Set the size from a fractional dp value; the fraction must survive, see FontZoom. */
+    private void setZoom(float dp) {
+        mZoomDp = Math.max(FontZoom.MIN_DP, Math.min(FontZoom.MAX_DP, dp));
+        mFontDp = FontZoom.dp(mZoomDp);
         mPrefs.setFontSizeDp(mFontDp);
-        if (mTermView.getCurrentSession() != null) {
-            mTermView.setTextSize(fontPx());
-        }
+        if (mTermView.getCurrentSession() != null) mTermView.setTextSize(fontPx());
     }
 
     /** Switch the Latin face; loadFonts() recomputes the cell width the face implies. */
@@ -1042,9 +1046,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     @Override
     public float onScale(float scale) {
-        mScale = Math.max(0.5f, Math.min(3f, scale));
-        applyFontSize((int) (mFontDp * mScale));
-        mScale = 1f;
+        setZoom(FontZoom.next(mZoomDp, scale));
         return 1f;
     }
 

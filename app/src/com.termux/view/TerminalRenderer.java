@@ -48,8 +48,13 @@ public final class TerminalRenderer {
     public interface FaceSelector {
         Typeface typefaceFor(int codePoint);
 
-        /** Text-size multiplier for a code point; 1 unless the face needs a size-adjust. */
+        /** Text-size multiplier for a code point; 1 unless the glyph overhangs its box. */
         float scaleFor(int codePoint);
+
+        /** A baseline offset in px for a code point, to centre it within the row. */
+        default float shiftFor(int codePoint) {
+            return 0f;
+        }
     }
 
     public FaceSelector mFaces;
@@ -315,12 +320,12 @@ public final class TerminalRenderer {
     }
 
     /**
-     * Draw a run code point by code point, switching face and scale as needed.
+     * Draw a run code point by code point, switching face as needed.
      *
-     * `x` advances by the measured width of each glyph in its own face, so a Hangul syllable
-     * occupies its size-adjusted width and the following ASCII glyph starts at the next cell
-     * boundary. `scaleFor` is what makes that width two cells: the face is asked to render at
-     * `textSize * scale`, and the caller has already reserved the cells.
+     * `x` advances by the grid width of each code point, not by the glyph's own advance, so a
+     * wide code point occupies the two cells `WcWidth` reserved for it and the next glyph
+     * starts on a cell boundary whatever the face measured. `shiftFor` moves a face whose
+     * ink sits off the row centre back onto it.
      */
     private void drawRunPerCodePoint(Canvas canvas, char[] text, int startCharIndex, int runWidthChars,
                                      float x, float y, int foreColor) {
@@ -331,11 +336,12 @@ public final class TerminalRenderer {
             int chars = Character.charCount(cp);
             Typeface face = mFaces.typefaceFor(cp);
             float scale = mFaces.scaleFor(cp);
+            float shift = mFaces.shiftFor(cp);
             mGlyphPaint.setTypeface(face);
             mGlyphPaint.setTextSize(mTextSize * scale);
             // Draw from the cell's left edge; the advance belongs to the grid, not to the
             // glyph, so the run never drifts even if a face is a pixel wide or narrow.
-            canvas.drawText(text, i, chars, x, y, mGlyphPaint);
+            canvas.drawText(text, i, chars, x, y + shift, mGlyphPaint);
             x += mFontWidth * WcWidth.width(cp);
             i += chars;
         }

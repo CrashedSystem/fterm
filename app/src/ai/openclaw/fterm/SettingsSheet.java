@@ -1239,15 +1239,15 @@ final class SettingsSheet {
         sizeRow.addView(text);
 
         SeekBar size = new SeekBar(mActivity);
-        size.setMax(22);
-        size.setProgress(Math.max(0, mHost.fontSizeDp() - 6));
+        size.setMax(FontZoom.MAX_DP - FontZoom.MIN_DP);
+        size.setProgress(Math.max(0, mHost.fontSizeDp() - FontZoom.MIN_DP));
         size.setLayoutParams(new LinearLayout.LayoutParams(dp(150),
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         size.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar sb, int p, boolean fromUser) {
                 if (fromUser) {
-                    mHost.onFontSize(p + 6);
-                    sub.setText((p + 6) + "dp");
+                    mHost.onFontSize(p + FontZoom.MIN_DP);
+                    sub.setText((p + FontZoom.MIN_DP) + "dp");
                 }
             }
             @Override public void onStartTrackingTouch(SeekBar sb) {}

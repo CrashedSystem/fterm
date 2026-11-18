@@ -2,10 +2,11 @@
  * The font stack's routing rules, checked against the app's own constants.
  *
  * mterm's terminal type is three faces: Iosevka for Latin, a Nerd symbols face for icons,
- * Pretendard for Hangul, with a size-adjust on the Hangul face so one syllable is exactly
- * two Latin cells. The *metrics* are asserted by `tests/fonts_check.py` (fontTools can read
- * a TTF; this JVM cannot), and this test asserts the half that lives in the app: which face
- * answers which code point, and that the size-adjust constant is the one mterm measured.
+ * Pretendard for Hangul. One syllable is two Latin cells wide, and the Hangul face is drawn
+ * at the same em size as the Latin one - a face that overhangs its box is shrunk for that
+ * code point, never the other faces grown to match (Windows Terminal's AtlasEngine rule).
+ * The *metrics* are asserted on a device, and this test asserts the half that lives in the
+ * app: which face answers which code point, and how the fitting is computed.
  */
 public class FontsTest {
 
@@ -25,9 +26,14 @@ public class FontsTest {
     }
 
     public static void main(String[] args) throws Exception {
-        // 1. The constant is mterm's measured value.
-        near(ai.openclaw.fterm.Fonts.HANGUL_SIZE_ADJUST_PCT, 115.85, 0.001,
-                "HANGUL_SIZE_ADJUST_PCT");
+        // 1. A Korean glyph may be shrunk to fit its two cells, never enlarged.
+        //
+        //    It used to be scaled up by 115.85% to fill the box. That made the Korean face's
+        //    own ascent and line spacing larger than the row height the Latin face defined -
+        //    measured on the device as 41.3px of spacing drawn into a 37.5px row - and the
+        //    text read as cramped. Windows Terminal keeps one em size for every face and only
+        //    corrects the advance to the cell, so this is the ceiling.
+        near(ai.openclaw.fterm.Fonts.HANGUL_FIT_MAX, 1.0, 0.001, "HANGUL_FIT_MAX");
 
         // 2. Hangul routing covers every block a Korean terminal sees.
         check(ai.openclaw.fterm.Fonts.isHangul(0xAC00), "가 (syllables)");
@@ -52,9 +58,9 @@ public class FontsTest {
         check(!ai.openclaw.fterm.Fonts.isNerdIcon('a'), "a letter is not an icon");
         check(!ai.openclaw.fterm.Fonts.isNerdIcon(0x2500), "box drawing is Iosevka's, not the icon face");
 
-        // 5. Only Hangul gets a size multiplier; everything else is 1.0.
-        check(ai.openclaw.fterm.Fonts.isHangul(0xD55C), "한 is scaled");
-        check(!ai.openclaw.fterm.Fonts.isHangul('x'), "x is not scaled");
+        // 5. Only Hangul can be resized at all; everything else is drawn at the em size.
+        check(ai.openclaw.fterm.Fonts.isHangul(0xD55C), "한 is the only script up for fitting");
+        check(!ai.openclaw.fterm.Fonts.isHangul('x'), "x is never resized");
 
         // 5b. Font choice is a scanned catalog, not a hard-coded table.
         //
@@ -146,6 +152,28 @@ public class FontsTest {
         check(client.contains("parseFontList"),
                 "the client decodes the listing");
         check(client.contains("le32(p, 4)"), "and reassembles chunks by their own offset");
+
+        // 6a. The Windows Terminal rule, stated where the fitting happens: no face is
+        //     enlarged, and the fitting is derived from the face's own metrics rather than
+        //     from a constant. A scale above 1 for one script is the bug this replaced.
+        check(fontsSrc.contains("Math.min(1f, Math.min(byWidth, byHeight))"),
+                "the fit is capped at 1, so a face is fitted and never enlarged");
+        check(fontsSrc.contains("lp.getFontSpacing()") && fontsSrc.contains("inkHeight > rowHeight"),
+                "the vertical fit compares the face's ink against the row the Latin face set");
+        check(fontsSrc.contains("2f * cell"), "the horizontal fit compares the advance to two cells");
+        check(!fontsSrc.contains("HANGUL_SIZE_ADJUST_PCT"),
+                "the fixed 115.85% size-adjust is gone");
+        check(fontsSrc.contains("mHangulFit"), "the fitted scale is carried to the renderer");
+
+        // 6b. A fitted glyph has to be centred, or a CJK face's deeper ascent leaves the row
+        //     looking bottom-heavy. The renderer asks the selector for the offset.
+        String renderer = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(
+                System.getProperty("renderer.src",
+                        "app/src/com.termux/view/TerminalRenderer.java"))), "UTF-8");
+        check(renderer.contains("shiftFor("),
+                "the selector exposes a per-code-point baseline shift");
+        check(renderer.contains("y + shift"),
+                "and the per-code-point path applies it");
 
         // 6. The app must install the selector, or the stack never reaches the renderer.
         String main = new String(java.nio.file.Files.readAllBytes(

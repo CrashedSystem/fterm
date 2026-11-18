@@ -10,8 +10,8 @@ package ai.openclaw.fterm;
  */
 public final class Fonts {
 
-    /** mterm's measured size-adjust for the Hangul face. */
-    public static final float HANGUL_SIZE_ADJUST_PCT = 115.85f;
+    /** The most a Hangul glyph is scaled: it is fitted to its box, never enlarged. */
+    public static final float HANGUL_FIT_MAX = 1.0f;
 
     /**
      * The catalog is scanned on the device, so the stub carries only the parts a JVM test can

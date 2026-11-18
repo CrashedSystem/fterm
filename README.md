@@ -17,6 +17,22 @@ Android 단독으로 쓰는 터미널. Termux의 셸을 그대로 물려 쓰고,
 `127.0.0.1:8791` 로 붙는다. 부수 효과가 오히려 장점이다: 앱을 닫아도 셸이 살아 있고,
 다시 열면 화면이 그대로 복원된다 (`REPLAY`).
 
+### 왜 터미널 모드까지 복원하는가
+
+화면만 되살리면 절반이다. TUI는 시작할 때 한 번 `ESC[?1000h`(마우스 보고),
+`ESC[?1006h`(SGR), `ESC[?1049h`(alt screen) 같은 선언을 하고 다시는 되풀이하지 않는다.
+앱 프로세스가 재생성되면 에뮬레이터는 새로 만들어지고 ring(최근 256KiB)만 재생되므로,
+그 선언이 ring 밖으로 밀려나 있으면 앱은 마우스가 꺼진 채로 시작한다. 셸은 여전히 켜져
+있다고 믿으니 스와이프는 히스토리 스크롤로 새고 탭은 TUI에 닿지 않는다 — 크기가 우연히
+달라 `SIGWINCH` 가 갈 때만 프로그램이 다시 선언해서 살아나므로 "가끔"으로 보인다(실측:
+재접속 replay 262144바이트 안에 `ESC[?1000h` 가 없음).
+
+`ftermd` 의 `Modes` 가 출력에서 그 선언들을 뽑아 마지막 상태를 들고 있다가, 재접속한
+클라이언트에게 ring보다 **먼저** 되돌려준다. 전체 화면 프로그램이 떠 있었으면 창 크기를
+1칸 줄였다 되돌려 `SIGWINCH` 를 보내 화면을 다시 그리게 한다. 앱은 그 선언을 그대로
+에뮬레이터에 먹이므로 따로 할 일이 없다. 테스트는 `test_client.py` 의 `test_mode_restore`
+(링 밖으로 밀어낸 뒤 재접속해 복원 확인, 끈 모드는 복원되지 않는지 확인).
+
 ## 설치 (기기에서 직접)
 
 1. Termux에서 데몬 설치:
@@ -50,7 +66,7 @@ bash termux/install.sh
 
 | 항목 | 원본 | 이 앱에서 |
 |---|---|---|
-| 폰트 스택 | `mterm/public/js/core/appearance.js` `FONT_STACK` = Iosevka → Nerd Symbols → Pretendard | `Fonts.java` — 코드포인트별 `Typeface` 선택. Iosevka `M` 0.500em, Pretendard `한` 0.864em이므로 2칸에 맞추려면 **115.71%** 필요 (mterm 상수 115.85%, 0.14p 차) — 앱은 실측 셀에서 매번 계산한다 |
+| 폰트 스택 | `mterm/public/js/core/appearance.js` `FONT_STACK` = Iosevka → Nerd Symbols → Pretendard | `Fonts.java` — 코드포인트별 `Typeface` 선택. 얼굴마다 em 크기는 같고, 두 칸을 넘는 글리프만 줄여 상자에 맞춘다 (Windows Terminal AtlasEngine 방식) |
 | Miku 팔레트 | 같은 파일의 `ONE_HALF_DARK` | `Schemes.miku()` — 16개 ANSI 값을 그대로 옮김 (`SchemesTest`가 대조) |
 | Miku 그림 | `mterm/public/img/miku.png` (CC BY-NC) | `assets/img/miku-dusk.png` — `#282c34`와 **미리 multiply**한 것. mterm의 `background-blend-mode: multiply`와 같은 결과이고, 런타임 블렌드가 필요 없다 |
 
@@ -127,7 +143,7 @@ curl -fLo ~/.fonts/JetBrainsMono-Regular.ttf \
 | | 라틴 (`글꼴`) | 한글 (`한글 글꼴`) |
 |---|---|---|
 | 거르는 기준 | 고정폭이어야 함 — 한 칸이 한 글자를 정의 | 글리프가 있어야 함 — 비례여도 됨 |
-| 그리는 방식 | 그대로 | 코드포인트별로 배율을 곱해 한 글자를 두 칸에 맞춤 |
+| 그리는 방식 | 그대로 | 같은 em 크기로 그리고, 두 칸을 넘으면 그 글자만 줄여 맞춤 |
 | 기본값 | 번들 Iosevka | 번들 Pretendard |
 
 한 목록으로 합치면 한글 글꼴을 고를 수 없다. 실기기의 한글 글꼴(나눔고딕, Noto Sans KR,
@@ -141,6 +157,32 @@ Pretendard에는 없어서, 분해된 자모를 붙여넣으면 플랫폼이 다
 묻는 것이라, 실기기에서 모든 글꼴이 "한글 된다"고 답했고 목록에 폰의 글꼴이 전부 올라왔다
 (실측). `FontCoverage`가 TTF/OTF/TTC의 `cmap` 테이블을 직접 읽어 그 파일 자신이 그 코드
 포인트를 갖고 있는지만 답한다.
+
+#### 왜 한글을 확대하지 않는가
+
+한때 한 글자가 두 칸에 꼭 차도록 한글 얼굴을 **115.85% 키워** 그렸다(mterm의 `size-adjust`
+값). 읽기 어려워졌다는 지적이 나왔고, 로그를 재보니 이유가 수치로 나왔다:
+
+| | 행 높이 기준 (라틴) | 한글 (115.85% 확대) |
+|---|---|---|
+| `getFontSpacing()` | 37.5 px | 41.3 px |
+| `ascent()` | -29.0 px | -33.0 px |
+
+행 높이는 라틴 얼굴이 정한 37.5인데, 한글은 41.3짜리 세로 메트릭으로 그려진다. 글자가 행을
+위아래로 3.8px씩 넘치고, 그 상태로 baseline을 공유하니 답답하게 보인다. 확대한 얼굴은
+자기 세로 메트릭을 데려오는데 행 높이는 따라오지 않기 때문이다.
+
+Windows Terminal의 AtlasEngine은 그래서 **em 크기를 바꾸지 않는다**
+(`src/renderer/atlas/AtlasEngine.cpp`). DirectWrite에 `font->fontSize` 그대로 배치를 묻고,
+클러스터의 advance만 셀 폭에 맞춘 뒤 (`glyphAdvances[last] += expectedAdvance - actualAdvance`),
+상자를 넘치는 글리프만 줄여 그린다. 여기서도 같다 — 확대는 하지 않고,
+
+1. 폭이 두 칸을 넘으면 `2 * cell / advance`로,
+2. 세로 잉크가 라틴 행 높이를 넘으면 `rowHeight / inkHeight`로
+
+그 코드포인트만 줄인다. 배율 상한은 1이고, 남은 여백은 베이스라인을 행 중앙으로 옮겨
+채운다(`shiftFor`). 한글 잉크의 세로 위치가 라틴과 어긋나 행이 아래로 쏠리던 것도 이
+오프셋이 함께 고친다.
 
 터미널 벨은 BEL을 진동/비프로 옮긴다 — 무음 모드에서는 진동만, 활성 탭만 울린다.
 네이티브 알림은 포그라운드 서비스의 상시 알림 하나이고, 탭하면 앱으로 돌아온다.
@@ -362,7 +404,7 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 
 | 검증 | 방법 | 결과 |
 |---|---|---|
-| 데몬 프로토콜 6종 (인증 거부, 에코, 한글, resize, replay, close) | `tests/run_all.sh` 의 python 파트 | 통과 |
+| 데몬 프로토콜 9종 (인증 거부, 에코, 한글, resize, replay, close, OPEN 문자열, 링 밖 터미널 모드 복원, 끈 모드 유지) | `tests/run_all.sh` 의 python 파트 | 통과 |
 | Java `SocketTransport` 9종 (토큰 오류, 왕복, 한글, resize, pid, replay, close, 세션 분리) | 실제 `ftermd` 에 JVM으로 접속 | 통과 |
 | `DaemonClient` SYNC 5종 (빈 데몬, 목록, 토큰 오류, 포트 거부, 종료 후 제거) | 같음 | 통과 |
 | 폭 계산 15종 (한글 음절 2칸, 자모, emoji, 결합문자, zero-width) | `tests/run_core.sh` | 통과 |
@@ -370,7 +412,7 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 | APK 빌드·서명 | `./build.sh` | 통과 (V3 서명, targetSdk 36) |
 | 붙여넣기 12종 (bracketed paste `\e[200~..\e[201~`, ESC 주입 차단, 모드 해제) | `tests/jvm/core/PasteTest.java` | 통과 |
 | 색상 147종 (mterm `ONE_HALF_DARK` 대조, OLED 순검정, 전 테마 4.5:1) | `tests/jvm/core/SchemesTest.java` | 통과 |
-| 폰트 라우팅 23종 (한글/아이콘/라틴, 상수 115.85) | `tests/jvm/core/FontsTest.java` | 통과 |
+| 폰트 라우팅 65종 (한글/아이콘/라틴, 셀에 맞춘 배율, 베이스라인 보정) | `tests/jvm/core/FontsTest.java` | 통과 |
 | 탭 닫기 9종 (plate 제거, transport 종료, Enter 경로) | `tests/jvm/core/TabCloseTest.java` | 통과 |
 | 알림 17종 (OSC 9 / 777 파싱, 제목·본문, 오탐 방지, 앱 배선) | `tests/jvm/core/NotifyTest.java` | 통과 |
 | 벨 13종 (VIBRATE 권한, 진동/비프, 활성 탭만, 설정 토글) | `tests/jvm/core/BellTest.java` | 통과 |

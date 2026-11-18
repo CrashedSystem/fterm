@@ -13,7 +13,7 @@ import android.graphics.Paint;
  * 500/1000 em), a Nerd Font symbols face answers the private-use icon range, and Pretendard
  * answers Hangul. That split is not taste - Iosevka has no CJK coverage at all, and Pretendard's
  * syllable advance (1770/2048 em) is *not* two Iosevka cells (1000/1000 em), so a Hangul
- * face has to be scaled before it can sit in a two-cell box.
+ * face needs its advance fitted to the two-cell box.
  *
  * Android has no `size-adjust` and no per-face unicode-range on a `Typeface`, so two things
  * replace them:
@@ -21,17 +21,26 @@ import android.graphics.Paint;
  *   1. A single `Typeface` is built with {@link Typeface#createFromAssets} for each face and
  *      selected per code point. {@link #typefaceFor(int)} returns Pretendard for Hangul and
  *      Iosevka for everything else, which is exactly the stack's decision.
- *   2. Hangul is scaled by {@link #HANGUL_SCALE}, which is mterm's 115.85% size-adjust
- *      expressed the way a {@link Paint} can express it - as a text size multiplier - so a
- *      syllable's advance lands on two Iosevka cells.
+ *   2. Every face is drawn at the same em size. Windows Terminal's AtlasEngine does the same
+ *      thing: it asks DirectWrite to place glyphs at `font->fontSize` and only corrects the
+ *      cluster's advance to the cells the width rules gave it. Nothing is enlarged to fill a
+ *      cell, because enlarging one script's face and not another's makes its ascent and line
+ *      spacing disagree with the row height every other face agreed on.
  *
  * The terminal view keeps one `Paint`, so the per-code-point switch has to happen in the
  * renderer. {@link #typefaceFor} is the single place that decision lives.
  */
 final class Fonts {
 
-    /** mterm: iosevka 500/1000 em, recommendation for the Hangul face's size-adjust. */
-    static final float HANGUL_SIZE_ADJUST_PCT = 115.85f;
+    /**
+     * The widest a Hangul glyph may be drawn, as a multiple of its two-cell box.
+     *
+     * <p>Faces differ: Noto Serif CJK's syllable is wider than two Iosevka cells, One UI Sans
+     * KR's is narrower. Windows Terminal answers this by leaving the em size alone and
+     * shrinking only a glyph that overhangs its box, so the text keeps one baseline and one
+     * line height. The same rule here: a face is never enlarged, only fitted.
+     */
+    static final float HANGUL_FIT_MAX = 1.0f;
 
     /** The bundled face, which is also the default and the one that always works. */
     static final String ASSET_PATH = "fonts/Iosevka.ttf";
@@ -500,13 +509,18 @@ final class Fonts {
     private final Typeface mIosevka;
     private final Typeface mHangul;
     private final Typeface mSymbols;
-    private final float mHangulAdjust;
+    /** How much (at most 1) a Hangul glyph is shrunk to sit inside its two cells. */
+    private final float mHangulFit;
+    /** Baseline shift for Hangul, as a fraction of the em, to centre it in the row. */
+    private final float mHangulShift;
 
-    private Fonts(Typeface iosevka, Typeface hangul, Typeface symbols, float hangulAdjust) {
+    private Fonts(Typeface iosevka, Typeface hangul, Typeface symbols, float hangulFit,
+                  float hangulShift) {
         mIosevka = iosevka;
         mHangul = hangul;
         mSymbols = symbols;
-        mHangulAdjust = hangulAdjust;
+        mHangulFit = hangulFit;
+        mHangulShift = hangulShift;
     }
 
     /**
@@ -575,35 +589,67 @@ final class Fonts {
         float measured = latinPaint.measureText("M");
         if (measured > 0f) cell = measured;
 
-        // Measure the Hangul advance at the same text size and derive the multiplier that
-        // makes one syllable exactly two Latin cells. mterm's 115.85% is what that
-        // arithmetic produced for a 6 px Iosevka cell; deriving it keeps a different face
-        // and size honest instead of 1.5% off.
-        float adjust = HANGUL_SIZE_ADJUST_PCT / 100f;
+        // The Hangul face is measured, not resized. Its glyph is drawn at the Latin em size
+        // and only shrunk when its own advance is wider than the two cells the width rules
+        // reserved for it - Windows Terminal's rule, and the reason text keeps one baseline:
+        // a face scaled up to fill its box brings its own, taller line metrics with it, and
+        // then its ascent disagrees with the row height the Latin face defined.
+        float fit = HANGUL_FIT_MAX;
+        float shift = 0f;
         if (hangul != null && cell > 0f) {
-            Paint p = new Paint();
-            p.setTypeface(hangul);
-            p.setTextSize(textSizePx);
-            float syllable = p.measureText("\uD55C");
-            if (syllable > 0f) {
-                float target = 2f * cell;
-                adjust = target / syllable;
-                // A face that is already two cells wide must not be scaled at all; a value
-                // far from mterm's means the measurement failed and the constant is safer.
-                if (adjust < 0.5f || adjust > 2.5f) adjust = HANGUL_SIZE_ADJUST_PCT / 100f;
+            Paint lp = new Paint();
+            lp.setTypeface(mono);
+            lp.setTextSize(textSizePx);
+            float rowHeight = lp.getFontSpacing();
+
+            Paint hp = new Paint();
+            hp.setTypeface(hangul);
+            hp.setTextSize(textSizePx);
+            float syllable = hp.measureText("\uD55C");
+            Paint.FontMetrics fm = hp.getFontMetrics();
+            float inkHeight = fm.descent - fm.ascent;
+
+            // Two ways a glyph can overhang its box, and Windows Terminal handles both: the
+            // advance can be wider than the two cells, and the face's own ascent and descent
+            // can be taller than the row the Latin face defined. Either one is answered by
+            // shrinking that glyph, never by growing the others to match.
+            float byWidth = syllable > 0f && syllable > 2f * cell ? (2f * cell) / syllable : 1f;
+            float byHeight = inkHeight > rowHeight ? rowHeight / inkHeight : 1f;
+            fit = Math.min(1f, Math.min(byWidth, byHeight));
+            // A measurement this far off means the face or the cell did not measure; drawing
+            // at the natural size is better than shrinking text to nothing.
+            if (fit < 0.5f) fit = HANGUL_FIT_MAX;
+
+            // Centre what is left in the row. A CJK face usually has more ascent than a Latin
+            // one, so without this its glyphs sit high and the row looks bottom-heavy. The
+            // shift is a fraction of the em, so it follows the font size.
+            Paint.FontMetrics hf = new Paint.FontMetrics();
+            Paint scaled = new Paint();
+            scaled.setTypeface(hangul);
+            scaled.setTextSize(textSizePx * fit);
+            scaled.getFontMetrics(hf);
+            if (textSizePx > 0f) {
+                float glyphCentre = (hf.ascent + hf.descent) / 2f;
+                float rowCentre = (lp.ascent() + lp.descent()) / 2f;
+                shift = (rowCentre - glyphCentre) / textSizePx;
             }
         }
         return new Fonts(mono, hangul != null ? hangul : mono,
-                symbols != null ? symbols : mono, adjust);
+                symbols != null ? symbols : mono, fit, shift);
     }
 
     Typeface latin() {
         return mIosevka;
     }
 
-    /** The multiplier a Hangul code point's text size needs, to land on two cells. */
-    float hangulAdjust() {
-        return mHangulAdjust;
+    /** The scale a Hangul glyph is drawn at; 1 unless the face overhangs its box. */
+    float hangulFit() {
+        return mHangulFit;
+    }
+
+    /** How far, in px at this size, to move a Hangul baseline down to centre it in the row. */
+    float hangulShift(float textSizePx) {
+        return mHangulShift * textSizePx;
     }
 
     /** True when the code point is answered by the Korean face. */
@@ -634,9 +680,15 @@ final class Fonts {
         return mIosevka;
     }
 
-    /** The text-size multiplier for one code point (Hangul needs its size-adjust). */
+    /**
+     * The scale for one code point. Only Hangul can differ, and only to fit its box.
+     *
+     * <p>Never above 1: a face is not enlarged to fill a cell. Enlarging one script's face
+     * while the row height stays the Latin face's is what made Korean text sit too tall for
+     * its line - measured on the device as 41.3px of line spacing drawn into a 37.5px row.
+     */
     float scaleFor(int codePoint) {
-        return isHangul(codePoint) ? mHangulAdjust : 1f;
+        return isHangul(codePoint) ? mHangulFit : 1f;
     }
 
     static float dpToPx(Context context, float dp) {
