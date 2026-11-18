@@ -663,7 +663,7 @@ final class SettingsSheet {
                 this::chooseCursor, false));
         card.addView(toggleCardRow("커서 깜빡임", "끄면 항상 보입니다",
                 mHost.cursorBlink(), mHost::onCursorBlink, true));
-        card.addView(toggleCardRow("레트로 효과", "주사선과 가장자리 어둡게",
+        card.addView(toggleCardRow("레트로 효과", "형광 글로우와 주사선 (Windows Terminal)",
                 mHost.retroEffect(), mHost::onRetroEffect, true));
     }
 

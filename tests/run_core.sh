@@ -49,7 +49,9 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/ProfilesTest.java" \
   "$ROOT/tests/jvm/core/ProfileTabTest.java" \
   "$ROOT/app/src/ai/openclaw/fterm/Search.java" \
-  "$ROOT/tests/jvm/core/SearchTest.java"
+  "$ROOT/tests/jvm/core/SearchTest.java" \
+  "$ROOT/app/src/ai/openclaw/fterm/RetroShader.java" \
+  "$ROOT/tests/jvm/core/RetroTest.java"
 
 
 echo "[2/2] 실행"
@@ -72,3 +74,4 @@ java -Droot="$ROOT" -cp "$OUT" KeyBarPrefsTest
 java -cp "$OUT" ProfilesTest
 java -cp "$OUT" ProfileTabTest
 java -cp "$OUT" SearchTest
+java -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" RetroTest

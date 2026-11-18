@@ -1236,6 +1236,11 @@ public final class TerminalView extends View {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         if (mBackgroundImage != null) mBackgroundImage.setBounds(0, 0, w, h);
         updateSize();
+        // The shader's resolution uniform is per size, so a rotation or a keyboard show
+        // needs a fresh effect - the old one would sample outside the frame.
+        mRetroEffect = null;
+        mRetroEffectW = mRetroEffectH = 0;
+        ensureRetroEffect();
     }
 
     /** Check if the terminal size in rows and columns should be updated. */
@@ -1277,16 +1282,50 @@ public final class TerminalView extends View {
 
     /** Optional picture drawn behind the terminal (the Miku theme). */
     private Drawable mBackgroundImage;
-    /** Optional scanline/vignette pass drawn over the finished frame. */
+    /** Optional retro pass over the finished frame; see RetroOverlay. */
     private ai.openclaw.fterm.RetroOverlay mRetroOverlay;
+    /** Set once per size: the shader's resolution uniform is the only thing that changes. */
+    private android.graphics.RenderEffect mRetroEffect;
+    private int mRetroEffectW, mRetroEffectH;
 
     /**
-     * Turn the retro overlay on or off. It is drawn after the text and the selection, so it
-     * dims them uniformly instead of being hidden by the next repaint.
+     * Turn the retro effect on or off.
+     *
+     * <p>On API 33+ this installs a {@link android.graphics.RenderEffect} on the view, so the
+     * glow sees the rendered text rather than a guess at it. Below that, the overlay draws
+     * dark scanline rows after the frame, which is the half of WT's effect that a software
+     * Canvas can do.
      */
     public void setRetroOverlay(ai.openclaw.fterm.RetroOverlay overlay) {
         mRetroOverlay = overlay;
+        mRetroEffect = null;
+        mRetroEffectW = mRetroEffectH = 0;
+        if (overlay == null) {
+            setRenderEffect(null);
+        } else {
+            ensureRetroEffect();
+        }
         invalidate();
+    }
+
+    /** (Re)build the shader effect for the current size and cell height. */
+    private void ensureRetroEffect() {
+        if (mRetroOverlay == null) return;
+        if (android.os.Build.VERSION.SDK_INT < 33) return;
+        int w = getWidth(), h = getHeight();
+        if (w <= 0 || h <= 0) return;
+        if (mRetroEffect != null && w == mRetroEffectW && h == mRetroEffectH) return;
+        // WT's "scale" is the UI scale - the text/UI zoom factor - and its scanline period is
+        // that many pixels, so a 2x desktop gets a 2 px stripe. On a phone the exact analogue
+        // is the display density (3.75 here), which yields a ~1 dp stripe. The cell height is
+        // the tempting substitute and it is wrong: half a row is 22 px, a stripe you can read
+        // across the room rather than the fine texture WT has.
+        float scale = Math.max(1f, getResources().getDisplayMetrics().density);
+        float sigma = 2f * scale;
+        mRetroEffect = mRetroOverlay.effectFor(w, h, scale, sigma);
+        mRetroEffectW = w;
+        mRetroEffectH = h;
+        setRenderEffect(mRetroEffect);
     }
 
     public void setBackgroundImage(Drawable image) {
@@ -1317,7 +1356,10 @@ public final class TerminalView extends View {
             // render the text selection handles
             renderTextSelection();
 
-            if (mRetroOverlay != null) mRetroOverlay.draw(canvas, getWidth(), getHeight());
+            if (mRetroOverlay != null) {
+                mRetroOverlay.draw(canvas, getWidth(), getHeight(),
+                        Math.max(1f, getResources().getDisplayMetrics().density));
+            }
         }
     }
 

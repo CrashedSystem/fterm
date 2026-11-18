@@ -150,7 +150,7 @@ public final class Prefs {
         sp().edit().putString("profiles", v == null ? "" : v).apply();
     }
 
-    /** WT's experimental.retroTerminalEffect: scanlines and a vignette over the text. */
+    /** WT's experimental.retroTerminalEffect: a glow and scanlines over the text. */
     public boolean retroEffect() { return sp().getBoolean("retro_effect", false); }
     public void setRetroEffect(boolean v) { sp().edit().putBoolean("retro_effect", v).apply(); }
 
