@@ -87,6 +87,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     /** Windows Terminal chrome: the command palette and the icon strip. */
     private Chrome mChrome;
     private Notifier mNotifier;
+    private DaemonBoot mBoot;
     int mScheme;
     /** The custom scheme's 19 editable slots, loaded once and kept in step with Prefs. */
     int[] mCustom;
@@ -109,6 +110,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
         applyChrome();
         buildUi();
+        mBoot = new DaemonBoot(this, mUi, mTermFrame, mTermView);
 
         // A foreground service keeps this process out of Android's freezer. Measured cause of
         // the idle death: with fterm backgrounded, `dumpsys activity processes` reports
@@ -130,7 +132,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // Nothing is attached yet, so the frame would sit as a blank black area until the
         // live query returns (up to the 2.5s timeout). Say so instead of showing a void -
         // "the first shell is blank" was this empty frame, not a dead shell.
-        showSplash("셸에 연결하는 중…");
+        mBoot.splash("셸에 연결하는 중…");
         startSessions();
     }
 
@@ -364,62 +366,29 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
      * which made the user open Termux and copy a token by hand on first run.
      */
     private void beginProvisioning() {
-        showSplash("Termux 데몬 준비 중…");
-        DaemonLauncher.requestStart();
-        pollForToken(0);
-    }
+        mBoot.start(new DaemonBoot.Host() {
+            @Override public void ready(String token) {
+                mPrefs.setToken(token);
+                mBoot.restore();
+                newTab(true);
+            }
 
-    private void showSplash(String text) {
-        int px = dp(24);
-        TextView splash = new TextView(this);
-        splash.setText(text);
-        splash.setTextColor(0xffcfcfcf);
-        splash.setTextSize(13);
-        UiFont.apply(splash, false);
-        splash.setPadding(px, px, px, px);
-        splash.setGravity(Gravity.CENTER);
-        if (mTermFrame != null) {
-            mTermFrame.removeAllViews();
-            mTermFrame.addView(splash);
-        }
-    }
+            @Override public void keeperMissing() {
+                mUi.post(() -> DaemonDialogs.keeperMissing(MainActivity.this,
+                        MainActivity.this::openManualTokenDialog));
+            }
 
-    private void pollForToken(int attempt) {
-        final int MAX_ATTEMPTS = 15;              // ~4.5 s at 300 ms
-        String token = DaemonLauncher.readToken();
-        if (token != null) {
-            mPrefs.setToken(token);
-            restoreTerminalView();
-            newTab(true);
-            return;
-        }
-        if (attempt < MAX_ATTEMPTS) {
-            if (attempt == 4) DaemonLauncher.requestStart();   // ask once more in case it raced
-            mUi.postDelayed(() -> pollForToken(attempt + 1), 300);
-            return;
-        }
-        restoreTerminalView();
-        if (!DaemonLauncher.keeperAlive()) {
-            showKeeperMissing();
-        } else {
-            showDaemonSlow();
-        }
-    }
+            @Override public void daemonSlow() {
+                mUi.post(() -> DaemonDialogs.daemonSlow(MainActivity.this,
+                        MainActivity.this::beginProvisioning,
+                        MainActivity.this::openManualTokenDialog));
+            }
 
-    private void restoreTerminalView() {
-        if (mTermFrame != null && mTermView.getParent() == null) {
-            mTermFrame.removeAllViews();
-            mTermFrame.addView(mTermView);
-        }
-    }
-
-    private void showKeeperMissing() {
-        mUi.post(() -> DaemonDialogs.keeperMissing(this, this::openManualTokenDialog));
-    }
-
-    private void showDaemonSlow() {
-        mUi.post(() -> DaemonDialogs.daemonSlow(this, this::beginProvisioning,
-                this::openManualTokenDialog));
+            @Override public void storageBlocked() {
+                mUi.post(() -> DaemonDialogs.storageBlocked(MainActivity.this,
+                        MainActivity.this::openManualTokenDialog));
+            }
+        });
     }
 
     /** Last resort: let the user paste a token they obtained themselves. */
@@ -493,7 +462,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 ? profile.name : Profiles.DEFAULT_NAME + " " + tab.id;
 
         if (mActive == tab) {
-            restoreTerminalView();   // remove any "connecting…" splash still in the frame
+            mBoot.restore();   // remove any "connecting…" splash still in the frame
             mTermView.attachSession(session);
             mTermView.setTextSize(fontPx());
             applySchemeTo(session);
@@ -660,7 +629,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                     Math.max(0, tab.plate.getLeft() - dp(8)), 0));
         }
         if (tab.session != null) {
-            restoreTerminalView();
+            mBoot.restore();
             mTermView.attachSession(tab.session);
             mTermView.setTextSize(fontPx());
             applySchemeTo(tab.session);
@@ -997,6 +966,14 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     // ---------------------------------------------------------------- lifecycle
 
     @Override
+    protected void onDestroy() {
+        // A ToneGenerator holds an audio track for its whole life. Without this, every
+        // activity recreation leaves one behind until the process dies.
+        if (mBell != null) mBell.release();
+        super.onDestroy();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         if (mShowKeyboardOnce && mPrefs.showKeyboardOnStart()) {
@@ -1224,14 +1201,16 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
         // An image clip has no text at all. Save it and paste the PATH: opencode resolves a
         // local filepath into a data: URI attachment, which is how a screenshot gets in.
-        if (ClipboardImage.isImage(this, clip)) {
-            String path = ClipboardImage.save(this, ClipboardImage.uriOf(clip));
-            if (path != null) {
+        // Saving happens on the worker: decoding a screenshot on the UI thread freezes the
+        // terminal while it runs.
+        if (ClipboardImage.pasteIfImage(this, mUi, clip, new ClipboardImage.Paste() {
+            @Override public boolean ready() { return mActive != null && mActive.session != null; }
+            @Override public void insert(String path) {
                 pasteText(path);
-                Toast.makeText(this, "이미지 경로 붙여넣음: " + path, Toast.LENGTH_LONG).show();
-                return;
+                Toast.makeText(MainActivity.this, "이미지 경로 붙여넣음: " + path,
+                        Toast.LENGTH_LONG).show();
             }
-            Toast.makeText(this, "이미지를 읽지 못했습니다 (권한 확인 필요)", Toast.LENGTH_LONG).show();
+        })) {
             return;
         }
 

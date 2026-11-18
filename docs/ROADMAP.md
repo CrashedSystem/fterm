@@ -13,9 +13,9 @@
 | 1 | CI와 데몬 명세 | GitHub Actions에서 Python·Rust·Java·프로토콜을 돌린다 | **완료** |
 | 2 | Rust `ftermd-rs` | 프로토콜 호환 데몬을 Rust로 | **완료** |
 | 3 | 프로토콜 호환 검증 | 같은 테스트가 두 데몬을 판정 | **완료** |
-| 4 | 고아 셸 | `S_ERROR` 뒤 `C_CLOSE` 누락 | 다음 PR |
-| 5 | FGS 타입 | `dataSync` → `specialUse` | 다음 PR |
-| 6 | UI·알림 정리 | 동기 디코딩, 무음 무시, 누락된 정리 | 다음 PR |
+| 4 | 고아 셸 | `S_ERROR` 뒤 `C_CLOSE` 누락 | **완료** |
+| 5 | FGS 타입 | `dataSync` → `specialUse` | **완료** |
+| 6 | UI·알림 정리 | 동기 디코딩, 무음 무시, 누락된 정리 | **완료** |
 | 7 | 프로토콜 중복 | 3중 프레이밍, 거대 클래스 분리 | 그 다음 |
 | 8 | 업스트림 기준점 | 벤더 파일의 원본 커밋 고정 | 그 다음 |
 | 9 | 스크롤백 상한 | `onTrimMemory` | 그 다음 |
@@ -95,31 +95,43 @@
 **증상**: `SocketTransport.finishIfRunning()`은 `!isRunning()`이면 `C_CLOSE`를 보내지 않습니다.
 `S_ERROR`로 끊긴 세션은 데몬 쪽에 셸째 남아 세션 16개 한도를 채웁니다.
 
-**고치는 방법**: 전송 계층이 세션을 "열었다가 실패한" 상태와 "연결만 잃은" 상태를 구분해,
-후자에서도 `C_CLOSE`를 보냅니다. 데몬은 이미 `C_CLOSE`에 대해 옳게 동작하므로 앱 쪽 문제입니다.
+**고치는 방법**: `SocketTransport` 가 `OPENED` 를 받은 순간부터 "이 세션의 셸은 데몬에 있다"고
+기억하고, 끝나는 세 갈래(`S_ERROR`, 재시도 한도 초과, 링크가 없을 때의 탭 닫기)에서 한 번만
+`C_CLOSE` 를 보냅니다. 링크가 없으면 짧은 연결을 하나 열어 HELLO 와 CLOSE 를 함께 보냅니다 —
+데몬은 `S_ERROR` 뒤에 연결을 닫아 버리므로 같은 소켓으로는 전달되지 않습니다.
 
-**검증**: 데몬을 17번째 세션에서 거절시키는 테스트. `E_TOO_MANY`가 아니라 "16개가 남지 않음"을
-확인합니다.
+**검증**: `tests/jvm/harness/OrphanCloseTest.java`. 데몬 없이, 소켓 위에서 프로토콜만 흉내 내는
+가짜 데몬을 씁니다(HELLO → OPENED → ERROR → 연결 끊기, 그다음 연결에 CLOSE 가 오는지). 이 검사는
+`tests/run_core.sh` 의 3단계로 CI 에서 돕니다. 수정을 되돌리면 실패하는 것도 확인했습니다.
 
 ## 5. FGS 타입 — `dataSync`의 6시간 상한
 
 **증상**: Android 15+에서 `dataSync` 포그라운드 서비스는 24시간 내 6시간이 지나면 시스템이
 제한할 수 있습니다. 유휴 세션 유지가 앱의 존재 이유이므로 여기서 걸리면 제품이 멈춥니다.
 
-**고치는 방법**: `AndroidManifest.xml`의 서비스 타입을 `specialUse`로 옮기고
-`PROPERTY_SPECIAL_USE_FGS_SUBTYPE`에 사유를 적습니다.
+**고치는 방법**: `AndroidManifest.xml`의 타입을 `specialUse` 로, 권한을
+`FOREGROUND_SERVICE_SPECIAL_USE` 로 바꾸고 `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` 에 사유를 적습니다.
+`TerminalService` 는 API 34+ 에서 타입을 인자로 넘기는 `startForeground` 를 씁니다(상수는 리터럴로
+적어 옛 android.jar 로도 컴파일됩니다).
 
-**검증**: 실기기에서 `dumpsys activity services`의 타입 확인, 그리고 6시간 뒤에도 살아 있는지.
+**검증**: 매니페스트·서비스 소스 검사(`BellTest`, `StructureTest` 의 51종 구조 검사). 타입이 실제로
+6시간 상한을 피하는지는 **기기에서만** 확인됩니다: `dumpsys activity services | grep -A2 fterm`.
 
 ## 6. UI·알림 정리
 
-- `ClipboardImage.save()`를 클릭 핸들러에서 동기 호출 → 고화소 이미지에서 버벅임. 작업 스레드로
-  옮기고 완료 후 경로를 붙여넣습니다.
-- `Notifier`가 무음 모드·알림 빈도를 보지 않고 무조건 진동 → `Bell`과 같은 게이트를 씁니다.
-- `onDestroy`에서 `Bell.release()` 호출 없음, `DaemonLauncher.requestStart()` 반환값 무시로 자동
-  기동 실패가 조용히 묻힘 → 반환값을 로그·토스트로 드러냅니다.
+- `ClipboardImage.save()`를 클릭 핸들러에서 동기 호출 → `pasteIfImage()` + `saveAsync()` 로
+  작업 스레드에서 저장하고 완료 후 경로를 붙여넣습니다.
+- `Notifier`가 무음 모드·알림 빈도를 보지 않고 무조건 진동 → `RINGER_MODE_SILENT` 에서는 울리지
+  않고, `VIBRATE_GAP_MS`(2초) 안의 두 번째 알림은 진동하지 않습니다. 음소거는 "하지 말라"는
+  뜻이고, 진동 모드는 "이걸로 하라"는 뜻이라 진동 모드는 그대로 둡니다.
+- `onDestroy`에서 `Bell.release()` 를 부릅니다(ToneGenerator 는 오디오 트랙을 계속 쥡니다).
+- `DaemonLauncher.requestStart()` 의 반환값을 봅니다. 요청 파일을 쓰지 못하면 keeper 는 영영
+  듣지 못하므로, 15번 폴링한 뒤 "keeper 가 없다"고 잘못 말하는 대신 즉시 저장소 문제로 알립니다.
+  그 상태기계는 `DaemonBoot` 로 옮겨 `MainActivity` 를 1,396줄로 유지했습니다(구조 검사의 상한
+  1,420줄).
 
-**검증**: 무음 모드에서 진동 없음, 연속 알림의 빈도 제한, 이미지 붙여넣기 중 프레임 드랍 없음.
+**검증**: `PasteTest`(이미지 경로가 워커 스레드를 지나는지), `NotifyTest`(무음·빈도), `PasteTest`·
+`StructureTest`(onDestroy·DaemonBoot). 무음 모드에서 실제로 진동하지 않는지는 기기 확인 항목입니다.
 
 ## 7. 프로토콜 3중 구현과 거대 클래스
 

@@ -1,7 +1,6 @@
 package com.termux.terminal;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -112,6 +111,20 @@ public final class SocketTransport implements SessionTransport {
 
     /** Set when the daemon reported the shell gone, so a reconnect would be pointless. */
     private volatile boolean mSessionEnded;
+
+    /**
+     * True once the daemon answered OPENED: from then on a shell exists on the daemon side, and
+     * C_CLOSE is the only thing that kills it.
+     */
+    private volatile boolean mOpened;
+
+    /**
+     * True once C_CLOSE was sent for this session id.
+     *
+     * <p>Exactly one of the paths that end a session may send it - a tab close, an S_ERROR, the
+     * attempt ceiling - and the flag is what makes "exactly one" true rather than likely.
+     */
+    private volatile boolean mCloseSent;
 
     /**
      * The current link's number. Bumped by {@link #supervise} and nowhere else, so comparing
@@ -248,6 +261,8 @@ public final class SocketTransport implements SessionTransport {
     /** @return false when the session should stop for good, after the last attempt. */
     private boolean giveUpAfter(int failures) {
         if (failures < MAX_ATTEMPTS) return false;
+        // No link is coming back, but the daemon may still be holding this session's shell.
+        tellDaemonToClose(false);
         mRunning = false;
         TerminalSession s = mSession;
         if (s != null) s.transportExit(-1);
@@ -275,16 +290,10 @@ public final class SocketTransport implements SessionTransport {
             // frozen even after the process comes back.
             s.setSoTimeout(SO_TIMEOUT_MS);
 
-            byte[] tok = mToken.getBytes(StandardCharsets.UTF_8);
-            ByteArrayOutputStream hello = new ByteArrayOutputStream();
-            hello.write(1);
-            hello.write(tok.length & 0xff);
-            hello.write((tok.length >> 8) & 0xff);
-            hello.write(tok, 0, tok.length);
             // HELLO must be the first frame on the connection, so it is written here before
             // the writer thread exists. Everything after it goes through the queue.
             OutputStream out = s.getOutputStream();
-            out.write(frameOf(C_HELLO, hello.toByteArray()));
+            out.write(frameOf(C_HELLO, helloPayload()));
             out.flush();
             ok = true;
             return s;
@@ -354,6 +363,7 @@ public final class SocketTransport implements SessionTransport {
                 enqueue(C_OPEN, openPayload(mColumns, mRows));
                 return true;
             case S_OPENED:
+                mOpened = true;
                 if (p.length >= 6) {
                     mPid = readIntLE(p, 2);
                     TerminalSession s = mSession;
@@ -379,6 +389,10 @@ public final class SocketTransport implements SessionTransport {
             }
             case S_EXIT: {
                 int code = p.length >= 6 ? readIntLE(p, 2) : -1;
+                // The daemon removed the session itself; a C_CLOSE here would only be a line in
+                // its log. Marking it sent is what keeps a later path from opening a connection
+                // just to say "already gone".
+                mCloseSent = true;
                 mRunning = false;
                 mSessionEnded = true;
                 TerminalSession s = mSession;
@@ -396,6 +410,10 @@ public final class SocketTransport implements SessionTransport {
                 // is nothing to retry, and the message is more useful left on screen.
                 mRunning = false;
                 mSessionEnded = true;
+                // The daemon drops the connection after some of these errors but keeps the pty
+                // and the shell. Nothing below will reconnect for this session, so this is the
+                // last chance to close it.
+                tellDaemonToClose(false);
                 TerminalSession s = mSession;
                 if (s != null) s.transportExit(-1);
                 return false;
@@ -547,13 +565,77 @@ public final class SocketTransport implements SessionTransport {
         mRunning = false;
         // CLOSE must reach the daemon before the socket dies, so the writer performs the
         // shutdown when it reaches the poison pill. Interrupting it here would drop CLOSE
-        // and leave the shell alive on the daemon side.
-        byte[] b = new byte[2];
-        putShort(b, 0, mSessionId);
-        mOutQueue.offer(frameOf(C_CLOSE, b));
+        // and leave the shell alive on the daemon side. A tab closed while the app is offline
+        // has no writer to hand it to, which is why this goes through the same helper as the
+        // error paths instead of queueing directly.
+        tellDaemonToClose(true);
         mOutQueue.offer(POISON);
         TerminalSession s = mSession;
         if (s != null) s.transportExit(0);
+    }
+
+    // ------------------------------------------------------------------ closing the shell
+
+    /** HELLO: the protocol byte, then the token as a length-prefixed UTF-8 string. */
+    private byte[] helloPayload() {
+        byte[] tok = mToken.getBytes(StandardCharsets.UTF_8);
+        byte[] hello = new byte[3 + tok.length];
+        hello[0] = 1;
+        hello[1] = (byte) (tok.length & 0xff);
+        hello[2] = (byte) ((tok.length >> 8) & 0xff);
+        System.arraycopy(tok, 0, hello, 3, tok.length);
+        return hello;
+    }
+
+    /**
+     * Kill the shell this session owns, once.
+     *
+     * <p>A C_CLOSE queued for the writer only reaches the daemon while a link is up, and a
+     * missing link is exactly the situation that used to leak the shell: an {@link #S_ERROR}
+     * the daemon answers by dropping the connection, {@link #MAX_ATTEMPTS} failed reconnects,
+     * or a tab closed while the app is offline. The daemon keeps the pty and the shell, and
+     * sixteen sessions are its limit, so a handful of leaks makes every new tab fail with
+     * "동시 세션 한도를 넘었습니다".
+     *
+     * <p>When no live link can carry it, this opens a short-lived one of its own and says it
+     * plainly. It never throws: this runs on the way out of a session that is already over.
+     *
+     * @param useLiveLink true when the current socket is still healthy (an ordinary tab close)
+     */
+    private void tellDaemonToClose(boolean useLiveLink) {
+        if (!mOpened || mCloseSent) return;
+        mCloseSent = true;
+        byte[] b = new byte[2];
+        putShort(b, 0, mSessionId);
+        Socket live = mSocket;
+        if (useLiveLink && live != null && live.isConnected() && !live.isClosed()) {
+            // Queued rather than written: every socket write belongs to the writer thread.
+            mOutQueue.offer(frameOf(C_CLOSE, b));
+            return;
+        }
+        Socket tmp = null;
+        try {
+            tmp = new Socket();
+            tmp.connect(new InetSocketAddress(mHost, mPort), 800);
+            tmp.setSoTimeout(800);
+            OutputStream out = tmp.getOutputStream();
+            out.write(frameOf(C_HELLO, helloPayload()));
+            out.write(frameOf(C_CLOSE, b));
+            out.flush();
+            // Read the daemon's first frame: that is the acknowledgement that it has read
+            // HELLO, and CLOSE is in the same segment behind it.
+            tmp.getInputStream().read();
+        } catch (IOException | RuntimeException ignored) {
+            // Best effort. If even this fails, the shell is still bounded by the daemon's idle
+            // watchdog and by the next successful connection's C_CLOSE.
+        } finally {
+            if (tmp != null) {
+                try {
+                    tmp.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------------ framing

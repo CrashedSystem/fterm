@@ -129,6 +129,19 @@ public byte[] getClipboardImage(com.termux.terminal.TerminalSession s) { return 
         check(ptBody.contains("DECSET 2004") || ptBody.contains("bracketed paste"),
                 "and says why");
 
+        // 7. An image clip is saved off the UI thread. The paste key used to call the blocking
+        //    save() from the click handler, which decodes a full-resolution screenshot while the
+        //    terminal (and the keyboard) waits.
+        String clipSrc = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get(System.getProperty("clip.src",
+                        "app/src/ai/openclaw/fterm/ClipboardImage.java"))), "UTF-8");
+        int pi = clipSrc.indexOf("static boolean pasteIfImage(");
+        check(pi > 0, "ClipboardImage offers the asynchronous image paste");
+        String piBody = clipSrc.substring(pi, Math.min(clipSrc.length(), pi + 600));
+        check(piBody.contains("saveAsync("), "which goes through the worker thread");
+        check(body.contains("ClipboardImage.pasteIfImage("), "pasteClipboard() uses it");
+        check(!body.contains("ClipboardImage.save("), "and not the blocking save()");
+
         System.out.println("ok  " + pass + " paste assertions");
         System.out.println("ALL OK");
     }

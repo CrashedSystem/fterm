@@ -136,6 +136,13 @@ public byte[] getClipboardImage(com.termux.terminal.TerminalSession s) { return 
                             "app/src/ai/openclaw/fterm/Notifier.java"))), "UTF-8");
             check(notifier.contains("IMPORTANCE_DEFAULT"),
                     "shell notifications are noticeable (unlike the service's LOW)");
+            // The hand is not a channel the user can turn off per app, so the app has to behave:
+            // a phone on silent is not buzzed, and a tool that notifies per step gets one buzz,
+            // not twenty.
+            check(notifier.contains("RINGER_MODE_SILENT"),
+                    "a phone on silent is not buzzed");
+            check(notifier.contains("VIBRATE_GAP_MS"),
+                    "and a stream of notifications is rate limited");
             // The class comment explains what this replaces, so strip comments before
             // checking that no termux-api call survives.
             StringBuilder code = new StringBuilder();

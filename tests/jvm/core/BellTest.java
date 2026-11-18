@@ -26,8 +26,12 @@ public class BellTest {
                 "VIBRATE is declared (without it the bell's default is a silent no-op)");
         check(manifest.contains("android.permission.POST_NOTIFICATIONS"),
                 "POST_NOTIFICATIONS is declared for the service notification");
-        check(manifest.contains("FOREGROUND_SERVICE_DATA_SYNC"),
+        // specialUse, not dataSync: Android 15 stops a dataSync service after six hours in any
+        // 24, and the service exists to outlive a shell session.
+        check(manifest.contains("FOREGROUND_SERVICE_SPECIAL_USE"),
                 "the foreground service type is declared");
+        check(manifest.contains("foregroundServiceType=\"specialUse\""),
+                "and it is specialUse, which has no daily clock");
         check(manifest.contains("ai.openclaw.fterm.TerminalService"),
                 "the service is registered");
 

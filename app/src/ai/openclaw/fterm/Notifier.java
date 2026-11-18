@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -38,8 +39,19 @@ final class Notifier {
     /** The service's notification owns low ids; these start where it cannot collide. */
     private static final int BASE_ID = 2000;
 
+    /**
+     * Least time between two buzzes.
+     *
+     * <p>A TUI that notifies per step - a build, an agent loop - produces a stream of them, and
+     * the shade already collapses them by title. The hand cannot collapse anything, so the
+     * vibration is rate limited: the first one says "notice me", the next twenty would only say
+     * "the phone is buzzing". Two seconds is longer than a person needs to look.
+     */
+    private static final long VIBRATE_GAP_MS = 2000;
+
     private final Context mContext;
     private int mNextId = BASE_ID;
+    private long mLastVibrate;
 
     Notifier(Context context) {
         mContext = context.getApplicationContext();
@@ -95,6 +107,16 @@ final class Notifier {
     }
 
     private void vibrate() {
+        // A phone on silent asked not to be buzzed. RINGER_MODE_VIBRATE is the opposite: it
+        // asked for exactly this. Only SILENT is a "do not".
+        try {
+            AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
+            if (am != null && am.getRingerMode() == AudioManager.RINGER_MODE_SILENT) return;
+        } catch (Throwable ignored) {
+        }
+        long now = System.currentTimeMillis();
+        if (now - mLastVibrate < VIBRATE_GAP_MS) return;
+        mLastVibrate = now;
         try {
             Vibrator v;
             if (Build.VERSION.SDK_INT >= 31) {

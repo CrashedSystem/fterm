@@ -36,6 +36,15 @@ public final class TerminalService extends Service {
     private static final String CHANNEL_ID = "fterm.session";
     private static final int NOTIFICATION_ID = 1001;
 
+    /**
+     * {@code ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE}, spelled out.
+     *
+     * <p>Constant inlined as a literal so this file still compiles against an older android.jar:
+     * the value is part of the API 34 surface, but the bit is simply ignored by older platforms,
+     * where the manifest attribute is what Android reads.
+     */
+    private static final int FGS_TYPE_SPECIAL_USE = 1 << 30;
+
     /** Start (or keep) the service. Idempotent. */
     static void start(Context context) {
         Intent intent = new Intent(context, TerminalService.class);
@@ -72,7 +81,14 @@ public final class TerminalService extends Service {
     public void onCreate() {
         super.onCreate();
         createChannel(this);
-        startForeground(NOTIFICATION_ID, build(this, "fterm", "터미널 준비 중"));
+        Notification n = build(this, "fterm", "터미널 준비 중");
+        if (Build.VERSION.SDK_INT >= 34) {
+            // The type is declared in the manifest too; passing it here is what Android 14+
+            // asks for explicitly, and it is what makes the specialUse exemption checkable.
+            startForeground(NOTIFICATION_ID, n, FGS_TYPE_SPECIAL_USE);
+        } else {
+            startForeground(NOTIFICATION_ID, n);
+        }
     }
 
     @Override

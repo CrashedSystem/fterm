@@ -10,7 +10,9 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- specialUse, not dataSync: Android 15 caps a dataSync foreground service at six hours
+         per day, and this service exists to stay up for as long as a shell is attached. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Clipboard images arrive as content:// URIs owned by the gallery/MediaStore.
@@ -50,10 +52,20 @@
         </activity>
 
         <!-- Keeps the process out of Android's freezer while a shell is attached. Without it
-             a backgrounded app is SIGSTOPped (measured: isFrozen=true) and its socket dies. -->
+             a backgrounded app is SIGSTOPped (measured: isFrozen=true) and its socket dies.
+
+             The type is specialUse rather than dataSync: Android 15 lets a dataSync service run
+             for six hours in any 24, then stops it, and "the terminal is up while a shell is
+             attached" is exactly the kind of long-lived session that limit was not written for.
+             specialUse has no such clock, and it is the declared type Android asks for when no
+             other type fits. -->
         <service
             android:name="ai.openclaw.fterm.TerminalService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="terminal session: holds the socket to the PTY daemon so a shell survives while the app is in the background" />
+        </service>
     </application>
 </manifest>
