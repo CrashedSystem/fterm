@@ -37,6 +37,18 @@ else
   ( cd "$RUST_CRATE" && cargo build --release --locked )
   RUST_BIN="$RUST_CRATE/target/release/ftermd"
 fi
+
+# A running binary cannot be overwritten: the kernel answers ETXTBSY ("Text file busy").
+# Stopping first also made the restart below correct in the only order that works, since a
+# daemon replaced under a live pidfile would keep serving the old code. The restart still runs
+# in its own session (see below) because this script is usually started from a fterm tab whose
+# shell is a child of the daemon being stopped.
+if "$DEST/ftermd" status >/dev/null 2>&1; then
+  echo "실행 중인 데몬 정지 (교체를 위해)"
+  "$DEST/ftermd" stop >/dev/null 2>&1 || true
+  sleep 0.5
+fi
+
 cp "$RUST_BIN" "$DEST/ftermd"
 echo "데몬: rust ($RUST_BIN)"
 chmod 700 "$DEST/ftermd"
