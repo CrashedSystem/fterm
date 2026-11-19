@@ -58,6 +58,53 @@ public class BackgroundTest {
         eq(odd[3], 2, "odd rounding keeps the picture's height");
         eq(odd[1], 0, "and centres it as closely as integers allow");
 
+        // --- alignment ---------------------------------------------------------
+        // Windows Terminal's nine names. A theme that ships "bottomRight" has to land in the
+        // bottom-right corner here too, or importing the theme means moving the picture by hand.
+        eq(ai.openclaw.fterm.BackgroundSpec.align("bottomRight"), "bottomRight",
+                "a WT alignment name passes through");
+        eq(ai.openclaw.fterm.BackgroundSpec.align("BOTTOMRIGHT"), "bottomRight",
+                "case does not matter");
+        eq(ai.openclaw.fterm.BackgroundSpec.align(null),
+                ai.openclaw.fterm.BackgroundSpec.DEFAULT_ALIGN, "absent means centre");
+        eq(ai.openclaw.fterm.BackgroundSpec.align("middle-ish"), "center",
+                "an unknown name falls back to centre rather than throwing");
+        eq(ai.openclaw.fterm.BackgroundSpec.ALIGN_NAMES.length, 9, "nine placements");
+
+        // A 100x100 picture in a 100x200 terminal, contain: 100x100 free vertically.
+        int[] tl = ai.openclaw.fterm.BackgroundSpec.place(100, 200, 100, 100, "contain", "topLeft");
+        eq(tl[0], 0, "topLeft is flush left");
+        eq(tl[1], 0, "and flush to the top");
+        int[] br = ai.openclaw.fterm.BackgroundSpec.place(
+                100, 200, 100, 100, "contain", "bottomRight");
+        eq(br[0], 0, "bottomRight does not move horizontally when the width already fits");
+        eq(br[1], 100, "and sits at the bottom");
+        int[] bc = ai.openclaw.fterm.BackgroundSpec.place(100, 200, 100, 100, "contain", "bottom");
+        eq(bc[0], 0, "bottom is horizontally centred");
+        eq(bc[1], 100, "and at the bottom");
+        int[] top = ai.openclaw.fterm.BackgroundSpec.place(200, 100, 100, 100, "contain", "top");
+        eq(top[0], 50, "top is horizontally centred");
+        eq(top[1], 0, "and at the top");
+        int[] lf = ai.openclaw.fterm.BackgroundSpec.place(200, 100, 100, 100, "contain", "left");
+        eq(lf[0], 0, "left letterboxes on the left");
+        eq(lf[1], 0, "and centres vertically");
+        int[] rt = ai.openclaw.fterm.BackgroundSpec.place(200, 100, 100, 100, "contain", "right");
+        eq(rt[0], 100, "right pushes the picture to the right edge");
+
+        // With cover the rectangle overflows; bottomRight keeps the overflow on the left/top so
+        // the bottom-right corner of the picture is the corner the user sees.
+        int[] cbr = ai.openclaw.fterm.BackgroundSpec.place(
+                100, 200, 100, 100, "cover", "bottomRight");
+        eq(cbr[2], 200, "cover still scales to the tall side");
+        eq(cbr[0], -100, "and the overflow moves off the right edge");
+
+        // The five-argument form is the pre-alignment behaviour and must not have changed.
+        int[] noArg = ai.openclaw.fterm.BackgroundSpec.place(100, 200, 100, 100, "contain");
+        int[] centred = ai.openclaw.fterm.BackgroundSpec.place(
+                100, 200, 100, 100, "contain", "center");
+        eq(noArg[0], centred[0], "no alignment argument is the same rect as centre (x)");
+        eq(noArg[1], centred[1], "no alignment argument is the same rect as centre (y)");
+
         // --- clamps ------------------------------------------------------------
         eq(ai.openclaw.fterm.BackgroundSpec.opacity(-5), 0, "opacity floor");
         eq(ai.openclaw.fterm.BackgroundSpec.opacity(150), 100, "opacity ceiling");

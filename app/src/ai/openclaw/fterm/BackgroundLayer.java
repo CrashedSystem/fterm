@@ -68,8 +68,8 @@ final class BackgroundLayer {
      */
     void reload() {
         String fileKey = BackgroundStore.fileSignature(mActivity);
-        String styleKey = mPrefs.backgroundFit() + "|" + mPrefs.backgroundOpacity()
-                + "|" + mPrefs.backgroundDim();
+        String styleKey = mPrefs.backgroundFit() + "|" + mPrefs.backgroundAlign() + "|"
+                + mPrefs.backgroundOpacity() + "|" + mPrefs.backgroundDim();
         if (fileKey.equals(mFileKey) && styleKey.equals(mStyleKey)) return;
 
         Bitmap old = mBitmap;
@@ -79,7 +79,8 @@ final class BackgroundLayer {
         }
         mStyleKey = styleKey;
         mImage = mBitmap == null ? null : new TerminalBackground(mBitmap,
-                mPrefs.backgroundFit(), mPrefs.backgroundOpacity(), mPrefs.backgroundDim());
+                mPrefs.backgroundFit(), mPrefs.backgroundAlign(),
+                mPrefs.backgroundOpacity(), mPrefs.backgroundDim());
         attach();
         if (old != null && old != mBitmap) old.recycle();
     }

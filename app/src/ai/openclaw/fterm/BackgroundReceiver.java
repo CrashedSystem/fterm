@@ -76,6 +76,9 @@ public final class BackgroundReceiver extends BroadcastReceiver {
         if (intent.hasExtra(BackgroundStore.EXTRA_FIT)) {
             prefs.setBackgroundFit(intent.getStringExtra(BackgroundStore.EXTRA_FIT));
         }
+        if (intent.hasExtra(BackgroundStore.EXTRA_ALIGN)) {
+            prefs.setBackgroundAlign(intent.getStringExtra(BackgroundStore.EXTRA_ALIGN));
+        }
         if (intent.hasExtra(BackgroundStore.EXTRA_DIM)) {
             prefs.setBackgroundDim(intent.getIntExtra(BackgroundStore.EXTRA_DIM, 0));
         }

@@ -26,6 +26,7 @@ final class TerminalBackground extends Drawable {
 
     private final Bitmap mBitmap;
     private final String mFit;
+    private final String mAlign;
     private final int mOpacity;
     private final int mDim;
     private final Paint mPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
@@ -33,9 +34,10 @@ final class TerminalBackground extends Drawable {
     private final Rect mSrc = new Rect();
     private final Rect mDst = new Rect();
 
-    TerminalBackground(Bitmap bitmap, String fit, int opacity, int dim) {
+    TerminalBackground(Bitmap bitmap, String fit, String align, int opacity, int dim) {
         mBitmap = bitmap;
         mFit = BackgroundSpec.fit(fit);
+        mAlign = BackgroundSpec.align(align);
         mOpacity = BackgroundSpec.opacity(opacity);
         mDim = BackgroundSpec.dim(dim);
         mPaint.setAlpha(mOpacity * 255 / 100);
@@ -48,7 +50,7 @@ final class TerminalBackground extends Drawable {
         Rect bounds = getBounds();
         if (mBitmap == null || bounds.isEmpty()) return;
         int[] place = BackgroundSpec.place(bounds.width(), bounds.height(),
-                mBitmap.getWidth(), mBitmap.getHeight(), mFit);
+                mBitmap.getWidth(), mBitmap.getHeight(), mFit, mAlign);
         if (place[2] <= 0 || place[3] <= 0) return;
 
         mSrc.set(0, 0, mBitmap.getWidth(), mBitmap.getHeight());

@@ -39,6 +39,7 @@ final class BackgroundStore {
     static final String EXTRA_PATH = "path";
     static final String EXTRA_OPACITY = "opacity";
     static final String EXTRA_FIT = "fit";
+    static final String EXTRA_ALIGN = "align";
     static final String EXTRA_DIM = "dim";
 
     static final int MAX_SIDE = 2048;
@@ -73,7 +74,10 @@ final class BackgroundStore {
     /** What the appearance page shows on the "배경 이미지" row. */
     static String describe(Context context) {
         File f = current(context);
-        return f == null ? null : f.getName();
+        if (f == null) return null;
+        Prefs p = new Prefs(context);
+        return f.getName() + " " + p.backgroundFit() + " " + p.backgroundAlign()
+                + " " + p.backgroundOpacity() + "%";
     }
 
     /**

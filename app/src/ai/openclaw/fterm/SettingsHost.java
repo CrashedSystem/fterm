@@ -151,6 +151,13 @@ final class SettingsHost implements SettingsSheet.Host {
         if (a.mBackdrop != null) a.mBackdrop.reload();
     }
 
+    @Override public String backgroundAlign() { return a.mPrefs.backgroundAlign(); }
+
+    @Override public void onBackgroundAlign(String align) {
+        a.mPrefs.setBackgroundAlign(align);
+        if (a.mBackdrop != null) a.mBackdrop.reload();
+    }
+
     @Override public void onBackgroundChanged() {
         if (a.mBackdrop != null) a.mBackdrop.reload();
     }

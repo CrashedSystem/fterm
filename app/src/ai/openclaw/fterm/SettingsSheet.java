@@ -86,6 +86,11 @@ final class SettingsSheet {
 
         void onBackgroundFit(String fit);
 
+        /** Where the picture sits when it does not fill the terminal. */
+        String backgroundAlign();
+
+        void onBackgroundAlign(String align);
+
         int backgroundDim();
 
         void onBackgroundDim(int percent);

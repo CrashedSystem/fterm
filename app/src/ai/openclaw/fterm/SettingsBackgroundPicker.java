@@ -55,6 +55,9 @@ final class SettingsBackgroundPicker {
         card.addView(mUi.valueRow("맞춤", "화면에 맞추는 방식",
                 BackgroundSpec.fitLabel(mHost.backgroundFit()), this::chooseFit, false));
 
+        card.addView(mUi.valueRow("위치", "여백이 생길 때 그림을 붙일 곳",
+                BackgroundSpec.alignLabel(mHost.backgroundAlign()), this::chooseAlign, false));
+
         card.addView(sliderRow("어둡게", "글자가 묻히면 올리세요",
                 mHost.backgroundDim(), BackgroundSpec.MAX_DIM, true, mHost::onBackgroundDim));
     }
@@ -176,6 +179,35 @@ final class SettingsBackgroundPicker {
                 .setTitle("맞춤")
                 .setSingleChoiceItems(labels, current, (d, which) -> {
                     mHost.onBackgroundFit(values[which]);
+                    d.dismiss();
+                    mSheet.render();
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    /**
+     * The nine placements, as Windows Terminal names them ({@code topLeft} … {@code bottomRight}).
+     *
+     * <p>A theme that ships {@code "backgroundImageAlignment": "bottomRight"} should arrive
+     * looking like the theme, which is why these are the same nine words and not a pair of
+     * sliders: "move the picture" has a small number of answers people actually want.
+     */
+    private void chooseAlign() {
+        final String[] values = BackgroundSpec.ALIGN_NAMES;
+        String[] labels = new String[values.length];
+        for (int i = 0; i < values.length; i++) {
+            labels[i] = BackgroundSpec.alignLabel(values[i]) + " (" + values[i] + ")";
+        }
+        String current = BackgroundSpec.align(mHost.backgroundAlign());
+        int selected = 0;
+        for (int i = 0; i < values.length; i++) {
+            if (values[i].equals(current)) selected = i;
+        }
+        new AlertDialog.Builder(mActivity)
+                .setTitle("배경 위치")
+                .setSingleChoiceItems(labels, selected, (d, which) -> {
+                    mHost.onBackgroundAlign(values[which]);
                     d.dismiss();
                     mSheet.render();
                 })

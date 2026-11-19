@@ -232,4 +232,12 @@ public final class Prefs {
     public void setBackgroundDim(int percent) {
         sp().edit().putInt("bg_dim", BackgroundSpec.dim(percent)).apply();
     }
+
+    /** Where the picture sits when it does not fill the terminal; see {@link BackgroundSpec}. */
+    public String backgroundAlign() {
+        return BackgroundSpec.align(sp().getString("bg_align", BackgroundSpec.DEFAULT_ALIGN));
+    }
+    public void setBackgroundAlign(String align) {
+        sp().edit().putString("bg_align", BackgroundSpec.align(align)).apply();
+    }
 }
