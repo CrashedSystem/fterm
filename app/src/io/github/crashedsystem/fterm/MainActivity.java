@@ -1206,7 +1206,10 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     private String getSelectedText() {
         if (mTermView.getCurrentSession() == null || mTermView.mEmulator == null) return null;
-        return mTermView.getStoredSelectedText();
+        // The live selection first - that is what the highlight on screen is - and the text the
+        // selection toolbar stored before closing as the fallback (the old Ctrl+Shift+C path).
+        String live = mTermView.getSelectedText();
+        return live != null ? live : mTermView.getStoredSelectedText();
     }
 
     void pasteClipboard() {
