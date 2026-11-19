@@ -39,6 +39,7 @@ import android.widget.Scroller;
 
 
 import com.termux.terminal.KeyHandler;
+import com.termux.terminal.TerminalBuffer;
 import com.termux.terminal.TerminalEmulator;
 import com.termux.terminal.TerminalSession;
 import com.termux.view.textselection.TextSelectionCursorController;
@@ -732,6 +733,41 @@ public final class TerminalView extends View {
     }
 
     /**
+     * A right-click from a mouse or trackpad, handed to the host.
+     *
+     * <p>Upstream relies on {@link #showContextMenu()} reaching an Activity listener, and this
+     * app has none - so the call was a no-op and right-click did nothing at all. The host owns
+     * the menu instead (Copy / Paste / Select All / Find / Settings, see TerminalMenu).
+     */
+    public interface ContextMenuRequest {
+        void onContextMenu(MotionEvent event);
+    }
+
+    private ContextMenuRequest mContextMenuRequest;
+
+    public void setContextMenuRequest(ContextMenuRequest request) {
+        mContextMenuRequest = request;
+    }
+
+    /**
+     * Select the whole screen, scrollback included.
+     *
+     * <p>Upstream has no such entry: its selection always starts at a touch point, which is the
+     * only thing a finger can give it. A mouse right-click menu is expected to offer it, and
+     * the selection it makes is a real one - the same handles, the same action mode, the same
+     * copy path as a long press.
+     */
+    public void selectAll() {
+        if (mEmulator == null || mTextSelectionCursorController == null) return;
+        if (!requestFocus()) return;
+        TerminalBuffer screen = mEmulator.getScreen();
+        mTextSelectionCursorController.selectAll(mEmulator.mColumns,
+                -screen.getActiveTranscriptRows(), mEmulator.mRows - 1);
+        mClient.copyModeChanged(isSelectingText());
+        invalidate();
+    }
+
+    /**
      * Sets the text size, which in turn sets the number of rows and columns.
      *
      * @param textSize the new font size, in density-independent pixels.
@@ -851,6 +887,12 @@ public final class TerminalView extends View {
         return false;
     }
 
+    /** The host's menu when it has one, else the platform's (unused here, but let it try). */
+    private void requestContextMenu(MotionEvent event) {
+        if (mContextMenuRequest != null) mContextMenuRequest.onContextMenu(event);
+        else showContextMenu();
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     @Override
     @TargetApi(23)
@@ -864,7 +906,7 @@ public final class TerminalView extends View {
             return true;
         } else if (event.isFromSource(InputDevice.SOURCE_MOUSE)) {
             if (event.isButtonPressed(MotionEvent.BUTTON_SECONDARY)) {
-                if (action == MotionEvent.ACTION_DOWN) showContextMenu();
+                if (action == MotionEvent.ACTION_DOWN) requestContextMenu(event);
                 return true;
             } else if (event.isButtonPressed(MotionEvent.BUTTON_TERTIARY)) {
                 ClipboardManager clipboardManager = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);

@@ -17,6 +17,8 @@ public final class FontZoom {
 
     public static final int MIN_DP = 4;
     public static final int MAX_DP = 28;
+    /** The size a fresh install starts at, and the one Ctrl+0 goes back to. */
+    public static final int DEFAULT_DP = 12;
 
     private FontZoom() {}
 

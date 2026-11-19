@@ -78,6 +78,9 @@ final class SettingsAppearancePage extends SettingsPage {
                 host.schemeName(), () -> open("schemes"), false));
         card.addView(ui.toggleCardRow("키 바 표시", "화면 아래 두 줄짜리 키 바",
                 host.keyBarVisible(), host::onKeyBarVisible, false));
+        card.addView(ui.toggleCardRow("하드웨어 키보드에서 키 바 숨김",
+                "DeX·북커버 키보드가 붙어 있으면 키 바를 자동으로 숨깁니다",
+                host.keyBarAutoHide(), host::onKeyBarAutoHide, false));
 
         // WT's cursor page, folded into this one: three shapes and a blink switch.
         card.addView(ui.valueRow("커서 모양", "블록 · 밑줄 · 세로 막대",

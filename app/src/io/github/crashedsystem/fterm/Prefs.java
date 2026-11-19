@@ -38,7 +38,7 @@ public final class Prefs {
      * "14" would be 3.7dp - unreadable. Model it in dp like a settings screen would,
      * and convert at the point of use.
      */
-    public int fontSizeDp() { return sp().getInt("font_dp", 12); }
+    public int fontSizeDp() { return sp().getInt("font_dp", FontZoom.DEFAULT_DP); }
     public void setFontSizeDp(int dp) { sp().edit().putInt("font_dp", dp).apply(); }
 
     public int scheme() { return sp().getInt("scheme", 0); }
@@ -99,6 +99,19 @@ public final class Prefs {
 
     public boolean keyBarVisible() { return sp().getBoolean("keybar", true); }
     public void setKeyBarVisible(boolean v) { sp().edit().putBoolean("keybar", v).apply(); }
+
+    /**
+     * Whether a keyboard that can type hides the key bar.
+     *
+     * <p>On by default: on DeX and on a tablet with a cover keyboard the bar repeats keys the
+     * keyboard already has and takes 88dp of the window to do it. It is a separate switch from
+     * {@link #keyBarVisible()} so a user who wants the bar always - or never, keyboard or not -
+     * can say so without giving up the other behaviour.
+     */
+    public boolean keyBarAutoHide() { return sp().getBoolean("keybar_auto_hide", true); }
+    public void setKeyBarAutoHide(boolean v) {
+        sp().edit().putBoolean("keybar_auto_hide", v).apply();
+    }
 
     /**
      * The terminal face: an id from {@link Fonts#catalog}.

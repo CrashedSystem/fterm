@@ -89,6 +89,28 @@ public class TextSelectionCursorController implements CursorController {
         }
     }
 
+    /**
+     * Select an explicit range, which is what the context menu's "select all" needs: the
+     * touch-driven entry point above can only start at a point on screen.
+     *
+     * @param columns  the number of columns to select across
+     * @param firstRow the first row, negative for scrollback above the screen
+     * @param lastRow  the last row on screen, inclusive
+     */
+    public void selectAll(int columns, int firstRow, int lastRow) {
+        mSelX1 = 0;
+        mSelY1 = firstRow;
+        mSelX2 = Math.max(0, columns - 1);
+        mSelY2 = lastRow;
+
+        mStartHandle.positionAtCursor(mSelX1, mSelY1, true);
+        mEndHandle.positionAtCursor(mSelX2 + 1, mSelY2, true);
+
+        setActionModeCallBacks();
+        mShowStartTime = System.currentTimeMillis();
+        mIsSelectingText = true;
+    }
+
     public void setInitialTextSelectionPosition(MotionEvent event) {
         int[] columnAndRow = terminalView.getColumnAndRow(event, true);
         mSelX1 = mSelX2 = columnAndRow[0];

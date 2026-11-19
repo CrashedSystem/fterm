@@ -119,7 +119,9 @@ public byte[] getClipboardImage(com.termux.terminal.TerminalSession s) { return 
         String src = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("main.src",
                         "app/src/io/github/crashedsystem/fterm/MainActivity.java"))), "UTF-8");
-        int at = src.indexOf("private void pasteClipboard()");
+        // The modifier is left out of the search: pasteClipboard() is also reached from the
+        // terminal's right-click menu now, so it is package-private rather than private.
+        int at = src.indexOf("void pasteClipboard()");
         check(at > 0, "pasteClipboard() exists");
         String body = src.substring(at, Math.min(src.length(), at + 1400));
         check(body.contains("pasteText("), "pasteClipboard() routes through pasteText()");

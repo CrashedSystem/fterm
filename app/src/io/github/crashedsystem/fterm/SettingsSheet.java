@@ -164,6 +164,10 @@ final class SettingsSheet {
 
         void onKeyBarVisible(boolean visible);
 
+        /** Whether a hardware keyboard hides the key bar by itself. */
+        boolean keyBarAutoHide();
+        void onKeyBarAutoHide(boolean on);
+
         boolean keyboardOnStart();
 
         void onKeyboardOnStart(boolean on);
@@ -289,11 +293,15 @@ final class SettingsSheet {
                 // The window's own background would draw the platform's card behind the
                 // surface; on OneUI that card is light and it showed as a white rim.
                 w.setBackgroundDrawable(Chrome.plate(mUi.WINDOW, 12));
-                w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,
-                        (int) (mActivity.getResources().getDisplayMetrics().heightPixels * 0.90f));
             }
         }
+        // Every render, not once: configChanges keeps the activity alive across a rotation, so
+        // a portrait sheet would otherwise keep its height and cut its bottom edge off.
+        DialogSize.sheet(mDialog, mActivity);
     }
+
+    /** Re-fit the window after the screen changed size or orientation. */
+    void relayout() { if (mDialog != null && mDialog.isShowing()) DialogSize.sheet(mDialog, mActivity); }
 
     /**
      * Breadcrumb on the left, close glyph on the right, exactly like WT's page header.

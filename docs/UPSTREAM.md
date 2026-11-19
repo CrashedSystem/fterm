@@ -47,9 +47,9 @@ v0.118.3 이후이고, 이 커밋과 내용이 일치합니다.
 | `terminal/TerminalSession.java` | +102 / -9 |
 | `terminal/TerminalSessionClient.java` | +23 / -10 |
 | `view/TerminalRenderer.java` | +71 / -0 |
-| `view/TerminalView.java` | +447 / -70 |
+| `view/TerminalView.java` | +485 / -71 |
 | `view/TerminalViewClient.java` | +15 / -0 |
-| `view/textselection/TextSelectionCursorController.java` | +2 / -3 |
+| `view/textselection/TextSelectionCursorController.java` | +21 / -3 |
 | `view/textselection/TextSelectionHandleView.java` | +1 / -1 |
 | `terminal/DaemonClient.java` | 이 저장소 (업스트림에 없음) |
 | `terminal/Protocol.java` | 이 저장소 (업스트림에 없음) |
@@ -59,6 +59,13 @@ v0.118.3 이후이고, 이 커밋과 내용이 일치합니다.
 "이 저장소" 로 표시한 네 파일은 데몬 링크(프레이밍, 세션 전송, 프로토콜 상수)라 업스트림에
 대응물이 없습니다. `Protocol.java` 의 상수는 `termux/ftermd`·`termux/ftermd-rs` 와 같은 값이어야
 하고, 그것은 `tests/test_protocol.py` 가 검사합니다.
+
+`TerminalView`·`TextSelectionCursorController` 의 최근 증가분은 마우스 오른쪽 클릭 메뉴 때문입니다.
+업스트림은 `showContextMenu()` 가 액티비티의 `onCreateContextMenu` 에 닿는 것을 전제하는데 이 앱은
+그 리스너를 두지 않으므로, 뷰가 `ContextMenuRequest` 로 호스트에 넘기고(복사·붙여넣기·전체 선택·
+찾기·설정), "전체 선택" 은 터치 지점에서만 시작할 수 있는 선택 컨트롤러에 범위를 직접 주는
+`selectAll(columns, firstRow, lastRow)` 를 추가했습니다. 업스트림 수정을 3-way 로 합칠 때 이 두
+갈래가 우리 쪽에 남아야 합니다.
 
 ## 업스트림 수정을 가져오는 순서
 

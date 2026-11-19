@@ -180,7 +180,15 @@ final class SettingsHost implements SettingsSheet.Host {
     @Override public boolean keyBarVisible() { return a.mPrefs.keyBarVisible(); }
     @Override public void onKeyBarVisible(boolean visible) {
         a.mPrefs.setKeyBarVisible(visible);
-        if (a.mKeyBar != null) a.mKeyBar.setVisible(visible);
+        // Not setVisible(visible): a keyboard that is attached still hides the bar, and this
+        // is the one place that decides.
+        a.applyKeyBarVisibility();
+    }
+
+    @Override public boolean keyBarAutoHide() { return a.mPrefs.keyBarAutoHide(); }
+    @Override public void onKeyBarAutoHide(boolean on) {
+        a.mPrefs.setKeyBarAutoHide(on);
+        a.applyKeyBarVisibility();
     }
 
     @Override public boolean keyboardOnStart() { return a.mPrefs.showKeyboardOnStart(); }

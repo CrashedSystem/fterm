@@ -6,16 +6,11 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.Editable;
-import android.text.InputType;
-import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -25,14 +20,9 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.BaseAdapter;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,8 +48,6 @@ import java.util.List;
  * navigation drawer - a phone terminal should come up on a shell in one frame.
  */
 public final class MainActivity extends Activity implements TerminalViewClient, TerminalSessionClient {
-
-    private static final String TAG = "fterm";
 
     Prefs mPrefs;
     private LinearLayout mRoot;
@@ -98,6 +86,10 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     private boolean mFn;
     private boolean mShowKeyboardOnce = true;
+    /** Hardware keys, handled before the focused view sees them. */
+    private Shortcuts mShortcuts;
+    /** The density the dp-derived px were built at; a change means they have to be redone. */
+    private int mDensityDpi;
 
     private final Handler mUi = new Handler(Looper.getMainLooper());
 
@@ -105,6 +97,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mPrefs = new Prefs(this);
+        mDensityDpi = getResources().getConfiguration().densityDpi;
         mFontDp = mPrefs.fontSizeDp();
         mZoomDp = mFontDp;
         mCustoms = mPrefs.customSchemes();
@@ -168,7 +161,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mTabScroll = new HorizontalScrollView(this);
         mTabScroll.setHorizontalScrollBarEnabled(false);
         mTabScroll.setFillViewport(false);
-        mTabScroll.setLayoutParams(new LinearLayout.LayoutParams(0, dp(38), 1f));
+        // wrap_content, not weight 1: the strip is then exactly as wide as its tabs, so the
+        // split button follows the last one. With weight 1 the + and the chevron sat at the
+        // far right of the window, which on a 12" tablet left over a thousand dp of empty bar
+        // between the last tab and the button that adds another.
+        mTabScroll.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)));
         mTabScroll.addView(mTabStrip);
 
         // WT's tab row, and nothing else.
@@ -199,6 +197,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // The chevron sits tight against the plus with no gap: the two halves read as one
         // split button, which is what they are.
         top.addView(drop);
+        // Whatever width is left belongs to the bar, not to a stretched-out strip.
+        top.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
         top.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
         mTopBar = top;
@@ -218,6 +218,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mTermView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         mTermFrame.addView(mTermView);
+        // Right-click on a tablet or in DeX: the view hands the event over, the menu is ours.
+        TerminalMenu.attach(this, mTermView);
 
         // Key bar
         mKeyBar = new KeyBar(this, new KeyBar.Action() {
@@ -240,13 +242,13 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mRoot.addView(mTermFrame);
         mRoot.addView(mKeyBar.view());
         setContentView(mRoot);
-        EdgeToEdge.applyInsets(mRoot, mTopBar, mKeyBar.view(), dp(38), dp(88));
+        EdgeToEdge.applyInsets(mRoot, mTopBar, mKeyBar.view(), mTermFrame, 38, 88);
 
         mChrome = new Chrome(this, new Chrome.Commands() {
             @Override public void newTab() { MainActivity.this.newTab(true); }
             @Override public void closeTab() { if (mActive != null) confirmClose(mActive); }
             @Override public void renameTab() { renameActiveTab(); }
-            @Override public void nextTab() { cycleTab(); }
+            @Override public void nextTab() { cycleTab(1); }
             @Override public void paste() { pasteClipboard(); }
             @Override public void copy() { copySelection(); }
             @Override public void biggerFont() { applyFontSize(mFontDp + 1); }
@@ -275,34 +277,11 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         applyScheme(mScheme);
         applyCursor();
         applyRetro();
-        mKeyBar.setVisible(mPrefs.keyBarVisible());
+        applyKeyBarVisibility();
+        mShortcuts = new Shortcuts(this);
     }
 
-    /**
-     * Key bar buttons. ALT/CTRL/SHIFT/FN are sticky: they latch until the next key is sent,
-     * which is how a phone keyboard has to work (there is no way to hold two keys at once
-     * with one thumb).
-     */
     // ---------------------------------------------------------------- sessions
-
-    private static final class Tab {
-        TerminalSession session;
-        SocketTransport transport;
-        TextView chip;
-        LinearLayout plate;
-        TextView closeBox;
-        /** The plate, title and close box as one object; see TabStrip. */
-        TabStrip.Chip chipView;
-        String title = Profiles.DEFAULT_NAME;
-        /** Set once the user renames the tab; the shell's OSC title stops winning. */
-        boolean userTitled;
-        /** The profile this tab was opened from, or null for the default profile. */
-        Profiles.Profile profile;
-        /** Typed into the shell once it has printed something; see openSession(). */
-        String pendingCommand;
-        int id;
-        boolean running;
-    }
 
     /**
      * Bring the terminal up.
@@ -523,62 +502,20 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mUi.postDelayed(r, 120);
     }
 
-    /** The daemon is unreachable or refused us. Say what to run, in the app. */
-    private void showDaemonHelp(String reason) {
-        mUi.post(() -> new AlertDialog.Builder(this)
-                .setTitle("Termux 데몬에 연결하지 못했습니다")
-                .setMessage(reason + "\n\nTermux에서 한 번 실행하세요:\n\n"
-                        + "  pkg install python\n"
-                        + "  ~/fterm/ftermd start\n\n"
-                        + "그다음 이 앱으로 돌아오세요.")
-                .setPositiveButton("명령 복사", (d, w) -> {
-                    copyToClipboard("~/fterm/ftermd start");
-                    Toast.makeText(this, "복사됨 — Termux에 붙여넣고 실행하세요",
-                            Toast.LENGTH_LONG).show();
-                })
-                .setNegativeButton("닫기", null)
-                .show());
-    }
-
     /**
      * First run: there is no token. Kick off `ftermd token` inside Termux via
      * RUN_COMMAND and ask the user to paste it once. Everything after that is
      * remembered, so this happens exactly once per install.
      */
     private void requestToken(Tab tab) {
-        mUi.post(() -> {
-            final EditText input = new EditText(this);
-            input.setHint("Termux에서 `ftermd token` 출력값");
-            input.setSingleLine(true);
-            input.setInputType(InputType.TYPE_CLASS_TEXT);
-            input.setTextColor(0xffe6e6e6);
-            input.setHintTextColor(0xff888888);
-
-            new AlertDialog.Builder(this)
-                    .setTitle("Termux 연결")
-                    .setMessage("Termux에서 다음을 한 번 실행하세요:\n\n"
-                            + "  ~/fterm/ftermd start\n"
-                            + "  ftermd token\n\n"
-                            + "출력된 토큰을 붙여넣으세요.")
-                    .setView(input)
-                    .setCancelable(false)
-                    .setPositiveButton("저장", (d, w) -> {
-                        String t = input.getText().toString().trim();
-                        if (t.isEmpty()) {
-                            finish();
-                            return;
-                        }
-                        mPrefs.setToken(t);
-                        openSession(tab, true);
-                    })
-                    .setNegativeButton("Termux 명령 복사", (d, w) -> {
-                        copyToClipboard("ftermd start && ftermd token");
-                        Toast.makeText(this, "복사됨 — Termux에 붙여넣고 실행하세요",
-                                Toast.LENGTH_LONG).show();
-                        finish();
-                    })
-                    .show();
-        });
+        mUi.post(() -> DaemonDialogs.manualToken(this, token -> {
+            if (token == null || token.isEmpty()) {
+                finish();
+                return;
+            }
+            mPrefs.setToken(token);
+            openSession(tab, true);
+        }));
     }
 
     private void addTabChip(Tab tab) {
@@ -804,10 +741,17 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private void showCommandPalette() {
         if (mChrome != null) mChrome.palette();
     }
-    private void cycleTab() {
+    /** Move to another tab by delta, wrapping both ways; the keyboard's Ctrl+Tab. */
+    void cycleTab(int delta) {
         if (mTabs.size() < 2) return;
+        int n = mTabs.size();
         int i = mTabs.indexOf(mActive);
-        activate(mTabs.get((i + 1) % mTabs.size()));
+        activate(mTabs.get(((i + delta) % n + n) % n));
+    }
+
+    /** The nth tab, counting from zero (Ctrl+1..9); out of range is a no-op. */
+    void selectTab(int index) {
+        if (index >= 0 && index < mTabs.size()) activate(mTabs.get(index));
     }
 
     /**
@@ -825,23 +769,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     /** WT's "Rename tab": the title is cosmetic and remembered until the shell sets its own. */
     private void renameActiveTab() {
         if (mActive == null) return;
-        final EditText input = new EditText(this);
-        input.setText(mActive.title);
-        input.setSingleLine(true);
-        input.setSelectAllOnFocus(true);
-        new AlertDialog.Builder(this)
-                .setTitle("탭 이름")
-                .setView(input)
-                .setPositiveButton("저장", (d, w) -> {
-                    String t = input.getText().toString().trim();
-                    if (!t.isEmpty()) {
-                        mActive.title = t;
-                        mActive.userTitled = true;
-                        updateChip(mActive);
-                    }
-                })
-                .setNegativeButton("취소", null)
-                .show();
+        Chrome.renameTab(this, mActive.title, name -> {
+            if (name.isEmpty()) return;
+            mActive.title = name;
+            mActive.userTitled = true;
+            updateChip(mActive);
+        });
     }
 
     /**
@@ -857,7 +790,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         if (mSettings != null) mSettings.onActivityResult(requestCode, resultCode, data);
     }
 
-    private void showSettings() {
+    void showSettings() {
         if (mSettings == null) mSettings = new SettingsSheet(this, new SettingsHost(this));
         mSettings.show();
     }
@@ -868,10 +801,13 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mSettings.show(page);
     }
 
-    /** WT's find bar; also bound to Ctrl+Shift+F in the key handler. */
-    private void find() {
+    /**
+     * WT's find bar; also bound to Ctrl+Shift+F in the key handler. Pressing it again while
+     * the bar is open puts the cursor back in the field rather than closing it.
+     */
+    void find() {
         if (mFind == null) return;
-        if (mFind.isOpen()) mFind.hide(); else mFind.show();
+        if (mFind.isOpen()) mFind.focus(); else mFind.show();
     }
 
     private void showAbout() {
@@ -887,6 +823,10 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     private void showKeyboardSoon() {
+        // A keyboard that can type makes the IME optional, and on DeX it covers half the
+        // window while the user is looking at a shell they can already type into. The key
+        // bar's keyboard button still raises it for the times the on-screen one is wanted.
+        if (HardwareKeyboard.present(this)) return;
         mUi.postDelayed(() -> {
             mTermView.requestFocus();
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -993,11 +933,50 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         super.onDestroy();
     }
 
+    /**
+     * The configuration changed without the activity being recreated, which is the deal the
+     * manifest's {@code configChanges} makes - a terminal must not lose its sessions to a
+     * rotation - so everything derived from the configuration is re-derived here.
+     */
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration config) {
+        super.onConfigurationChanged(config);
+        if (mSettings != null) mSettings.relayout();
+        if (mChrome != null) mChrome.relayout();
+        applyKeyBarVisibility();
+        // DeX on an external monitor changes the density, and every dp in this layout was
+        // multiplied out to px once, in buildUi.
+        if (config.densityDpi != mDensityDpi) {
+            mDensityDpi = config.densityDpi;
+            mTermView.setTextSize(fontPx());
+            loadFonts();
+        }
+        // The insets listener re-derives both bar heights from their dp bases on every pass,
+        // so asking for the insets again is what refreshes them.
+        mRoot.requestApplyInsets();
+    }
+
+    /**
+     * Whether the key bar belongs on screen right now.
+     *
+     * <p>"키 바 표시" is the user's switch, and off means off. On top of it, a keyboard that
+     * can type hides a bar holding the keys that keyboard already has; the 모양 page's
+     * auto-hide row is what lets a tablet that is sometimes a tablet keep the bar.
+     */
+    void applyKeyBarVisibility() {
+        if (mKeyBar == null) return;
+        mKeyBar.setVisible(mPrefs.keyBarVisible()
+                && !(mPrefs.keyBarAutoHide() && HardwareKeyboard.present(this)));
+        // The inset that the bar is not using moves to the terminal; ask for them again so
+        // the move happens now rather than at the next rotation.
+        if (mRoot != null) mRoot.requestApplyInsets();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
         if (mBackdrop != null) mBackdrop.resume();
-        if (mShowKeyboardOnce && mPrefs.showKeyboardOnStart()) {
+        if (mShowKeyboardOnce && mPrefs.showKeyboardOnStart() && !HardwareKeyboard.present(this)) {
             mShowKeyboardOnce = false;
             showKeyboardSoon();
         }
@@ -1012,23 +991,17 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         if (android.os.Build.VERSION.SDK_INT < 33) return;
         getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                 android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
-                new android.window.OnBackInvokedCallback() {
-                    @Override
-                    public void onBackInvoked() {
-                        if (mPrefs.backIsEscape() && mActive != null && mActive.session != null) {
-                            sendEscape("esc");
-                        } else {
-                            finish();
-                        }
-                    }
-                });
+                this::handleBack);
     }
 
-    @SuppressWarnings("deprecation")
-    @Override
-    public void onBackPressed() {
-        // An open find bar is the innermost thing on screen, so Back closes it first - the
-        // same order as every other overlay on the phone.
+    /**
+     * Back, from either path (the API 33+ callback or {@link #onBackPressed()}).
+     *
+     * <p>The order is the point: the find bar is the innermost thing on screen, so Back closes
+     * it first. The API 33+ callback was written without that check, so on a current device
+     * Back closed the whole app while the find bar was open - the two paths disagreed.
+     */
+    private void handleBack() {
         if (mFind != null && mFind.isOpen()) {
             mFind.hide();
             return;
@@ -1037,7 +1010,26 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             sendEscape("esc");
             return;
         }
-        super.onBackPressed();
+        finish();
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public void onBackPressed() {
+        handleBack();
+    }
+
+    /**
+     * Hardware keys before the focused view sees them.
+     *
+     * <p>The terminal was the only listener, so every shortcut stopped working the moment
+     * focus moved to the find field. Dispatching here makes the bindings a property of the
+     * window, which is what a keyboard user expects on a tablet or in DeX.
+     */
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent e) {
+        if (mShortcuts != null && mShortcuts.handle(e)) return true;
+        return super.dispatchKeyEvent(e);
     }
 
     // ---------------------------------------------------------------- TerminalViewClient
@@ -1050,10 +1042,14 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     @Override
     public void onSingleTapUp(MotionEvent e) {
-        if (mTermView.getCurrentSession() != null) {
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) imm.showSoftInput(mTermView, InputMethodManager.SHOW_IMPLICIT);
-        }
+        if (mTermView.getCurrentSession() == null) return;
+        // A click is not a request for the keyboard. Tapping the terminal to give it focus in
+        // DeX used to raise the IME over the pane, which is the opposite of what a mouse user
+        // wants; and with a hardware keyboard attached the IME is redundant either way.
+        if (e.isFromSource(android.view.InputDevice.SOURCE_MOUSE)) return;
+        if (HardwareKeyboard.present(this)) return;
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) imm.showSoftInput(mTermView, InputMethodManager.SHOW_IMPLICIT);
     }
 
     @Override
@@ -1198,7 +1194,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         }
     }
 
-    private void copySelection() {
+    void copySelection() {
         String sel = getSelectedText();
         if (sel == null || sel.isEmpty()) {
             Toast.makeText(this, "선택된 텍스트가 없습니다", Toast.LENGTH_SHORT).show();
@@ -1213,7 +1209,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         return mTermView.getStoredSelectedText();
     }
 
-    private void pasteClipboard() {
+    void pasteClipboard() {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null || !cm.hasPrimaryClip()) return;
         ClipData clip = cm.getPrimaryClip();

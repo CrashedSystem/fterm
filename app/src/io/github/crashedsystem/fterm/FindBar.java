@@ -130,10 +130,22 @@ final class FindBar {
         mBar.setVisibility(View.VISIBLE);
         mField.requestFocus();
         mField.setSelection(mField.getText().length());
-        android.view.inputmethod.InputMethodManager ime =
-                (android.view.inputmethod.InputMethodManager)
-                        mActivity.getSystemService(Activity.INPUT_METHOD_SERVICE);
-        if (ime != null) ime.showSoftInput(mField, 0);
+        // With a keyboard attached the field takes typed text without dragging the IME over
+        // the terminal it is searching - the same rule the activity follows for its own
+        // showSoftInput calls.
+        if (!HardwareKeyboard.present(mActivity)) {
+            android.view.inputmethod.InputMethodManager ime =
+                    (android.view.inputmethod.InputMethodManager)
+                            mActivity.getSystemService(Activity.INPUT_METHOD_SERVICE);
+            if (ime != null) ime.showSoftInput(mField, 0);
+        }
+        research();
+    }
+
+    /** Back into the field with the query intact: a repeat Ctrl+Shift+F lands here. */
+    void focus() {
+        mField.requestFocus();
+        mField.setSelection(mField.getText().length());
         research();
     }
 

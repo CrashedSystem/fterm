@@ -68,11 +68,22 @@ final class KeyBar {
      */
     private static final int EDGE_W_DP = 16;
 
+    /**
+     * How wide the keys are allowed to spread.
+     *
+     * <p>Six cells with weight 1 fill whatever width they are given, and a 12" tablet gives
+     * them 210dp each - a strip of panels rather than keys, with the outer two further from a
+     * thumb than any phone key has ever been. Past a comfortable key width the whole bar stops
+     * growing and centres instead.
+     */
+    private static final int MAX_CONTENT_DP = 520;
+
     private final Context mContext;
     private final Action mAction;
     private final LinearLayout mRow;
     private final LinearLayout mUserRow;
     private final LinearLayout mRoot;
+    private final FrameLayout mInner;
     private final FrameLayout mFrame;
     private final TextView mLeftTab;
     private final TextView mRightTab;
@@ -118,18 +129,39 @@ final class KeyBar {
 
         mFrame = new FrameLayout(context);
         mFrame.setBackgroundColor(BG);
-        mFrame.addView(mRoot, new FrameLayout.LayoutParams(
+        // The keys live in a centred, width-capped layer of their own: the frame is what the
+        // system draws behind and insets, and it must stay full width for the bar to reach the
+        // edges of a phone screen.
+        mInner = new FrameLayout(context);
+        mInner.addView(mRoot, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        FrameLayout.LayoutParams innerLp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        innerLp.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
+        mFrame.addView(mInner, innerLp);
         FrameLayout.LayoutParams leftLp = new FrameLayout.LayoutParams(dp(EDGE_W_DP),
                 ViewGroup.LayoutParams.MATCH_PARENT);
         leftLp.gravity = Gravity.START;
-        mFrame.addView(mLeftTab, leftLp);
+        mInner.addView(mLeftTab, leftLp);
         FrameLayout.LayoutParams rightLp = new FrameLayout.LayoutParams(dp(EDGE_W_DP),
                 ViewGroup.LayoutParams.MATCH_PARENT);
         rightLp.gravity = Gravity.END;
-        mFrame.addView(mRightTab, rightLp);
+        mInner.addView(mRightTab, rightLp);
+        // Width is known only after the first layout pass, so the clamp runs there and on
+        // every resize (a DeX window is resized as often as it is moved).
+        mFrame.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> clampWidth());
 
         buildLayer(false);
+    }
+
+    private void clampWidth() {
+        int avail = mFrame.getWidth() - mFrame.getPaddingLeft() - mFrame.getPaddingRight();
+        if (avail <= 0) return;
+        ViewGroup.LayoutParams lp = mInner.getLayoutParams();
+        int want = Math.min(avail, dp(MAX_CONTENT_DP));
+        if (lp.width == want) return;
+        lp.width = want;
+        mInner.setLayoutParams(lp);
     }
 
     private void buildLayer(boolean fnLayer) {
@@ -209,6 +241,7 @@ final class KeyBar {
     void applyTheme(boolean oled) {
         int bg = oled ? 0xff0d0d0d : BG;
         mFrame.setBackgroundColor(bg);
+        mInner.setBackgroundColor(bg);
         mRoot.setBackgroundColor(bg);
         mRow.setBackgroundColor(bg);
         mUserRow.setBackgroundColor(bg);

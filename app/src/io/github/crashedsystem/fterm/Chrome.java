@@ -63,9 +63,43 @@ final class Chrome {
     private final Activity mActivity;
     private final Commands mCommands;
 
+    /** The palette while it is on screen, so a rotation can re-size it; null when closed. */
+    private android.app.Dialog mPalette;
+
     Chrome(Activity activity, Commands commands) {
         mActivity = activity;
         mCommands = commands;
+    }
+
+    /** What a rename dialog hands back once the user accepts a name. */
+    interface NameInput {
+        void onName(String name);
+    }
+
+    /**
+     * WT's "Rename tab" dialog.
+     *
+     * <p>A dialog rather than an in-place editor because a tab's title is the shell's until
+     * the user overrides it, and an inline field would have to fight the OSC title for the
+     * same row. What the new name means to the tab is the caller's business.
+     */
+    static void renameTab(Activity activity, String current, final NameInput apply) {
+        final EditText input = new EditText(activity);
+        input.setText(current);
+        input.setSingleLine(true);
+        input.setSelectAllOnFocus(true);
+        new android.app.AlertDialog.Builder(activity)
+                .setTitle("탭 이름")
+                .setView(input)
+                .setPositiveButton("저장", (d, w) ->
+                        apply.onName(input.getText().toString().trim()))
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    /** Re-apply the palette's window size after the window changed (rotation, DeX resize). */
+    void relayout() {
+        if (mPalette != null && mPalette.isShowing()) DialogSize.palette(mPalette, mActivity);
     }
 
     /**
@@ -150,14 +184,17 @@ final class Chrome {
         });
 
         dialog.show();
+        mPalette = dialog;
         // The window is what gives the list its height; without this it collapses to a stub in
-        // the middle of the screen and the rows at the bottom are unreachable.
+        // the middle of the screen and the rows at the bottom are unreachable. The width is
+        // capped as well, so a 12" screen gets a column of commands instead of a list whose
+        // labels sit at the far left of a metre of empty space.
         android.view.Window w = dialog.getWindow();
         if (w != null) {
+            // Translucent, so the palette's own rounded plate is the surface on screen.
             w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
-            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,
-                    (int) (mActivity.getResources().getDisplayMetrics().heightPixels * 0.72f));
         }
+        DialogSize.palette(dialog, mActivity);
     }
 
     // ------------------------------------------------------------------ dropdown

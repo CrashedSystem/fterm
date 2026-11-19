@@ -45,19 +45,32 @@ final class EdgeToEdge {
     /**
      * Fit three rows between the system bars.
      *
-     * @param root    the vertical column holding the three rows
-     * @param topBar  the tab strip row
-     * @param keyBar  the key row
-     * @param topBase the tab strip height without insets, in px
-     * @param keyBase the key row height without insets, in px
+     * <p>The base heights are dp, not px: they are multiplied out on every inset pass, so a
+     * density change (DeX on an external monitor) is picked up without rebuilding the layout.
+     *
+     * <p>The bottom inset lives on the key bar while the bar is showing. When it is not - the
+     * user turned it off, or a hardware keyboard hid it - it moves to {@code frame} instead,
+     * because otherwise the last rows of the terminal would sit behind the navigation bar.
+     *
+     * @param root       the vertical column holding the three rows
+     * @param topBar     the tab strip row
+     * @param keyBar     the key row
+     * @param frame      the terminal's frame, which takes the inset the key bar is not using
+     * @param topBaseDp  the tab strip height without insets, in dp
+     * @param keyBaseDp  the key row height without insets, in dp
      */
     static void applyInsets(final View root, final View topBar, final View keyBar,
-                            final int topBase, final int keyBase) {
-        // 8dp of slack under the key row (see the padding computation below).
-        final int slack = Math.round(8 * root.getResources().getDisplayMetrics().density);
+                            final View frame, final float topBaseDp, final float keyBaseDp) {
         root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             @Override
             public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                // Read the density here rather than closing over it: this listener outlives
+                // any configuration change the manifest keeps the activity alive for.
+                float density = v.getResources().getDisplayMetrics().density;
+                int topBase = Math.round(topBaseDp * density);
+                int keyBase = Math.round(keyBaseDp * density);
+                // 8dp of slack under the key row (see the padding computation below).
+                int slack = Math.round(8 * density);
                 int top, bottom;
                 if (Build.VERSION.SDK_INT >= 30) {
                     android.graphics.Insets bars =
@@ -98,6 +111,17 @@ final class EdgeToEdge {
                     if (keyBar.getPaddingBottom() != pad) {
                         keyBar.setPadding(keyBar.getPaddingLeft(), keyBar.getPaddingTop(),
                                 keyBar.getPaddingRight(), pad);
+                    }
+                }
+
+                if (frame != null) {
+                    // The key bar is what normally absorbs the navigation bar; when it is not
+                    // on screen the terminal has to.
+                    boolean barShowing = keyBar != null && keyBar.getVisibility() == View.VISIBLE;
+                    int pad = barShowing ? 0 : bottom;
+                    if (frame.getPaddingBottom() != pad) {
+                        frame.setPadding(frame.getPaddingLeft(), frame.getPaddingTop(),
+                                frame.getPaddingRight(), pad);
                     }
                 }
                 return insets;

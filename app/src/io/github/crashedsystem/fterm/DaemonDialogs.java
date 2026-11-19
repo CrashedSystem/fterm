@@ -18,15 +18,58 @@ final class DaemonDialogs {
 
     private DaemonDialogs() {}
 
+    /** Where a manually entered token, or a cancel, comes back to. */
+    interface TokenInput {
+        /** @param token the pasted token, or null when the user backed out. */
+        void onToken(String token);
+    }
+
+    /**
+     * Last resort when the app cannot provision the daemon itself: the user runs the two
+     * commands in Termux and pastes the token once. This used to live in the activity, where
+     * it was the longest thing in the class that was not about the terminal.
+     */
+    static void manualToken(Activity a, final TokenInput onToken) {
+        final android.widget.EditText input = new android.widget.EditText(a);
+        input.setHint("Termux에서 `ftermd token` 출력값");
+        input.setSingleLine(true);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+        input.setTextColor(0xffe6e6e6);
+        input.setHintTextColor(0xff888888);
+
+        new AlertDialog.Builder(a)
+                .setTitle("Termux 연결")
+                .setMessage("Termux에서 다음을 한 번 실행하세요:\n\n"
+                        + "  ~/fterm/ftermd start\n"
+                        + "  ftermd token\n\n"
+                        + "출력된 토큰을 붙여넣으세요.")
+                .setView(input)
+                .setCancelable(false)
+                .setPositiveButton("저장", (d, w) ->
+                        onToken.onToken(input.getText().toString().trim()))
+                .setNegativeButton("Termux 명령 복사", (d, w) -> {
+                    copy(a, "ftermd start && ftermd token");
+                    Toast.makeText(a, "복사됨 — Termux에 붙여넣고 실행하세요",
+                            Toast.LENGTH_LONG).show();
+                    onToken.onToken(null);
+                })
+                .show();
+    }
+
+    /** The one thing these dialogs have in common besides their shape: a command to copy. */
+    private static void copy(Activity a, String command) {
+        android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                a.getSystemService(Activity.CLIPBOARD_SERVICE);
+        if (cm != null) cm.setPrimaryClip(
+                android.content.ClipData.newPlainText("fterm", command));
+    }
+
     static void keeperMissing(Activity a, Runnable onDismiss) {
         new AlertDialog.Builder(a)
                 .setTitle("Termux 준비가 필요합니다")
                 .setMessage(DaemonLauncher.keeperInstructions())
                 .setPositiveButton("명령 복사", (d, w) -> {
-                    android.content.ClipboardManager cm = (android.content.ClipboardManager)
-                            a.getSystemService(Activity.CLIPBOARD_SERVICE);
-                    if (cm != null) cm.setPrimaryClip(
-                            android.content.ClipData.newPlainText("fterm", COMMAND));
+                    copy(a, COMMAND);
                     Toast.makeText(a, "복사됨 — Termux에 붙여넣고 실행하세요",
                             Toast.LENGTH_LONG).show();
                 })
