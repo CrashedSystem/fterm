@@ -69,21 +69,28 @@ Termux의 `terminal-emulator`/`terminal-view`(Apache-2.0)를 벤더링했으므�
 다른 문제이기 때문입니다. `test_client.py` 의 `test_mode_restore` 는 실제 pty 위의
 curses 프로그램으로 같은 것을 확인합니다.
 
-## 설치 (기기에서 직접)
+## 설치
 
-1. Termux에서 데몬을 설치합니다.
+1. [Releases](https://github.com/CrashedSystem/fterm/releases)에서 `fterm.apk` 를 받아
+   설치합니다 (`io.github.crashedsystem.fterm`, targetSdk 36 / minSdk 26).
+
+2. Termux에서 아래 한 줄을 붙여넣고 실행합니다.
 
 ```bash
-cd ~/projects/fterm
-bash termux/install.sh
+curl -fsSL https://raw.githubusercontent.com/CrashedSystem/fterm/master/termux/setup.sh | bash
 ```
 
-출력 마지막 줄의 토큰을 기억해 두십시오.
+저장소를 clone 하거나 Rust로 빌드하지 않습니다. 릴리즈에 첨부된 aarch64 바이너리와 keeper를
+`~/fterm` 에 놓고, 데몬과 keeper를 띄운 다음 토큰을 `/sdcard/Download/fterm-token` 에 써
+둡니다. 그래서 앱으로 돌아오면 기다릴 것 없이 바로 연결됩니다. 32비트 ARM이나 x86
+에뮬레이터는 프리빌드 바이너리가 없으므로 저장소에서 `bash termux/install.sh` 로 직접
+빌드해야 합니다.
 
-2. APK를 설치합니다. `build/fterm.apk` 를 탭하면 됩니다(이미 `/sdcard/Download/fterm.apk`
-   에 복사해 두었습니다).
-
-3. 앱 첫 실행 시 뜨는 창에 토큰을 붙여넣습니다. 한 번만 하면 됩니다.
+3. 앱을 엽니다. Android 11+ 에서는 첫 실행 때 '모든 파일 접근' 설정 화면이 한 번 뜹니다.
+   앱이 keeper에게 데몬을 요청하는 통로가 `/sdcard/Download` 의 파일이고, 스코프드
+   스토리지에서는 그 파일을 쓸 수 없기 때문입니다. 허용하고 앱으로 돌아오면 앱이 스스로
+   다시 시도해 바로 연결됩니다. keeper도 Termux도 없는 상태라면 스크립트가 띄우지 못한
+   것이므로, 창의 '명령 복사 & Termux 열기'로 2번을 다시 실행하면 됩니다.
 
 ## 조작
 
@@ -217,8 +224,9 @@ keeper 프로세스가 그것을 폴링해 데몬을 띄우고 토큰을 돌려�
            /sdcard/Download/fterm-token = 861f4ee8…
 ```
 
-`termux/install.sh` 가 데몬과 keeper를 설치하고 keeper를 띄웁니다. 사용자는 이것만 한 번
-하면 이후로는 앱만 열면 됩니다.
+`termux/setup.sh` 가 프리빌드 바이너리로 데몬과 keeper를 설치하고, keeper를 띄우고, 토큰을
+`/sdcard/Download` 에 써 둡니다. 사용자는 이것만 한 번 하면 이후로는 앱만 열면 됩니다.
+저장소에서 직접 빌드하려면 `termux/install.sh` 가 같은 자리에 컴파일한 바이너리를 놓습니다.
 
 ## Windows Terminal 느낌
 
@@ -560,7 +568,9 @@ select 오류가 루프를 죽이지 않게 했습니다.
 
 ### 기기에서 빌드하고 켜기
 
-Termux 안에서 직접 빌드합니다(크로스 컴파일이 아니라 그 기기에서).
+Termux 안에서 직접 빌드합니다(크로스 컴파일이 아니라 그 기기에서). 프리빌드 바이너리로
+설치하는 쪽은 위의 설치 절에 있는 한 줄짜리 `termux/setup.sh` 이고, 이 절은 소스를 고칠 때
+쓰는 경로입니다.
 
 ```bash
 pkg install rust

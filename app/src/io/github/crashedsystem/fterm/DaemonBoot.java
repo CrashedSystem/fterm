@@ -1,6 +1,8 @@
 package io.github.crashedsystem.fterm;
 
 import android.app.Activity;
+import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -21,6 +23,12 @@ import android.widget.TextView;
  * ignored by the Termux build on this device, so the app writes a request file, the keeper polls
  * for it, starts the daemon and publishes the token next to it. That is why "storage blocked"
  * is one of the endings - with no writable {@code /sdcard/Download} there is no way to ask.
+ *
+ * <p>Two of the four endings name something the user can fix outside the app: the all-files
+ * switch in Settings, and the Termux install. Both send the user away, and both are worth
+ * retrying the moment they come back - that is what {@link #start} and {@link #retryOnResume}
+ * are for. The flags below exist so that neither a resume nor a failure can start a second
+ * poll on top of the first.
  */
 final class DaemonBoot {
 
@@ -48,6 +56,22 @@ final class DaemonBoot {
     private final FrameLayout mFrame;
     private final View mTerminal;
 
+    /** A poll is in flight; a resume must not stack a second one on top of it. */
+    private boolean mRunning;
+    /**
+     * The last attempt ended somewhere the user can come back from: they went to the all-files
+     * screen or to Termux to fix it. Cleared as soon as a retry is handed out, so every return
+     * buys at most one attempt - otherwise a resume inside a failing attempt would re-enter
+     * itself.
+     */
+    private boolean mWaiting;
+    /**
+     * The user has left the app since that ending. A resume is only a return if they did: the
+     * first onResume of a launch arrives right after onCreate started the first attempt, and
+     * retrying there would stack a second dialog on the one that is still on screen.
+     */
+    private boolean mLeft;
+
     DaemonBoot(Activity activity, Handler ui, FrameLayout frame, View terminal) {
         mActivity = activity;
         mUi = ui;
@@ -58,15 +82,23 @@ final class DaemonBoot {
     /**
      * Bring the daemon up without the user leaving the app.
      *
+     * <p>On Android 11+ the write into {@code /sdcard/Download} needs all-files access first.
+     * Asking before it is granted is not a slow failure, it is a certain one - the channel to
+     * the keeper is that file - so the permission ending comes first and no request is written.
+     *
      * <p>Writes the request file the Termux-side keeper watches, then polls for the token it
-     * publishes. If the write fails there is no point polling: the one channel to the keeper is
-     * the file, so that ending is reported immediately rather than after fifteen attempts that
-     * would blame the keeper for not answering.
+     * publishes. If the write fails there is no point polling either: that ending is reported
+     * immediately rather than after fifteen attempts that would blame the keeper for not
+     * answering.
      */
     void start(final Host host) {
+        if (mRunning) return;
+        mRunning = true;
+        mWaiting = false;
         splash("Termux 데몬 준비 중…");
-        if (!DaemonLauncher.requestStart()) {
+        if (!hasAllFilesAccess() || !DaemonLauncher.requestStart()) {
             restore();
+            settle(true);
             host.storageBlocked();
             return;
         }
@@ -76,6 +108,7 @@ final class DaemonBoot {
     private void poll(final int attempt, final Host host) {
         String token = DaemonLauncher.readToken();
         if (token != null) {
+            settle(false);
             host.ready(token);
             return;
         }
@@ -87,11 +120,50 @@ final class DaemonBoot {
             return;
         }
         restore();
+        settle(true);
         if (!DaemonLauncher.keeperAlive()) {
             host.keeperMissing();
         } else {
             host.daemonSlow();
         }
+    }
+
+    private void settle(boolean waiting) {
+        mRunning = false;
+        mWaiting = waiting;
+    }
+
+    /** The user is leaving the app; a resume after this is a return worth one attempt. */
+    void leftApp() {
+        mLeft = true;
+    }
+
+    /**
+     * True when returning to the app is worth one more attempt.
+     *
+     * <p>The user left to grant all-files access or to paste the install line into Termux, and
+     * both are pointless unless the app tries again by itself: it would sit on a dead frame
+     * until they relaunched it. Callers pass whether a tab already exists, because a manual
+     * token path opens one and that tab is the user's answer, not a reason to ask again.
+     */
+    boolean retryOnResume(boolean hasTabs) {
+        if (!mLeft) return false;
+        mLeft = false;
+        if (mRunning || !mWaiting || hasTabs) return false;
+        mWaiting = false;
+        return true;
+    }
+
+    /**
+     * True when this app may write outside its sandbox.
+     *
+     * <p>Android 11 (API 30) is where scoped storage became the rule; below it, shared storage is
+     * reachable with the older storage permissions. The check is the same one the platform
+     * makes when the write happens, so a failure here is the honest answer rather than a guess.
+     */
+    static boolean hasAllFilesAccess() {
+        if (Build.VERSION.SDK_INT < 30) return true;
+        return Environment.isExternalStorageManager();
     }
 
     /** Say what is happening where the terminal will be, instead of showing a void. */

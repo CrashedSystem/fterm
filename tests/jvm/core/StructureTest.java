@@ -214,6 +214,25 @@ public class StructureTest {
         int iDrop = main.indexOf("top.addView(drop);");
         check(iPlus >= 0 && iDrop > iPlus, "and the chevron sits after the plus");
 
+        // 8. 설치가 앱 밖에서 시작된다. APK만 받은 사람이 Termux에서 한 줄로 데몬까지 갖추는
+        //    것과, 스코프드 스토리지가 먼저 막는 그 통로를 앱이 스스로 열 수 있는 것이 함께
+        //    맞지 않으면 "첫 실행이 늘 수동 토큰"으로 돌아간다.
+        check(manifest.contains("android.permission.MANAGE_EXTERNAL_STORAGE"),
+                "the app may write the keeper's request file outside its sandbox");
+        check(manifest.contains("versionName=\"0.2.1\"") && manifest.contains("versionCode=\"3\""),
+                "and this is the release that adds it");
+        check(boot.contains("isExternalStorageManager()"),
+                "the permission is checked before a request is written");
+        check(boot.contains("boolean retryOnResume(") && main.contains("retryOnResume("),
+                "and coming back from that screen or from Termux retries by itself");
+        String setup = read("termux/setup.sh");
+        check(setup.contains("releases/latest/download"),
+                "setup.sh installs the prebuilt daemon, no clone and no cargo");
+        check(setup.contains("fterm-keeper") && setup.contains("fterm-token"),
+                "with the keeper, and publishes the token the app reads");
+        check(launcher.contains("termux/setup.sh"),
+                "the dialog quotes that one line instead of a clone path");
+
         System.out.println("ok  " + pass + " structure assertions");
         System.out.println("ALL OK");
     }

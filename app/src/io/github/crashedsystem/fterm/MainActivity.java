@@ -340,12 +340,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     /**
-     * Bring the daemon up without the user leaving the app.
-     *
-     * Writes the request file the Termux-side keeper watches, then polls for the token it
-     * publishes. If the keeper is not running (never installed, or Termux was killed) the
-     * app says so once, with the single command that fixes it - instead of the old flow,
-     * which made the user open Termux and copy a token by hand on first run.
+     * Ask {@link DaemonBoot} for the daemon and act on how it ends: a token opens a tab, and
+     * every other ending is a dialog naming the screen that fixes it.
      */
     private void beginProvisioning() {
         mBoot.start(new DaemonBoot.Host() {
@@ -503,9 +499,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     /**
-     * First run: there is no token. Kick off `ftermd token` inside Termux via
-     * RUN_COMMAND and ask the user to paste it once. Everything after that is
-     * remembered, so this happens exactly once per install.
+     * First run: there is no token. Ask once by hand - one command in Termux, then the token -
+     * for the case where the keeper is not there to answer the request file.
      */
     private void requestToken(Tab tab) {
         mUi.post(() -> DaemonDialogs.manualToken(this, token -> {
@@ -922,6 +917,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     @Override
     protected void onPause() {
         if (mBackdrop != null) mBackdrop.pause();   // the changed-broadcast receiver
+        mBoot.leftApp();
         super.onPause();
     }
 
@@ -976,6 +972,9 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     protected void onResume() {
         super.onResume();
         if (mBackdrop != null) mBackdrop.resume();
+        // Back from the all-files screen or from Termux: try again by itself. DaemonBoot hands
+        // out one retry per resume; a tab that already exists is the user's answer already.
+        if (mBoot.retryOnResume(mTabs.isEmpty())) startSessions();
         if (mShowKeyboardOnce && mPrefs.showKeyboardOnStart() && !HardwareKeyboard.present(this)) {
             mShowKeyboardOnce = false;
             showKeyboardSoon();

@@ -36,6 +36,16 @@ final class DaemonLauncher {
     /** The keeper rewrites the heartbeat every second, so two missed beats means it is gone. */
     private static final long KEEPER_STALE_SECONDS = 5;
 
+    /**
+     * The whole Termux-side install, in one line.
+     *
+     * <p>It has to be one line pasted into Termux by someone who downloaded an APK and nothing
+     * else: no clone, no cargo, no path to know. {@code termux/setup.sh} is what it fetches, and
+     * the dialog and the README both quote this exact string so they cannot drift apart.
+     */
+    static final String SETUP_COMMAND = "curl -fsSL "
+            + "https://raw.githubusercontent.com/CrashedSystem/fterm/master/termux/setup.sh | bash";
+
     private DaemonLauncher() {}
 
     /** True when the keeper wrote its heartbeat recently. */
@@ -88,12 +98,12 @@ final class DaemonLauncher {
         }
     }
 
-    /** The paths, for the instructions shown when the keeper is not installed. */
+    /** The line to paste, for the dialog shown when the keeper is not installed. */
     static String keeperInstructions() {
-        return "Termux에서 한 번만 실행하세요:\n\n"
-                + "  cd ~/projects/fterm\n"
-                + "  bash termux/install.sh\n\n"
-                + "install.sh 가 데몬과 keeper를 설치하고 keeper를 띄웁니다.\n"
-                + "그 다음 이 앱으로 돌아오면 자동으로 연결됩니다.";
+        return "Termux에서 아래 한 줄을 붙여넣고 실행하세요:\n\n"
+                + "  " + SETUP_COMMAND + "\n\n"
+                + "저장소를 받을 필요도, Rust로 빌드할 필요도 없습니다. 릴리즈에 첨부된\n"
+                + "바이너리를 ~/fterm 에 두고 keeper를 띄운 다음 토큰까지 써 둡니다.\n"
+                + "그 다음 이 앱으로 돌아오면 바로 연결됩니다.";
     }
 }
