@@ -23,7 +23,7 @@ public class StructureTest {
     }
 
     public static void main(String[] args) throws Exception {
-        String dir = System.getProperty("app.dir", "app/src/ai/openclaw/fterm/");
+        String dir = System.getProperty("app.dir", "app/src/io/github/crashedsystem/fterm/");
         String main = read(dir + "MainActivity.java");
 
         // 1. MainActivity stays a coordinator. 1200 lines was the old number and it is the
@@ -150,13 +150,13 @@ public class StructureTest {
         // 5c. The wire protocol has one Java home. The four-way agreement is checked by
         //     tests/test_protocol.py; what is checked here is that the app has one table and not
         //     the two it used to.
-        String proto = read(dir + "../../../com.termux/terminal/Protocol.java");
+        String proto = read(dir + "../../../../com.termux/terminal/Protocol.java");
         check(proto.contains("C_HELLO") && proto.contains("S_ERROR") && proto.contains("E_TOO_MANY"),
                 "the protocol constants live in Protocol");
-        check(!read(dir + "../../../com.termux/terminal/SocketTransport.java")
+        check(!read(dir + "../../../../com.termux/terminal/SocketTransport.java")
                         .contains("private static final int C_HELLO"),
                 "the transport does not keep a second copy");
-        check(!read(dir + "../../../com.termux/terminal/DaemonClient.java")
+        check(!read(dir + "../../../../com.termux/terminal/DaemonClient.java")
                         .contains("private static final int C_HELLO"),
                 "and neither does the one-shot client");
 
@@ -165,7 +165,7 @@ public class StructureTest {
         String memory = read(dir + "TabMemory.java");
         check(memory.contains("TRIM_MEMORY_COMPLETE"), "the trim policy has two steps");
         check(main.contains("TabMemory.trim("), "and the activity asks it on onTrimMemory");
-        check(read(dir + "../../../com.termux/terminal/TerminalEmulator.java")
+        check(read(dir + "../../../../com.termux/terminal/TerminalEmulator.java")
                         .contains("public void trimScrollback(int keep)"),
                 "the emulator can drop scrollback without touching the screen");
 
@@ -175,7 +175,7 @@ public class StructureTest {
         check(clip.contains("new Thread("), "decoding runs off the UI thread");
         check(clip.contains("text/uri-list") || clip.contains("// text/uri-list"),
                 "a URI given only as text is still read");
-        String view = read(dir + "../../../com.termux/view/TerminalView.java");
+        String view = read(dir + "../../../../com.termux/view/TerminalView.java");
         check(view.contains("contentMimeTypes"), "the editor announces it takes images");
         check(view.contains("commitContent"), "and implements the IME image commit");
         check(view.contains("requestPermission"), "releasing the URI grant the IME hands over");

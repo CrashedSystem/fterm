@@ -32,24 +32,24 @@ public class BellTest {
                 "the foreground service type is declared");
         check(manifest.contains("foregroundServiceType=\"specialUse\""),
                 "and it is specialUse, which has no daily clock");
-        check(manifest.contains("ai.openclaw.fterm.TerminalService"),
+        check(manifest.contains("io.github.crashedsystem.fterm.TerminalService"),
                 "the service is registered");
 
-        String bell = read(root + "/app/src/ai/openclaw/fterm/Bell.java");
+        String bell = read(root + "/app/src/io/github/crashedsystem/fterm/Bell.java");
         check(bell.contains("VibrationEffect.createWaveform"), "the bell vibrates");
         check(bell.contains("RINGER_MODE_NORMAL"), "and beeps only when the ringer is normal");
         check(bell.contains("hasVibrator()"), "and checks the device has one");
         check(bell.contains("ToneGenerator.TONE_PROP_BEEP"), "the beep is a short tone");
         check(bell.contains("release()"), "the tone generator is releasable");
 
-        String main = read(root + "/app/src/ai/openclaw/fterm/MainActivity.java");
+        String main = read(root + "/app/src/io/github/crashedsystem/fterm/MainActivity.java");
         check(main.contains("mBell.ring(mPrefs.bellVibrate(), mPrefs.bellSound())"),
                 "MainActivity rings with the user's settings");
         check(main.contains("mActive.session != session"), "and only for the active tab");
 
         // The toggles must be reachable, or the bell cannot be turned off.
         String settings = SettingsSources.all(
-                root + "/app/src/ai/openclaw/fterm/SettingsSheet.java");
+                root + "/app/src/io/github/crashedsystem/fterm/SettingsSheet.java");
         check(settings.contains("진동") && settings.contains("소리"), "both toggles are in settings");
         check(settings.contains("bellVibrate()") && settings.contains("bellSound()"),
                 "and are bound to the host");

@@ -1290,7 +1290,7 @@ public final class TerminalView extends View {
     /** Optional picture drawn behind the terminal; see TerminalBackground. */
     private Drawable mBackgroundImage;
     /** Optional retro pass over the finished frame; see RetroOverlay. */
-    private ai.openclaw.fterm.RetroOverlay mRetroOverlay;
+    private io.github.crashedsystem.fterm.RetroOverlay mRetroOverlay;
     /** Set once per size: the shader's resolution uniform is the only thing that changes. */
     private android.graphics.RenderEffect mRetroEffect;
     private int mRetroEffectW, mRetroEffectH;
@@ -1303,7 +1303,7 @@ public final class TerminalView extends View {
      * dark scanline rows after the frame, which is the half of WT's effect that a software
      * Canvas can do.
      */
-    public void setRetroOverlay(ai.openclaw.fterm.RetroOverlay overlay) {
+    public void setRetroOverlay(io.github.crashedsystem.fterm.RetroOverlay overlay) {
         mRetroOverlay = overlay;
         mRetroEffect = null;
         mRetroEffectW = mRetroEffectH = 0;

@@ -34,9 +34,9 @@ public class FontCoverageTest {
 
         // 1. The bundled Korean face has every syllable...
         byte[] bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(bundled));
-        check(ai.openclaw.fterm.FontCoverage.covers(bytes, HANGUL),
+        check(io.github.crashedsystem.fterm.FontCoverage.covers(bytes, HANGUL),
                 "the bundled face covers every syllable probe");
-        check(!ai.openclaw.fterm.FontCoverage.covers(bytes, JAMO),
+        check(!io.github.crashedsystem.fterm.FontCoverage.covers(bytes, JAMO),
                 "and none of the conjoining jamo - which is why the picker marks ability, "
                         + "not which face is loaded");
 
@@ -45,7 +45,7 @@ public class FontCoverageTest {
         //    pointless and something is reading the wrong table.
         byte[] latin = java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("latin.src", "assets/fonts/Iosevka.ttf")));
-        check(!ai.openclaw.fterm.FontCoverage.covers(latin, HANGUL),
+        check(!io.github.crashedsystem.fterm.FontCoverage.covers(latin, HANGUL),
                 "Iosevka does not answer Hangul, so the two-face split is real");
 
         // 3. The parser must handle both cmap formats in the wild: format 4 (BMP) and format
@@ -53,9 +53,9 @@ public class FontCoverageTest {
         //    a face that only declares format 4 must stay honest about being BMP-only.
         java.io.File cjk = new java.io.File("/system/fonts/NotoSansCJK-Regular.ttc");
         if (cjk.isFile()) {
-            check(ai.openclaw.fterm.FontCoverage.covers(cjk, HANGUL),
+            check(io.github.crashedsystem.fterm.FontCoverage.covers(cjk, HANGUL),
                     "a TTC's first face answers Hangul through format 12");
-            check(ai.openclaw.fterm.FontCoverage.covers(cjk, JAMO),
+            check(io.github.crashedsystem.fterm.FontCoverage.covers(cjk, JAMO),
                     "and carries conjoining jamo, unlike the bundled face");
         } else {
             System.out.println("skip no NotoSansCJK-Regular.ttc on this device");
@@ -66,10 +66,10 @@ public class FontCoverageTest {
         java.io.File junk = java.io.File.createTempFile("not-a-font", ".ttf");
         try {
             java.nio.file.Files.write(junk.toPath(), new byte[]{1, 2, 3, 4, 5, 6, 7, 8});
-            check(!ai.openclaw.fterm.FontCoverage.covers(junk, HANGUL), "junk is not coverage");
-            check(!ai.openclaw.fterm.FontCoverage.covers((byte[]) null, HANGUL),
+            check(!io.github.crashedsystem.fterm.FontCoverage.covers(junk, HANGUL), "junk is not coverage");
+            check(!io.github.crashedsystem.fterm.FontCoverage.covers((byte[]) null, HANGUL),
                     "and null has none either");
-            check(!ai.openclaw.fterm.FontCoverage.covers(junk, new int[0]),
+            check(!io.github.crashedsystem.fterm.FontCoverage.covers(junk, new int[0]),
                     "an empty probe list is not a free yes");
         } finally {
             junk.delete();
@@ -82,7 +82,7 @@ public class FontCoverageTest {
                 System.getProperty("home", System.getProperty("user.home"))
                         + "/.fonts/NanumGothic-Regular.ttf");
         if (nanum.isFile()) {
-            check(ai.openclaw.fterm.FontCoverage.covers(nanum, HANGUL),
+            check(io.github.crashedsystem.fterm.FontCoverage.covers(nanum, HANGUL),
                     "NanumGothic carries Hangul, so the Korean picker must offer it");
         } else {
             System.out.println("skip no ~/.fonts/NanumGothic-Regular.ttf");
@@ -91,7 +91,7 @@ public class FontCoverageTest {
         // 6. The app's own source has to keep asking the file, never the platform.
         String fonts = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("fonts.src",
-                        "app/src/ai/openclaw/fterm/Fonts.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/fterm/Fonts.java"))), "UTF-8");
         check(!fonts.contains("p.hasGlyph("),
                 "hasGlyph is not used: it answers via the system fallback, not the file");
         check(fonts.contains("FontCoverage.covers("),
@@ -101,18 +101,18 @@ public class FontCoverageTest {
 
         String prefs = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("prefs.src",
-                        "app/src/ai/openclaw/fterm/Prefs.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/fterm/Prefs.java"))), "UTF-8");
         check(prefs.contains("hangul_family"),
                 "and its own preference, because one id cannot mean two faces");
 
         String main = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("main.src",
-                        "app/src/ai/openclaw/fterm/MainActivity.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/fterm/MainActivity.java"))), "UTF-8");
         check(main.contains("mPrefs.hangulFamily()"),
                 "which is read when the stack is built");
 
         String sheet = SettingsSources.all(System.getProperty("sheet.src",
-                "app/src/ai/openclaw/fterm/SettingsSheet.java"));
+                "app/src/io/github/crashedsystem/fterm/SettingsSheet.java"));
         check(sheet.contains("한글 글꼴"),
                 "the setting is reachable by name in 모양");
         check(sheet.contains("Fonts.hangulCatalog("),

@@ -46,8 +46,8 @@ public class SchemesTest {
         oneHalfDark.put(8, rgb(0x5a, 0x63, 0x74));
         for (int i = 1; i <= 7; i++) oneHalfDark.put(8 + i, oneHalfDark.get(i));
 
-        int[] oneHalf = ai.openclaw.fterm.Schemes.colors(
-                ai.openclaw.fterm.Schemes.ONE_HALF_DARK_INDEX);
+        int[] oneHalf = io.github.crashedsystem.fterm.Schemes.colors(
+                io.github.crashedsystem.fterm.Schemes.ONE_HALF_DARK_INDEX);
         for (Map.Entry<Integer, Integer> e : oneHalfDark.entrySet()) {
             eq(oneHalf[e.getKey()], e.getValue(),
                     "One Half Dark ANSI " + e.getKey() + " must match mterm's table");
@@ -60,7 +60,7 @@ public class SchemesTest {
         // Every scheme must fill the whole indexed table, or the renderer reads garbage.
         int expectedSize = com.termux.terminal.TextStyle.NUM_INDEXED_COLORS;
         for (int i = 0; i < SCHEME_COUNT; i++) {
-            int[] table = ai.openclaw.fterm.Schemes.colors(i);
+            int[] table = io.github.crashedsystem.fterm.Schemes.colors(i);
             eq(table.length, expectedSize, "scheme " + i + " table size");
             for (int c = 0; c < 16; c++) {
                 check((table[c] >>> 24) == 0xff, "scheme " + i + " ANSI " + c + " is opaque");
@@ -70,10 +70,10 @@ public class SchemesTest {
         }
 
         // OLED must be actual #000000: on an OLED panel that is an unlit pixel.
-        int[] oled = ai.openclaw.fterm.Schemes.colors(ai.openclaw.fterm.Schemes.OLED_INDEX);
+        int[] oled = io.github.crashedsystem.fterm.Schemes.colors(io.github.crashedsystem.fterm.Schemes.OLED_INDEX);
         eq(oled[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND], 0xff000000,
                 "OLED background is pure black");
-        check(ai.openclaw.fterm.Schemes.isOled(ai.openclaw.fterm.Schemes.OLED_INDEX),
+        check(io.github.crashedsystem.fterm.Schemes.isOled(io.github.crashedsystem.fterm.Schemes.OLED_INDEX),
                 "isOled recognises it");
 
         // The foreground has to stay readable on that black: contrast >= 7:1.
@@ -86,7 +86,7 @@ public class SchemesTest {
         // The custom schemes are excluded: their colours are whatever the user typed, and a
         // palette tool that refuses low contrast is a tool that argues with its user.
         for (int i = 0; i < SCHEME_COUNT; i++) {
-            int[] t = ai.openclaw.fterm.Schemes.colors(i);
+            int[] t = io.github.crashedsystem.fterm.Schemes.colors(i);
             double lf = luminance(t[com.termux.terminal.TextStyle.COLOR_INDEX_FOREGROUND], false);
             double lb = luminance(t[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND], false);
             double hi = Math.max(lf, lb), lo = Math.min(lf, lb);
@@ -99,13 +99,13 @@ public class SchemesTest {
         // The custom slot is not compiled in: it is whatever nineteen ints are handed to it,
         // and the cube/ramp are still generated so the renderer never reads zeros. Index 6 is
         // the first of the sixteen custom slots and every one of them behaves the same.
-        int[] slots = new int[ai.openclaw.fterm.Schemes.CUSTOM_SLOTS];
+        int[] slots = new int[io.github.crashedsystem.fterm.Schemes.CUSTOM_SLOTS];
         for (int i = 0; i < 16; i++) slots[i] = rgb(16 * i, 255 - 16 * i, 40 + 4 * i);
         slots[16] = rgb(0xee, 0xee, 0xee);
         slots[17] = rgb(0x11, 0x11, 0x11);
         slots[18] = rgb(0x00, 0xdd, 0xff);
-        int[] custom = ai.openclaw.fterm.Schemes.colors(
-                ai.openclaw.fterm.Schemes.CUSTOM_INDEX, slots);
+        int[] custom = io.github.crashedsystem.fterm.Schemes.colors(
+                io.github.crashedsystem.fterm.Schemes.CUSTOM_INDEX, slots);
         eq(custom.length, expectedSize, "custom table size");
         for (int c = 0; c < 16; c++) eq(custom[c], slots[c], "custom ANSI " + c + " is the stored slot");
         eq(custom[16], rgb(0, 0, 0), "custom cube starts at black");
@@ -118,20 +118,20 @@ public class SchemesTest {
         eq(custom[com.termux.terminal.TextStyle.COLOR_INDEX_CURSOR], slots[18],
                 "custom cursor");
         // Without slots the custom index must not return a broken table.
-        eq(ai.openclaw.fterm.Schemes.colors(ai.openclaw.fterm.Schemes.CUSTOM_INDEX, null).length,
+        eq(io.github.crashedsystem.fterm.Schemes.colors(io.github.crashedsystem.fterm.Schemes.CUSTOM_INDEX, null).length,
                 expectedSize, "custom without slots still fills the table");
         // A custom scheme with a black background counts as OLED for chrome purposes.
-        check(ai.openclaw.fterm.Schemes.isOled(ai.openclaw.fterm.Schemes.CUSTOM_INDEX, slots)
+        check(io.github.crashedsystem.fterm.Schemes.isOled(io.github.crashedsystem.fterm.Schemes.CUSTOM_INDEX, slots)
                 == false, "custom #111 background is not OLED");
         slots[17] = rgb(0, 0, 0);
-        check(ai.openclaw.fterm.Schemes.isOled(ai.openclaw.fterm.Schemes.CUSTOM_INDEX, slots),
+        check(io.github.crashedsystem.fterm.Schemes.isOled(io.github.crashedsystem.fterm.Schemes.CUSTOM_INDEX, slots),
                 "custom black background is OLED");
-        check(ai.openclaw.fterm.Schemes.isOled(ai.openclaw.fterm.Schemes.OLED_INDEX, null),
+        check(io.github.crashedsystem.fterm.Schemes.isOled(io.github.crashedsystem.fterm.Schemes.OLED_INDEX, null),
                 "built-in OLED is still OLED");
 
         // No scheme carries a picture any more: the background is a user setting, independent
         // of the palette. The reference must be gone from the source, not just unused.
-        String schemes = read("app/src/ai/openclaw/fterm/Schemes.java");
+        String schemes = read("app/src/io/github/crashedsystem/fterm/Schemes.java");
         check(!schemes.contains("hasBackgroundImage"), "schemes do not claim a picture");
         check(!schemes.toLowerCase().contains("miku"), "no theme image is named in Schemes");
 
@@ -139,7 +139,7 @@ public class SchemesTest {
         // The override is applied in MainActivity on top of whatever palette won, so what is
         // pinned here is the rule, not the plumbing: zero means "follow the scheme", and any
         // other value is written into the cursor slot of the live table.
-        String activity = read("app/src/ai/openclaw/fterm/MainActivity.java");
+        String activity = read("app/src/io/github/crashedsystem/fterm/MainActivity.java");
         check(activity.contains("mPrefs.cursorColor()"),
                 "the palette application reads the cursor override");
         check(activity.contains("if (cursor != 0)"),
@@ -147,13 +147,13 @@ public class SchemesTest {
         check(activity.contains("COLOR_INDEX_CURSOR] = cursor"),
                 "the override lands in the cursor slot of the live colours");
 
-        String prefs = read("app/src/ai/openclaw/fterm/Prefs.java");
+        String prefs = read("app/src/io/github/crashedsystem/fterm/Prefs.java");
         check(prefs.contains("getInt(\"cursor_color\", 0)"),
                 "no override is stored as zero, so a fresh install follows the scheme");
         check(prefs.contains("setCursorColor"),
                 "and the override survives a restart");
 
-        String sheet = SettingsSources.all("app/src/ai/openclaw/fterm/SettingsSheet.java");
+        String sheet = SettingsSources.all("app/src/io/github/crashedsystem/fterm/SettingsSheet.java");
         check(sheet.contains("커서 색"),
                 "the setting is reachable by name in 모양");
         check(sheet.contains("구성표 따름"),

@@ -14,7 +14,7 @@ import android.view.View;
 
 import com.termux.terminal.TerminalBuffer;
 import com.termux.terminal.WcWidth;
-import ai.openclaw.fterm.R;
+import io.github.crashedsystem.fterm.R;
 import com.termux.view.TerminalView;
 
 public class TextSelectionCursorController implements CursorController {

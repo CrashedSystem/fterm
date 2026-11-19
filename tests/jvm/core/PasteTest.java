@@ -118,7 +118,7 @@ public byte[] getClipboardImage(com.termux.terminal.TerminalSession s) { return 
         // 6. The app must route the clipboard through the emulator.
         String src = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("main.src",
-                        "app/src/ai/openclaw/fterm/MainActivity.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/fterm/MainActivity.java"))), "UTF-8");
         int at = src.indexOf("private void pasteClipboard()");
         check(at > 0, "pasteClipboard() exists");
         String body = src.substring(at, Math.min(src.length(), at + 1400));
@@ -134,7 +134,7 @@ public byte[] getClipboardImage(com.termux.terminal.TerminalSession s) { return 
         //    terminal (and the keyboard) waits.
         String clipSrc = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("clip.src",
-                        "app/src/ai/openclaw/fterm/ClipboardImage.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/fterm/ClipboardImage.java"))), "UTF-8");
         int pi = clipSrc.indexOf("static boolean pasteIfImage(");
         check(pi > 0, "ClipboardImage offers the asynchronous image paste");
         String piBody = clipSrc.substring(pi, Math.min(clipSrc.length(), pi + 600));

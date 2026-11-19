@@ -28,12 +28,12 @@ public class TabTitleTest {
     public static void main(String[] args) throws Exception {
         String src = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("main.src",
-                        "app/src/ai/openclaw/fterm/MainActivity.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/fterm/MainActivity.java"))), "UTF-8");
 
         // The chip is built by TabStrip, so that is where the marquee settings live now.
         String strip = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("strip.src",
-                        "app/src/ai/openclaw/fterm/TabStrip.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/fterm/TabStrip.java"))), "UTF-8");
         String chip = strip;
 
         // 1. The four things a marquee needs, and it silently degrades if any is missing.
@@ -89,7 +89,7 @@ public class TabTitleTest {
                 "and rebuilds it through the one place that knows both forms");
 
         String icons = new String(java.nio.file.Files.readAllBytes(
-                java.nio.file.Paths.get("app/src/ai/openclaw/fterm/TabIcons.java")), "UTF-8");
+                java.nio.file.Paths.get("app/src/io/github/crashedsystem/fterm/TabIcons.java")), "UTF-8");
         check(icons.contains("DEFAULT_ID = \">_\""), "the default is the prompt >_");
         check(icons.contains("isGlyph("), "a value is either a glyph id or text");
         // Unknown input must not be a blank slot: a tab with no mark reads as a bug.

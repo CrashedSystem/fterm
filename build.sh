@@ -11,7 +11,7 @@ SDKJAR=${SDKJAR:-/data/data/com.termux/files/usr/tmp/android36.jar}
 KS=${KS:-$HOME/build/android/ks.jks}
 KS_PASS=${KS_PASS:-openclaw}
 OUT=$ROOT/build
-PKG=ai.openclaw.fterm
+PKG=io.github.crashedsystem.fterm
 
 MIN_SDK=26
 TARGET_SDK=36
@@ -56,7 +56,7 @@ javac -nowarn -source 11 -target 11 \
   -classpath "$SDKJAR" \
   -d "$OUT/obj" @"$OUT/sources.txt" 2>&1 | grep -v 'bootstrap class path'
 set +o pipefail
-[ -f "$OUT/obj/ai/openclaw/fterm/MainActivity.class" ] || { echo "컴파일 실패" >&2; exit 1; }
+[ -f "$OUT/obj/io/github/crashedsystem/fterm/MainActivity.class" ] || { echo "컴파일 실패" >&2; exit 1; }
 
 echo "[4/6] dex"
 find "$OUT/obj" -name '*.class' > "$OUT/classes.txt"

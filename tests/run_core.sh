@@ -30,12 +30,12 @@ javac -nowarn -d "$OUT" \
   "$CORE/KeyHandler.java" \
   "$CORE/TerminalSessionClient.java" \
   "$ROOT/tests/corestub/com/termux/terminal/TerminalSession.java" \
-  "$ROOT/tests/corestub/ai/openclaw/fterm/Fonts.java" \
+  "$ROOT/tests/corestub/io/github/crashedsystem/fterm/Fonts.java" \
   "$CORE/TerminalOutput.java" \
   "$ROOT/tests/jvm/core/WidthTest.java" \
   "$ROOT/tests/jvm/core/ScreenTest.java" \
   "$ROOT/tests/jvm/core/SchemesTest.java" \
-  "$ROOT/app/src/ai/openclaw/fterm/CustomSchemes.java" \
+  "$ROOT/app/src/io/github/crashedsystem/fterm/CustomSchemes.java" \
   "$ROOT/tests/jvm/core/CustomSchemesTest.java" \
   "$ROOT/tests/jvm/core/PasteTest.java" \
   "$ROOT/tests/jvm/core/FontsTest.java" \
@@ -49,20 +49,20 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/NotifyTest.java" \
   "$ROOT/tests/jvm/core/FocusTest.java" \
   "$ROOT/tests/jvm/core/KeyBarPrefsTest.java" \
-  "$ROOT/app/src/ai/openclaw/fterm/Schemes.java" \
-  "$ROOT/app/src/ai/openclaw/fterm/BackgroundSpec.java" \
-  "$ROOT/app/src/ai/openclaw/fterm/TerminalSchemeJson.java" \
+  "$ROOT/app/src/io/github/crashedsystem/fterm/Schemes.java" \
+  "$ROOT/app/src/io/github/crashedsystem/fterm/BackgroundSpec.java" \
+  "$ROOT/app/src/io/github/crashedsystem/fterm/TerminalSchemeJson.java" \
   "$ROOT/tests/jvm/core/BackgroundTest.java" \
   "$ROOT/tests/jvm/core/SchemeJsonTest.java" \
-  "$ROOT/app/src/ai/openclaw/fterm/Profiles.java" \
+  "$ROOT/app/src/io/github/crashedsystem/fterm/Profiles.java" \
   "$ROOT/tests/jvm/core/ProfilesTest.java" \
   "$ROOT/tests/jvm/core/ProfileTabTest.java" \
-  "$ROOT/app/src/ai/openclaw/fterm/Search.java" \
+  "$ROOT/app/src/io/github/crashedsystem/fterm/Search.java" \
   "$ROOT/tests/jvm/core/SearchTest.java" \
-  "$ROOT/app/src/ai/openclaw/fterm/RetroShader.java" \
+  "$ROOT/app/src/io/github/crashedsystem/fterm/RetroShader.java" \
   "$ROOT/tests/jvm/core/RetroTest.java" \
-  "$ROOT/app/src/ai/openclaw/fterm/FontCoverage.java" \
-  "$ROOT/app/src/ai/openclaw/fterm/FontZoom.java" \
+  "$ROOT/app/src/io/github/crashedsystem/fterm/FontCoverage.java" \
+  "$ROOT/app/src/io/github/crashedsystem/fterm/FontZoom.java" \
   "$ROOT/tests/jvm/core/FontCoverageTest.java" \
   "$ROOT/tests/jvm/core/FontZoomTest.java" \
   "$ROOT/tests/jvm/core/ModeRestoreTest.java" \
@@ -76,18 +76,18 @@ java -cp "$OUT" SchemesTest
 java -cp "$OUT" CustomSchemesTest
 java -cp "$OUT" BackgroundTest
 java -cp "$OUT" SchemeJsonTest
-java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
-  -Dclip.src="$ROOT/app/src/ai/openclaw/fterm/ClipboardImage.java" -cp "$OUT" PasteTest
-java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" FontsTest
-java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
+java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/fterm/MainActivity.java" \
+  -Dclip.src="$ROOT/app/src/io/github/crashedsystem/fterm/ClipboardImage.java" -cp "$OUT" PasteTest
+java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/fterm/MainActivity.java" -cp "$OUT" FontsTest
+java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/fterm/MainActivity.java" \
   -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" TabCloseTest
 java -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" ImeComposeTest
-java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" TabTitleTest
-java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" UiTest
-java -Dapp.dir="$ROOT/app/src/ai/openclaw/fterm/" -cp "$OUT" StructureTest
+java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/fterm/MainActivity.java" -cp "$OUT" TabTitleTest
+java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/fterm/MainActivity.java" -cp "$OUT" UiTest
+java -Dapp.dir="$ROOT/app/src/io/github/crashedsystem/fterm/" -cp "$OUT" StructureTest
 java -Droot="$ROOT" -cp "$OUT" BellTest
-java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
-  -Dnotifier.src="$ROOT/app/src/ai/openclaw/fterm/Notifier.java" -cp "$OUT" NotifyTest
+java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/fterm/MainActivity.java" \
+  -Dnotifier.src="$ROOT/app/src/io/github/crashedsystem/fterm/Notifier.java" -cp "$OUT" NotifyTest
 java -Droot="$ROOT" -cp "$OUT" com.termux.terminal.FocusTest
 java -Droot="$ROOT" -cp "$OUT" KeyBarPrefsTest
 java -cp "$OUT" ProfilesTest
@@ -99,7 +99,7 @@ java -Dhangul.src="$ROOT/assets/fonts/PretendardHangul.ttf" \
      -Dhome="$HOME" \
      -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" \
      -cp "$OUT" FontCoverageTest
-java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
+java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/fterm/MainActivity.java" \
      -Drenderer.src="$ROOT/app/src/com.termux/view/TerminalRenderer.java" \
      -cp "$OUT" FontZoomTest
 java -cp "$OUT" com.termux.terminal.ModeRestoreTest

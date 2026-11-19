@@ -17,14 +17,14 @@ public class RetroTest {
     }
 
     public static void main(String[] args) throws Exception {
-        final String src = ai.openclaw.fterm.RetroShader.SOURCE;
+        final String src = io.github.crashedsystem.fterm.RetroShader.SOURCE;
 
         // 1. WT's two constants, unchanged.
-        check(ai.openclaw.fterm.RetroShader.SCANLINE_FACTOR == 0.5f,
+        check(io.github.crashedsystem.fterm.RetroShader.SCANLINE_FACTOR == 0.5f,
                 "SCANLINE_FACTOR is WT's 0.5");
         // Deliberately below WT's 0.3: see the comment on the constant. The test pins the
         // value that was actually chosen on device so it cannot drift back silently.
-        check(ai.openclaw.fterm.RetroShader.GLOW_STRENGTH == 0.1f,
+        check(io.github.crashedsystem.fterm.RetroShader.GLOW_STRENGTH == 0.1f,
                 "glow is the tuned-down 0.1, not WT's 0.3");
 
         // 2. Both strengths reach the shader as uniforms, not as baked-in constants.
@@ -33,9 +33,9 @@ public class RetroTest {
         //    serves both cases. A constant nobody uses is a lie; so is one that cannot vary.
         check(src.contains("uniform float scanlineFactor"), "the scanline depth is a uniform");
         check(src.contains("uniform float glowStrength"), "the glow strength is a uniform");
-        check(ai.openclaw.fterm.RetroShader.SCANLINE_FACTOR_ON_IMAGE == 0.16f,
+        check(io.github.crashedsystem.fterm.RetroShader.SCANLINE_FACTOR_ON_IMAGE == 0.16f,
                 "over a picture the scanline drops to a third of WT's depth");
-        check(ai.openclaw.fterm.RetroShader.GLOW_STRENGTH_ON_IMAGE == 0.05f,
+        check(io.github.crashedsystem.fterm.RetroShader.GLOW_STRENGTH_ON_IMAGE == 0.05f,
                 "and the glow halves, because a bloom over a photo reads as haze");
 
         // 3. The glow is ADDED to the frame - that is what makes it a glow.

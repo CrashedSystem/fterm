@@ -13,7 +13,7 @@ import android.view.ViewParent;
 import android.view.WindowManager;
 import android.widget.PopupWindow;
 
-import ai.openclaw.fterm.R;
+import io.github.crashedsystem.fterm.R;
 import com.termux.view.TerminalView;
 import com.termux.view.support.PopupWindowCompatGingerbread;
 
