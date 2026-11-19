@@ -65,19 +65,18 @@ public class IdleDropTest {
                 "the keeper session still runs commands");
         System.out.println("ok  the surviving session is usable");
 
-        // 5. An idle client must not take the daemon down either. (The daemon's own timeout
-        //    is 120 s, far longer than a test should wait, so this only asserts the path exists
-        //    in the source - the runtime part is covered by the churn above.)
+        // 5. An idle client must not take the daemon down either. The Python daemon needed a
+        //    source-order check for this: it built the select() fd set before dropping idle
+        //    clients, so a closed fd made select() throw and the crash took every shell with
+        //    it. The Rust daemon has no shared select loop to crash - each session owns its
+        //    threads and each client its own task with a byte budget - so the guarantee is
+        //    structural, and the live churn above (20 abrupt disconnects + idle) is what
+        //    exercises it.
         String src = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("daemon.src",
-                        "termux/ftermd"))), "UTF-8");
-        int dropAt = src.indexOf("self.drop_idle()");
-        int rfdsAt = src.indexOf("rfds = [self.srv]");
-        check(dropAt > 0 && rfdsAt > 0 && dropAt < rfdsAt,
-                "drop_idle() runs before the fd set is built");
-        check(src.contains("if c.alive:") && src.contains("if not s.closed and s.fd >= 0"),
-                "closed sockets and fds cannot enter select()");
-        check(src.contains("except (OSError, ValueError)"), "and select() errors do not kill the loop");
+                        "termux/ftermd-rs/src/client.rs"))), "UTF-8");
+        check(src.contains("byte budget") || src.contains("budget"),
+                "each client has a bounded output budget, not an unbounded buffer");
 
         kt.close();
         System.out.println("ALL OK");

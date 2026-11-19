@@ -12,9 +12,8 @@ starts or kills things:
      and with it every tab's shell - with it.
   C. One tab whose program stops reading its terminal must not stop another tab.
 
-`termux/ftermd` (the Python one) fails A and B by design: they are the bugs. It passes C only by
-luck of timing. So CI runs this against the Rust binary only; the Python daemon is judged by the
-protocol and mode suites, which both daemons must pass identically.
+The wire-protocol suites judge any daemon; this one pins the hardening guarantees the shipped
+implementation must have.
 """
 import json
 import os

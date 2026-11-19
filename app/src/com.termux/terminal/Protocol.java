@@ -8,13 +8,14 @@ import java.nio.charset.StandardCharsets;
  * The wire protocol between the app and ftermd, in one place.
  *
  * <p>Before this file the constants lived four times: in {@link SocketTransport}, in
- * {@link DaemonClient}, in {@code termux/ftermd} and in {@code termux/ftermd-rs}. They agreed,
- * but only by having been copied carefully, and a frame type added on one side and not the
- * others is a silent misread rather than an error - the daemon answers "unknown type" and the
- * app sees a tab that does nothing.
+ * {@link DaemonClient}, in the first (Python) daemon and in {@code termux/ftermd-rs}. They
+ * agreed, but only by having been copied carefully, and a frame type added on one side and not
+ * the others is a silent misread rather than an error - the daemon answers "unknown type" and
+ * the app sees a tab that does nothing. The Python implementation has since been removed; the
+ * Rust one is the daemon.
  *
- * <p>Java can only share with Java, so the four-way agreement is checked by a test instead:
- * {@code tests/test_protocol.py} reads the constant tables out of the Python daemon, the Rust
+ * <p>Java can only share with Java, so the agreement is checked by a test instead:
+ * {@code tests/test_protocol.py} reads the constant tables out of the Rust
  * daemon and this class and fails when any value differs. That check is the point; this file is
  * where the Java half of it lives.
  *

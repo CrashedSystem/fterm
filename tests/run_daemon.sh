@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 # Wire-level suites against one daemon binary.
 #
-#   bash tests/run_daemon.sh python3 termux/ftermd
 #   bash tests/run_daemon.sh termux/ftermd-rs/target/release/ftermd
 #
-# The daemon is given as a command (not a path) because the two daemons are started
-# differently: the Python one carries a Termux shebang that nothing else has, so on a Linux
-# runner it has to be handed to python3 explicitly, while the Rust one is a binary. Everything
-# after that is identical - the same protocol client and the same mode-tracker claims judge
-# both, which is the only way the claim "the Rust daemon is protocol compatible" means
-# anything.
+# The daemon is given as a command (not a path) so a future implementation with a different
+# launcher fits the same harness. Everything inside is identical for every daemon: the same
+# protocol client and the same mode-tracker claims judge it, which is the only way the claim
+# "this daemon speaks the same protocol" means anything.
 #
 # The daemon runs on its own FTERM_RUNDIR and port so this never touches the phone's tabs.
 set -uo pipefail
@@ -47,9 +44,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "=== protocol spec (one table, four implementations)"
+echo "=== protocol spec (two tables: daemon and app)"
 # Static, and independent of which daemon this run is for: it reads the constant tables out of
-# the Python daemon, the Rust daemon and the app's Protocol class and fails on any difference.
+# the Rust daemon and the app's Protocol class and fails on any difference.
 # It lives here because this script is what CI calls.
 python3 "$ROOT/tests/test_protocol.py" || rc=1
 echo
@@ -80,19 +77,20 @@ echo "=== protocol (termux/test_client.py)"
 python3 "$ROOT/termux/test_client.py" || rc=1
 
 echo
-echo "=== terminal modes over the wire (tests/test_modes.py --daemon)"
-python3 "$ROOT/tests/test_modes.py" --daemon || rc=1
+echo "=== terminal modes over the wire (tests/test_modes.py)"
+python3 "$ROOT/tests/test_modes.py" || rc=1
 
 echo
-# The three defects the Rust daemon exists to remove. They fail on the Python daemon by design -
-# that failure is the bug - so this runs only against a daemon that says it is the Rust one.
+# The three defects this daemon exists to remove: a stale pidfile that blocks startup, a
+# blocked tab stalling the others, and an unbounded output buffer. They are properties of the
+# implementation, not of the protocol, so they are not expected of every daemon that speaks
+# the wire format - but the one we ship must have them.
 if "${DAEMON[@]}" version 2>/dev/null | grep -q rust; then
   echo "=== daemon hardening (stale pidfile, slow client, blocked tab)"
   python3 "$ROOT/tests/test_daemon_hardening.py" "${DAEMON[@]}" || rc=1
 else
   echo "=== daemon hardening: skipped for this daemon"
-  echo "    tests/test_daemon_hardening.py fails on the Python daemon by design: the three"
-  echo "    checks are the defects the Rust daemon removes."
+  echo "    tests/test_daemon_hardening.py pins the Rust daemon's hardening guarantees."
 fi
 
 echo

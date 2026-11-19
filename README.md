@@ -23,7 +23,7 @@ Termux의 `terminal-emulator`/`terminal-view`(Apache-2.0)를 벤더링했으므�
 | | |
 |---|---|
 | 앱 | `build/fterm.apk` (`ai.openclaw.fterm`, targetSdk 36 / minSdk 26). 코드만으로 빌드하면 1.8MB이고, 테마 그림을 얹으면 2.5MB입니다 |
-| 데몬 | `termux/ftermd` (python3, Termux 안에서 실행) |
+| 데몬 | `termux/ftermd-rs` (Rust, Termux 안에서 실행. 같은 프로토콜의 첫 구현이던 python 데몬은 Rust 이식이 와이어 레벨에서 동일함이 증명된 뒤 제거됐습니다) |
 | 엔진 | Termux `terminal-emulator` + `terminal-view` (Apache-2.0) 벤더링 |
 | 폰트 | mterm 스택: Iosevka(라틴) + Nerd Symbols(아이콘) + Pretendard(한글) |
 
@@ -486,10 +486,10 @@ select 오류가 루프를 죽이지 않게 했습니다.
 `tests/jvm/harness/IdleDropTest.java` 가 회귀를 막습니다. 20회 급절단 접속 + 20초 유휴 +
 소스 순서 검사(select 전에 drop)를 확인합니다.
 
-## Rust 데몬 (`termux/ftermd-rs`) — 같은 프로토콜, 다른 안쪽
+## 데몬 — Rust (`termux/ftermd-rs`)
 
-파이썬 데몬은 잘 돌지만, 구조상 세 가지가 실사용에서 걸립니다. 셋 다 **데몬 하나가 죽으면
-모든 탭의 셸이 같이 죽는다**는 같은 뿌리입니다.
+첫 구현은 python(`termux/ftermd`)이었습니다. 잘 돌지만, 구조상 세 가지가 실사용에서
+걸렸습니다. 셋 다 **데몬 하나가 죽으면 모든 탭의 셸이 같이 죽는다**는 같은 뿌리입니다.
 
 | 문제 | 지금 동작 | Rust 데몬 |
 |---|---|---|
@@ -499,8 +499,9 @@ select 오류가 루프를 죽이지 않게 했습니다.
 
 프로토콜은 한 바이트도 바꾸지 않았습니다. 상수·프레이밍·`E_*`·`S_ERROR`/`C_CLOSE` 동작,
 `ART` 변수 상속과 캐시, `FTERM_HISTORY_BYTES`, 글꼴 경로, 세션 16개, ring 256KiB, `Modes`
-복원 순서가 같습니다. 그래서 **앱은 어느 데몬에 붙었는지 알 수 없고**, `install.sh` 와
-keeper 도 그대로 동작합니다(명령줄·출력·종료 코드가 같습니다).
+복원 순서가 같습니다. `tests/run_daemon.sh` 하나가 이 프로토콜 표를 심사합니다. Rust 이식이
+그 심사를 통과한 뒤 파이썬 구현은 삭제했습니다 — 하나의 프로토콜에 구현이 둘이면, 그 일치는
+복사가 조심스러웠다는 사실 위에만 서 있고 언젠가 어긋납니다.
 
 ### 기기에서 빌드하고 켜기
 
@@ -508,22 +509,17 @@ Termux 안에서 직접 빌드합니다(크로스 컴파일이 아니라 그 기
 
 ```bash
 pkg install rust
-cd ~/projects/fterm/termux/ftermd-rs && cargo build --release
-# 설치할 때부터 Rust 데몬을 쓰려면:
-FTERM_DAEMON=rust bash ~/projects/fterm/termux/install.sh
+bash ~/projects/fterm/termux/install.sh    # 없으면 cargo build --release 를 먼저 돕니다
 ```
 
-`FTERM_DAEMON=rust` 는 `~/fterm/ftermd` 자리에 Rust 바이너리를 놓습니다. 그 뒤로는 앱도
-keeper 도 같은 소켓으로 이야기합니다. 되돌리려면 `FTERM_DAEMON=python` 으로 다시 설치하면
-됩니다 — 두 데몬의 명령줄이 같으므로 스크립트도 앱도 바뀌지 않습니다.
+`install.sh` 는 `~/fterm/ftermd` 자리에 Rust 바이너리를 놓습니다. 그 뒤로는 앱도 keeper 도
+같은 소켓으로 이야기합니다.
 
 ### 검증
 
-CI 가 **같은 두 스위트**(`termux/test_client.py`, `tests/test_modes.py --daemon`)를 파이썬
-데몬과 Rust 바이너리에 그대로 돌립니다. 추가로 `tests/test_daemon_hardening.py` 가 위 표의
-세 가지를 실제 소켓으로 확인합니다(다른 프로세스의 pid 를 가진 pidfile, 읽지 않는
-클라이언트, 입력을 안 읽는 탭). 이 세 검사는 **파이썬 데몬에서는 실패하는 것이 정상**이며,
-그 실패가 고치려는 버그 자체입니다.
+CI 가 **같은 두 스위트**(`termux/test_client.py`, `tests/test_modes.py`)를 Rust 바이너리에
+돌립니다. 추가로 `tests/test_daemon_hardening.py` 가 위 표의 세 가지를 실제 소켓으로
+확인합니다(다른 프로세스의 pid 를 가진 pidfile, 읽지 않는 클라이언트, 입력을 안 읽는 탭).
 
 ## 이전 수정 (핑/타임아웃) — 여전히 유효하지만 충분하지 않았습니다
 
@@ -561,9 +557,9 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 
 | 검증 | 방법 | 결과 |
 |---|---|---|
-| 데몬 프로토콜 9종 (인증 거부, 에코, 한글, resize, replay, close, OPEN 문자열, 링 밖 터미널 모드 복원, 끈 모드 유지) | `tests/run_all.sh` 의 python 파트 | 통과 |
-| 모드 추적기 41종 (바이트 분할 17종, 결합 파라미터, 무관한 CSI, 마지막 선언 우선, carry 상한) | `tests/test_modes.py` | 통과 |
-| 셸 환경 22종 (ART 변수 목록, 부모 정체 거르기, 캐시 왕복·0600·staleness, 죽은 pid) | `tests/test_env.py` | 통과 |
+| 데몬 프로토콜 9종 (인증 거부, 에코, 한글, resize, replay, close, OPEN 문자열, 링 밖 터미널 모드 복원, 끈 모드 유지) | `tests/run_daemon.sh` → `termux/test_client.py` | 통과 |
+| 모드 추적기 와이어 16종 (선언 분할, 결합 파라미터, 무관한 CSI, ring 밖 복원, redraw 후 응답) | `tests/test_modes.py` | 통과 |
+| 모드 추적기·환경·프레이밍·pidfile 유닛 58종 | `cargo test` (`termux/ftermd-rs`) | 통과 |
 | ART 변수 없는 데몬에서 termux-api 4종 (battery·toast·clipboard·am broadcast) | 격리 포트 `FTERM_PORT=8813` 에 `env -u BOOTCLASSPATH` 로 기동 | 통과 (rc=0) |
 | `install.sh` 재시작 (pid 교체 후 새 세션에서 배터리 조회) | 격리 `FTERM_HOME`·`FTERM_RUNDIR` 로 두 번 실행 | 통과 |
 | `rish2` 캐시 없이 동작 (`ftermd` 없이 `/proc` 발견) | `env -i` 로 캐시 삭제 후 실행 | 통과 (uid=2000 shell) |
@@ -582,7 +578,7 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 | 기기 설치·실행·렌더링·셸 연결 | `rish` 로 `pm install` 후 화면 확인 | 통과 |
 | 기기 영문 입력 (`abc` → `a`,`b`,`c`) | daemon 로그 바이트 확인 | 통과 |
 | 유휴/프리징 3종 (20초 유휴 후 세션 생존·사용 가능, 데몬이 클라이언트 유지, 끊긴 링크 즉시 종료) | `tests/jvm/harness/IdleTest.java` | 통과 |
-| 데몬 크래시 회귀 5종 (20회 급절단, 세션 생존, select 전 drop 순서) | `tests/jvm/harness/IdleDropTest.java` | 통과 |
+| 데몬 크래시 회귀 5종 (20회 급절단, 세션 생존, 클라이언트 예산 구조) | `tests/jvm/harness/IdleDropTest.java` | 통과 |
 | 구조 14종 (MainActivity 1264줄 상한, KeyBar/SettingsSheet 분리, 서비스·벨·keeper) | `tests/jvm/core/StructureTest.java` | 통과 |
 | UI 19종 (드롭다운·팔레트·이름 고정·테마 색·Enter) | `tests/jvm/core/UiTest.java` | 통과 |
 | 한글 IME 조합 16종 (ㅎ→하→한, 성장/축소, commit 꼬리, delete, 소스 대조) | `tests/jvm/core/ImeComposeTest.java` | 통과 |
@@ -594,8 +590,7 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 
 | 잡 | 도는 것 | 조건 |
 |---|---|---|
-| `python` | `test_modes.py`·`test_env.py`, 그리고 데몬을 띄워 `test_client.py`·`test_modes.py --daemon` | 항상 |
-| `rust` | `cargo build --release`·`cargo test`, 그리고 **같은 두 스위트를 Rust 바이너리로** | `termux/ftermd-rs/Cargo.toml` 이 있을 때 |
+| `rust` | `cargo build --release`·`cargo test`, 그리고 데몬을 띄워 `test_client.py`·`test_modes.py`·`test_daemon_hardening.py` | 항상 |
 | `java` | `tests/run_core.sh` (ANSI 파서·폭·팔레트·모드 복원) | 항상 |
 
 데몬은 `FTERM_RUNDIR`·`FTERM_PORT`를 따로 받아 뜨므로 폰의 탭과 섞이지 않습니다. 러너가 확인할
@@ -624,9 +619,10 @@ ConnectBot이 같은 문제를 푼 방식([connectbot#2352](https://github.com/c
 
 ```
 app/src/ai/openclaw/fterm/    MainActivity, Prefs, Schemes
-app/src/com.termux/terminal/  벤더링 + SessionTransport / SocketTransport / DaemonClient
+app/src/com.termux/terminal/  벤더링 + Protocol / SessionTransport / SocketTransport / DaemonClient
 app/src/com.termux/view/      벤더링 TerminalView / TerminalRenderer
-termux/ftermd                 PTY 소유 데몬 (토큰, ring replay, 세션 상한 16)
+termux/ftermd-rs              PTY 소유 데몬 (Rust: 토큰, ring replay, 세션 상한 16)
+termux/fterm-keeper           앱 요청을 받아 데몬을 띄우는 Termux 쪽 절반 (python3)
 tests/                        프로토콜, 전송, 파서, 폭 테스트
 ```
 

@@ -373,7 +373,7 @@ pub fn wait_status(pid: i32) -> i32 {
     }
 }
 
-/// Kill the shell and everything it started, in the same three steps as the Python daemon.
+/// Kill the shell and everything it started, in the same three steps as the first (Python) daemon.
 fn kill_group(pid: i32) {
     if pid <= 0 {
         return;

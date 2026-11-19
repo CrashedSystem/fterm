@@ -11,21 +11,18 @@ export FTERM_PORT=${FTERM_PORT:-8791}
 PORT=$FTERM_PORT
 
 cd "$ROOT/termux"
-echo "=== python protocol"
+echo "=== protocol (against the running daemon)"
 python3 test_client.py
 
 echo
-echo "=== mode tracker"
-python3 "$ROOT/tests/test_modes.py"
-
-echo
-echo "=== shell environment"
-python3 "$ROOT/tests/test_env.py"
+echo "=== daemon unit (mode tracker, env, framing, pidfile)"
+cargo test --locked --manifest-path "$ROOT/termux/ftermd-rs/Cargo.toml" --quiet
 
 echo
 echo "=== java transport"
 rm -rf "$T"; mkdir -p "$T/out"
 javac -d "$T/out" \
+  "$ROOT/app/src/com.termux/terminal/Protocol.java" \
   "$ROOT/app/src/com.termux/terminal/SessionTransport.java" \
   "$ROOT/app/src/com.termux/terminal/SocketTransport.java" \
   "$ROOT/app/src/com.termux/terminal/DaemonClient.java" \
@@ -43,7 +40,7 @@ java -cp "$T/out" SyncTest "$TOKEN" "$PORT"
 echo
 java -cp "$T/out" IdleTest "$TOKEN" "$PORT"
 echo
-java -Ddaemon.src="$ROOT/termux/ftermd" -cp "$T/out" IdleDropTest "$TOKEN" "$PORT"
+java -Ddaemon.src="$ROOT/termux/ftermd-rs/src/client.rs" -cp "$T/out" IdleDropTest "$TOKEN" "$PORT"
 echo
 java -cp "$T/out" ReconnectTest
 echo

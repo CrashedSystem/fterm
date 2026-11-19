@@ -1,7 +1,8 @@
 name: CI
 
-# Everything here is runnable on a plain ubuntu-latest with nothing installed but python3 and a
-# JDK. The daemon is started on a free port with its own FTERM_RUNDIR, so the suites never touch
+# Everything here is runnable on a plain ubuntu-latest with nothing installed but rust and a
+# JDK (the Java suites still drive the daemon over its socket from python3, which ubuntu has).
+# The daemon is started on a free port with its own FTERM_RUNDIR, so the suites never touch
 # a real ~/.fterm or a running phone daemon.
 #
 # What a Linux runner cannot check - install.sh, the Android PTY, termux-api's ART variables,
@@ -18,54 +19,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  python:
-    name: Python daemon
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Mode tracker (unit)
-        run: python3 tests/test_modes.py
-      - name: Shell environment (unit)
-        run: python3 tests/test_env.py
-      - name: Protocol and mode tracker against the Python daemon
-        run: bash tests/run_daemon.sh python3 termux/ftermd
-
   rust:
     name: Rust ftermd
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      # The migration is landing in steps: this job exists only once termux/ftermd-rs/ does,
-      # and until then it must report success without pretending it built anything.
-      - name: Is there a Rust daemon yet?
-        id: probe
-        run: |
-          if [ -f termux/ftermd-rs/Cargo.toml ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "termux/ftermd-rs/Cargo.toml is absent - skipping the Rust job" >> "$GITHUB_STEP_SUMMARY"
-          fi
       - name: Install toolchain
-        if: steps.probe.outputs.present == 'true'
         uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        if: steps.probe.outputs.present == 'true'
         with:
           workspaces: termux/ftermd-rs
       - name: Build
-        if: steps.probe.outputs.present == 'true'
         run: cargo build --release --locked --manifest-path termux/ftermd-rs/Cargo.toml
-      - name: Unit tests (mode tracker, ring, framing, pidfile, backpressure)
-        if: steps.probe.outputs.present == 'true'
+      - name: Unit tests (mode tracker, ring, framing, pidfile, backpressure, env)
         run: cargo test --locked --manifest-path termux/ftermd-rs/Cargo.toml
       - name: Protocol and mode tracker against the Rust binary
-        if: steps.probe.outputs.present == 'true'
         run: bash tests/run_daemon.sh termux/ftermd-rs/target/release/ftermd
 
   java:

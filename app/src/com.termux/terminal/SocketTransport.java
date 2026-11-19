@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A {@link SessionTransport} that talks to the fterm daemon over loopback TCP.
  *
- * Frame format is defined by termux/ftermd: a one byte type, a little endian 32 bit payload
+ * Frame format is defined by the fterm daemon (termux/ftermd-rs/src/protocol.rs): a one byte type, a little endian 32 bit payload
  * length, then the payload. Output is pushed to the session on a reader thread; input is
  * buffered on a writer thread so the UI thread never blocks on a socket.
  *

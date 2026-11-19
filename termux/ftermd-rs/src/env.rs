@@ -148,7 +148,7 @@ pub fn read_token(dir: &Path, create: bool) -> io::Result<Option<String>> {
 }
 
 fn random_token() -> String {
-    // 24 bytes of /dev/urandom, hex - the same shape the Python daemon writes, so an app that
+    // 24 bytes of /dev/urandom, hex - the same shape the first (Python) daemon wrote, so an app that
     // has a token saved keeps working if the daemon is swapped underneath it.
     let mut buf = [0u8; 24];
     if let Ok(mut f) = fs::File::open("/dev/urandom") {
@@ -236,7 +236,7 @@ pub fn read_cache(dir: &Path) -> HashMap<String, String> {
 
 /// Undo one `export K='...'` value, including the `'\''` run that a single quote becomes.
 ///
-/// The Python daemon trims the outer quotes only, which is enough for a class path (they have no
+/// The first (Python) daemon trimmed the outer quotes only, which is enough for a class path (they have no
 /// quotes in them) but loses a value with one. Reading back exactly what was written is worth
 /// the twenty lines: `ftermd env` and the cache are two views of the same fact.
 fn unquote(v: &str) -> String {
@@ -628,7 +628,14 @@ mod tests {
     fn a_missing_directory_falls_back_to_home() {
         assert_eq!(resolve_cwd("/nonexistent/dir/xyz"), home());
         assert_eq!(resolve_cwd(""), home());
-        assert_eq!(resolve_cwd("/tmp"), PathBuf::from("/tmp"));
+        // An existing directory the process can actually read+enter passes through. Pick one
+        // at runtime: /tmp is 0771 shell:shell on this device, so Termux uid fails the check
+        // and falls back to home - which is the behaviour under test, not a failure of it.
+        if let Ok(cwd) = std::env::current_dir() {
+            if cwd.is_dir() && access_rx(cwd.to_string_lossy().as_ref()) {
+                assert_eq!(resolve_cwd(cwd.to_string_lossy().as_ref()), cwd);
+            }
+        }
     }
 
     #[test]

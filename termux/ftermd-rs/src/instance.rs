@@ -1,6 +1,6 @@
 //! Who is the daemon, and is it still me?
 //!
-//! The bug this replaces: the Python daemon decided "already running" from
+//! The bug this replaces: the first (Python) daemon decided "already running" from
 //! `os.kill(pid, 0)` alone. After a crash the pidfile stays, and once the kernel hands that pid
 //! to any other process the check succeeds forever - `start` prints "already running" and exits,
 //! the app keeps failing to connect, and nothing in the log says why.

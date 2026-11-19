@@ -134,17 +134,22 @@ public class FontsTest {
                 "offered from the font list itself, where the new font will appear");
 
         String daemon = new String(java.nio.file.Files.readAllBytes(
-                java.nio.file.Paths.get(System.getProperty("daemon.src", "termux/ftermd"))),
+                java.nio.file.Paths.get(System.getProperty("daemon.src",
+                        "termux/ftermd-rs/src/protocol.rs"))),
+                "UTF-8");
+        String fontsrv = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get(System.getProperty("daemon.fonts",
+                        "termux/ftermd-rs/src/fonts.rs"))),
                 "UTF-8");
         check(daemon.contains("C_FONT_LIST") && daemon.contains("C_FONT_GET"),
                 "the daemon protocol has the font opcodes");
-        check(daemon.contains("FONT_CHUNK"),
+        check(fontsrv.contains("FONT_CHUNK"),
                 "a font is served in chunks, because one frame is capped at 1 MiB");
-        check(daemon.contains("font_scan()"),
+        check(fontsrv.contains("font_scan()"),
                 "and only a path the scan returned is served, not an arbitrary file");
-        check(daemon.contains("C_FONT_FETCH"),
+        check(fontsrv.contains("fetch_font("),
                 "the daemon can download a URL, which is the whole point of the shortcut");
-        check(daemon.contains("\".fonts\""),
+        check(fontsrv.contains(".fonts"),
                 "into ~/.fonts, the directory a curl one-liner can reach");
 
         String client = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(

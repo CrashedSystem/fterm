@@ -31,14 +31,14 @@
 **증상**: `README.md`의 검증 표는 전부 손으로 돌린 결과입니다. Rust 데몬을 붙이는 순간 "무엇이
 여전히 맞는지"를 사람이 기억해야 합니다.
 
-**고치는 방법**: `.github/workflows/ci.yml`에 네 갈래를 둡니다.
+**고치는 방법**: `.github/workflows/ci.yml`에 잡을 둡니다.
 
-- `python` — `tests/test_modes.py`(모드 추적기), `tests/test_env.py`(셸 환경), 그리고 실제
-  데몬을 띄워 `termux/test_client.py` + `tests/test_modes.py --daemon`.
-- `rust` — `cargo test`, 그리고 **같은 두 스위트를 컴파일된 Rust 바이너리로**. `termux/ftermd-rs/`가
-  없으면 이 잡은 건너뜁니다.
+- `rust` — `cargo test`, 그리고 데몬을 띄워 `termux/test_client.py` + `tests/test_modes.py` +
+  `tests/test_daemon_hardening.py`. (처음에는 python 잡과 rust 잡이 나뒀고, Rust 이식이 같은
+  스위트를 통과한 뒤 python 잡은 지웠습니다 — 파이썬 데몬도 함께 지워졌습니다.)
 - `java` — `tests/run_core.sh`(ANSI 파서·폭·팔레트·모드 복원). `FTERM_TMPDIR`만 CI용으로 넘깁니다.
-- 전부 `ubuntu-latest`, 의존성 설치 없이. 필요한 것은 `python3`과 JDK뿐입니다.
+- 전부 `ubuntu-latest`, 의존성 설치 없이. 필요한 것은 rust와 JDK뿐입니다(스위트 구동에 쓰는
+  `python3`은 러너에 기본 설치돼 있습니다).
 
 **검증**: PR의 체크가 초록인 것 자체가 검증입니다. CI가 초록이 아니면 PR은 열린 채로 둡니다.
 
@@ -77,21 +77,23 @@ APK 빌드 자체는 지금도 기기에서만 확인됩니다.
 한도, ring 256KiB, `Modes`의 복원 순서가 전부 같아야 합니다. 앱은 어느 데몬에 붙었는지
 알아채지 못해야 합니다.
 
-**설치**: `install.sh` 에 `FTERM_DAEMON=rust` 를 두었습니다. 기본값은 지금과 같은
-`python` 이고, `rust` 로 설치하면 같은 자리(`~/fterm/ftermd`)에 Rust 바이너리가 들어갑니다.
-두 데몬의 명령줄·출력·종료 코드가 같으므로 앱도 keeper 도 스크립트도 바뀌지 않습니다.
+**설치**: `install.sh` 는 `~/fterm/ftermd` 자리에 Rust 바이너리를 놓습니다. 파이썬 데몬은
+Rust 이식이 같은 스위트를 통과한 뒤 삭제됐고, 기본값도 rust 입니다.
+두 데몬의 명령줄·출력·종료 코드가 같았으므로 앱도 keeper 도 스크립트도 바뀌지 않았습니다.
 
 **검증**: `cargo test` 58종(모드 추적기·ring·프레이밍·pidfile·백프레셔·환경·글꼴),
-`tests/test_daemon_hardening.py`(낡은 pidfile·느린 클라이언트·막힌 탭 — 파이썬 데몬에서는
-실패하는 것이 정상), 그리고 3단계의 프로토콜 스위트를 Rust 바이너리로.
+`tests/test_daemon_hardening.py`(낡은 pidfile·느린 클라이언트·막힌 탭), 그리고 3단계의
+프로토콜 스위트를 Rust 바이너리로.
 
 ## 3. 프로토콜 호환 — 두 구현을 같은 잣대로
 
 **증상**: 2단계의 "호환된다"는 말은 검증이 없으면 주장일 뿐입니다.
 
-**고치는 방법**: `tests/test_modes.py --daemon`(실제 데몬에 붙어 선언 분할·망각·복원 순서를
+**고치는 방법**: `tests/test_modes.py`(실제 데몬에 붙어 선언 분할·망각·복원 순서를
 확인)과 `termux/test_client.py`(인증·에코·한글·resize·replay·close·OPEN 문자열·모드 복원)를
-**Python 데몬과 Rust 데몬 양쪽에** 돌립니다. `tests/run_daemon.sh`가 그 실행기입니다.
+데몬 바이너리에 돌립니다. `tests/run_daemon.sh`가 그 실행기입니다. 이식 당시에는 Python
+데몬과 Rust 데몬 양쪽에 같은 스위트를 돌려 동일성을 증명했고, 증명 뒤 파이썬 구현은
+삭제했습니다. 지금은 Rust 바이너리 하나를 심사합니다.
 
 **검증**: 같은 출력, 같은 통과 수. 하나라도 다르면 그 차이가 곧 버그입니다.
 

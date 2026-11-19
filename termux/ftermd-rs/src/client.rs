@@ -155,7 +155,7 @@ pub async fn serve(sock: TcpStream, daemon: Arc<Daemon>) {
 }
 
 pub fn error_payload(code: u8, msg: &str) -> Vec<u8> {
-    // S_ERROR is <u8 code><u16 len><utf-8 message>, exactly as the Python daemon sends it.
+    // S_ERROR is <u8 code><u16 len><utf-8 message>, exactly as the first (Python) daemon sent it.
     let b = msg.as_bytes();
     let mut out = Vec::with_capacity(3 + b.len());
     out.push(code);
