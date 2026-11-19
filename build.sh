@@ -73,15 +73,18 @@ apk, dex = sys.argv[1], sys.argv[2]
 with zipfile.ZipFile(apk, 'a', zipfile.ZIP_STORED) as z:
     z.write(dex, 'classes.dex')
 PY
-python3 - "$OUT/app.apk" <<'PY'
-import sys, zipfile
+python3 - "$OUT/app.apk" "$ROOT/licenses" <<'PY'
+import os, sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as z:
     names = z.namelist()
 assert 'classes.dex' in names, "classes.dex missing from the APK: %s" % names
 # 라이선스 고지는 배포 요건이다 — assets 스테이징이 조용히 빠지면 여기서 멈춘다.
-for want in ('assets/LICENSE', 'assets/NOTICE.md', 'assets/licenses/Apache-2.0.txt',
-             'assets/licenses/OFL-1.1.txt', 'assets/licenses/MIT.txt'):
-    assert want in names, "%s missing from the APK: %s" % (want, names)
+# 저장소의 licenses/*.txt 를 그대로 기대 목록으로 쓰므로, 라이선스 파일을 하나 더하면
+# 이 검사도 자동으로 따라온다.
+want = ['assets/LICENSE', 'assets/NOTICE.md']
+want += ['assets/licenses/' + f for f in sorted(os.listdir(sys.argv[2])) if f.endswith('.txt')]
+missing = [w for w in want if w not in names]
+assert not missing, "%s missing from the APK: %s" % (missing, names)
 print("  dex %d bytes, %d entries" % (z.getinfo('classes.dex').file_size, len(names)))
 PY
 zipalign -f 4 "$OUT/app.apk" "$OUT/app-aligned.apk"
