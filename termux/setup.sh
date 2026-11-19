@@ -157,8 +157,14 @@ if [ "$SHARED_OK" = 1 ] && [ -s "$SHARED/fterm-token" ]; then
   say "수동으로 넣어야 할 때만 쓰는 토큰:"
   cat "$SHARED/fterm-token"; say ""
 elif [ "$SHARED_OK" = 1 ]; then
-  say "토큰 파일을 쓰지 못했습니다. 앱에서 '직접 토큰 입력'을 누르고 아래 값을 붙여넣으세요:"
-  "$DEST/ftermd" token
+  t=$("$DEST/ftermd" token 2>/dev/null | tr -d ' \r\n')
+  if [ -n "$t" ]; then
+    say "토큰 파일을 쓰지 못했습니다. 앱에서 '직접 토큰 입력'을 누르고 아래 값을 붙여넣으세요:"
+    say "  $t"
+  else
+    warn "토큰을 읽지 못했습니다 — 데몬이 뜨지 않았으니 먼저 $DEST/daemon.log 를 보세요."
+    exit 1
+  fi
 else
   warn "$SHARED 는 쓸 수 없습니다. Termux에서 termux-setup-storage 를 실행하고 이 스크립트를"
   warn "다시 실행하세요. 앱과 keeper가 만나는 곳이 그 디렉터리뿐입니다."
