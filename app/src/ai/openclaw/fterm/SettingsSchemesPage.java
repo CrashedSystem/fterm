@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.termux.terminal.TextStyle;
 
@@ -20,6 +21,10 @@ import com.termux.terminal.TextStyle;
  * <p>The preview is not decoration - it is the only place the foreground, background and
  * all eight normal/bright pairs are shown together, which is what makes a scheme's
  * legibility judgeable before it is applied.
+ *
+ * <p>The list is the six compiled-in schemes followed by the user's own, up to
+ * {@link Schemes#MAX_CUSTOM_SCHEMES}. A custom row carries a pencil: that is where a saved
+ * scheme is renamed or deleted, because the row itself already means "use this one".
  */
 final class SettingsSchemesPage extends SettingsPage {
 
@@ -29,14 +34,17 @@ final class SettingsSchemesPage extends SettingsPage {
 
     @Override
     void build(LinearLayout col) {
-        int[] slots = host.customSlots();
-        col.addView(preview(host.scheme(), slots));
+        final int scheme = host.scheme();
+        final int[] slots = host.customSlots();
+        final int customCount = host.customSchemeCount();
+        // Only a saved scheme has slots to edit; a built-in's are compiled in.
+        final boolean editable = Schemes.isCustom(scheme) && customCount > 0;
+        col.addView(preview(scheme, slots));
 
         LinearLayout colours = ui.card(col);
         colours.addView(ui.cardTitle("색"));
-        int[] table = Schemes.colors(host.scheme(), slots);
+        int[] table = Schemes.colors(scheme, slots);
         String[] names = {"검정", "빨강", "녹색", "노랑", "파랑", "보라색", "녹청색", "흰색"};
-        final boolean editable = host.scheme() == Schemes.CUSTOM_INDEX;
         for (int i = 0; i < names.length; i++) {
             colours.addView(swatchRow(names[i], table[i], table[i + 8], i == names.length - 1,
                     editable, i, slots));
@@ -44,26 +52,65 @@ final class SettingsSchemesPage extends SettingsPage {
 
         LinearLayout list = ui.card(col);
         list.addView(ui.cardTitle("구성표"));
-        for (int i = 0; i < Prefs.SCHEME_NAMES.length; i++) {
+        final int rows = Schemes.SCHEME_NAMES.length + customCount;
+        int shown = 0;
+        for (int i = 0; i < Schemes.SCHEME_NAMES.length; i++) {
             final int idx = i;
-            list.addView(schemeRow(Prefs.SCHEME_NAMES[i], host.scheme() == idx,
-                    i == Prefs.SCHEME_NAMES.length - 1, () -> {
+            shown++;
+            list.addView(schemeRow(Schemes.SCHEME_NAMES[i], scheme == idx, shown == rows,
+                    false, () -> {
                         host.onScheme(idx);
                         render();          // so the preview and the palette follow the pick
-                    }));
+                    }, null));
+        }
+        for (int i = 0; i < customCount; i++) {
+            final int idx = Schemes.CUSTOM_INDEX + i;
+            final int at = i;
+            shown++;
+            list.addView(schemeRow(host.customSchemeName(i), scheme == idx, shown == rows,
+                    true, () -> {
+                        host.onScheme(idx);
+                        render();
+                    }, () -> sheet.schemeEditor().edit(at)));
         }
 
         ui.hint(col, editable
                 ? "색을 누르면 그 자리의 값을 바꿀 수 있습니다. 왼쪽이 보통색, "
-                        + "오른쪽이 밝은색입니다."
-                : "색 구성표는 앱에 내장되어 있습니다. \"사용자 지정\"을 고르면 "
-                        + "16색을 직접 정할 수 있습니다.");
+                        + "오른쪽이 밝은색입니다. 구성표 옆 연필로 이름을 바꾸거나 삭제합니다."
+                : "내장 구성표의 색은 앱에 들어 있습니다. 아래에서 사용자 지정 구성표를 "
+                        + "고르거나 새로 만들면 16색을 직접 정할 수 있습니다.");
+
+        LinearLayout add = ui.card(col);
+        add.addView(ui.cardTitle("사용자 지정  " + customCount + "/"
+                + Schemes.MAX_CUSTOM_SCHEMES));
+        add.addView(ui.valueRow("현재 구성표 복제", "지금 보이는 색으로 새 구성표를 만듭니다",
+                "복제", () -> addCustom(host.schemeName() + " 복제",
+                        Schemes.slotsOf(scheme, slots)), false));
+        add.addView(ui.valueRow("새 구성표", "Campbell 색에서 시작합니다",
+                "만들기", () -> addCustom("새 구성표", Schemes.campbellSlots()), true));
 
         LinearLayout importCard = ui.card(col);
         importCard.addView(ui.cardTitle("가져오기"));
         importCard.addView(ui.valueRow("Windows Terminal JSON",
-                "16색과 전경·배경·커서를 읽어 \"사용자 지정\"에 저장",
+                "16색과 전경·배경·커서를 읽어 새 구성표로 추가하고 바로 적용",
                 "가져오기", () -> sheet.schemes().open(), true));
+    }
+
+    /**
+     * Adds a scheme and selects it.
+     *
+     * <p>The cap is refused here, with a sentence that says what to do about it, because the
+     * alternative - silently replacing the oldest scheme - would delete something the user
+     * made without ever being asked.
+     */
+    private void addCustom(String name, int[] slots) {
+        if (host.addCustomScheme(name, slots) < 0) {
+            Toast.makeText(activity, "사용자 지정 구성표가 " + Schemes.MAX_CUSTOM_SCHEMES
+                    + "개입니다. 구성표 옆 연필에서 하나를 삭제한 뒤 다시 추가하세요.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        render();
     }
 
     /**
@@ -179,7 +226,7 @@ final class SettingsSchemesPage extends SettingsPage {
     /**
      * One palette entry: name, its normal swatch, its bright swatch.
      *
-     * <p>When the custom scheme is active the two swatches become tappable, because that is
+     * <p>When a saved scheme is active the two swatches become tappable, because that is
      * where editing lives - WT's colour page is the same idea with a picker instead of a hex
      * field. The row itself stays a row: a value you can change, not a form control.
      */
@@ -231,8 +278,12 @@ final class SettingsSchemesPage extends SettingsPage {
         return v;
     }
 
-    /** A scheme as a selectable row: accent bar when active, name, check glyph. */
-    private View schemeRow(String name, boolean active, boolean last, Runnable onPick) {
+    /**
+     * A scheme as a selectable row: accent bar when active, name, check glyph, and for a
+     * saved scheme a pencil that opens rename/delete.
+     */
+    private View schemeRow(String name, boolean active, boolean last, boolean custom,
+                           Runnable onPick, Runnable onEdit) {
         LinearLayout row = new LinearLayout(activity);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -257,6 +308,14 @@ final class SettingsSchemesPage extends SettingsPage {
         row.addView(t);
 
         if (active) row.addView(Chrome.icon(activity, "check", 18, false, null));
+        if (custom && onEdit != null) {
+            View pencil = Chrome.icon(activity, "pencil", 17, true, v -> onEdit.run());
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ui.dp(17), ui.dp(17));
+            lp.leftMargin = ui.dp(10);
+            lp.rightMargin = ui.dp(2);
+            pencil.setLayoutParams(lp);
+            row.addView(pencil);
+        }
         return ui.cardRow(row, last);
     }
 }

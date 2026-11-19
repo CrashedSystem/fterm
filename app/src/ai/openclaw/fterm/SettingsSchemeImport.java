@@ -20,9 +20,11 @@ import java.io.InputStream;
  * <p>Two ways in, because both are how people actually have one: paste the block they copied
  * from a gist or a {@code settings.json}, or open the {@code .json} file they downloaded.
  *
- * <p>Import lands in the 사용자 지정 slot and selects it. Overwriting the custom palette is the
- * honest behaviour - a scheme is nineteen values, and merging a new one into an old one would
- * produce a palette that exists nowhere.
+ * <p>An import is added as a new custom scheme under the name the JSON carries, and selected.
+ * It used to overwrite the single 사용자 지정 slot, which was the honest behaviour when there
+ * was one palette; with sixteen there is nothing to overwrite, and the scheme the user was
+ * using stays where it was. A name already in the list gets a number appended, so importing
+ * the same gist twice gives two distinguishable rows rather than one that looks unchanged.
  */
 final class SettingsSchemeImport {
 
@@ -71,8 +73,8 @@ final class SettingsSchemeImport {
 
         TextView note = new TextView(mActivity);
         note.setText("Windows Terminal의 색 구성표 JSON입니다. 16색과 전경·배경·커서를 읽고 "
-                + "\"사용자 지정\" 구성표로 저장합니다. selectionBackground는 이 앱에 그 자리가 "
-                + "없어 무시합니다.");
+                + "새 사용자 지정 구성표로 추가해 바로 적용합니다. selectionBackground는 이 앱에 "
+                + "그 자리가 없어 무시합니다.");
         note.setTextColor(mUi.HINT);
         note.setTextSize(10.5f);
         note.setPadding(0, mUi.dp(6), 0, 0);
@@ -130,12 +132,21 @@ final class SettingsSchemeImport {
         apply(text);
     }
 
-    /** @return true when the scheme was applied, so a pasted dialog can close on success only. */
+    /**
+     * @return true when the scheme was added and selected, so a pasted dialog can close on
+     *         success only.
+     */
     private boolean apply(String text) {
         try {
             TerminalSchemeJson.Scheme scheme = TerminalSchemeJson.parse(text);
-            mHost.onCustomScheme(scheme.slots);
-            Toast.makeText(mActivity, "'" + scheme.name + "' 구성표를 가져왔습니다",
+            int added = mHost.addCustomScheme(scheme.name, scheme.slots);
+            if (added < 0) {
+                Toast.makeText(mActivity, "사용자 지정 구성표가 " + Schemes.MAX_CUSTOM_SCHEMES
+                        + "개입니다. 하나를 삭제한 뒤 다시 가져오세요.",
+                        Toast.LENGTH_LONG).show();
+                return false;
+            }
+            Toast.makeText(mActivity, "'" + mHost.customSchemeName(added) + "' 구성표를 추가했습니다",
                     Toast.LENGTH_SHORT).show();
             mSheet.render();
             return true;

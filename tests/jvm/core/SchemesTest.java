@@ -11,8 +11,8 @@ import java.util.Map;
  */
 public class SchemesTest {
 
-    /** The built-in Prefs.SCHEME_NAMES entries; the last one is the editable slot. */
-    static final int SCHEME_COUNT = 7;
+    /** The schemes compiled in; the user's own occupy 6..21 and are not built-ins. */
+    static final int SCHEME_COUNT = 6;
 
     static int pass = 0;
 
@@ -83,9 +83,9 @@ public class SchemesTest {
         System.out.println("ok  OLED contrast " + Math.round(contrast * 10) / 10.0 + ":1");
 
         // And each built-in scheme's foreground must clear 4.5:1 against its background.
-        // The custom slot is excluded: its colours are whatever the user typed, and a
+        // The custom schemes are excluded: their colours are whatever the user typed, and a
         // palette tool that refuses low contrast is a tool that argues with its user.
-        for (int i = 0; i < SCHEME_COUNT - 1; i++) {
+        for (int i = 0; i < SCHEME_COUNT; i++) {
             int[] t = ai.openclaw.fterm.Schemes.colors(i);
             double lf = luminance(t[com.termux.terminal.TextStyle.COLOR_INDEX_FOREGROUND], false);
             double lb = luminance(t[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND], false);
@@ -97,7 +97,8 @@ public class SchemesTest {
         }
 
         // The custom slot is not compiled in: it is whatever nineteen ints are handed to it,
-        // and the cube/ramp are still generated so the renderer never reads zeros.
+        // and the cube/ramp are still generated so the renderer never reads zeros. Index 6 is
+        // the first of the sixteen custom slots and every one of them behaves the same.
         int[] slots = new int[ai.openclaw.fterm.Schemes.CUSTOM_SLOTS];
         for (int i = 0; i < 16; i++) slots[i] = rgb(16 * i, 255 - 16 * i, 40 + 4 * i);
         slots[16] = rgb(0xee, 0xee, 0xee);

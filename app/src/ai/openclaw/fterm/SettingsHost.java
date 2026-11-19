@@ -28,6 +28,38 @@ final class SettingsHost implements SettingsSheet.Host {
     @Override public int scheme() { return a.mScheme; }
     @Override public void onScheme(int index) { a.applyScheme(index); }
 
+    @Override public String schemeName() { return Schemes.nameOf(a.mScheme, a.mCustoms); }
+
+    @Override public int customSchemeCount() { return a.mCustoms.size(); }
+
+    @Override public String customSchemeName(int index) { return a.mCustoms.nameAt(index); }
+
+    @Override public int addCustomScheme(String name, int[] slots) {
+        int at = a.mCustoms.add(name, slots);
+        if (at < 0) return -1;
+        a.mPrefs.setCustomSchemes(a.mCustoms.encode());
+        a.applyScheme(Schemes.CUSTOM_INDEX + at);   // an added scheme is the one to use
+        return at;
+    }
+
+    @Override public void onRenameCustomScheme(int index, String name) {
+        if (a.mCustoms.rename(index, name)) a.mPrefs.setCustomSchemes(a.mCustoms.encode());
+    }
+
+    @Override public void onDeleteCustomScheme(int index) {
+        if (!a.mCustoms.remove(index)) return;
+        a.mPrefs.setCustomSchemes(a.mCustoms.encode());
+        int scheme = a.mScheme;
+        int at = CustomSchemes.themeIndexOf(scheme);
+        if (at > index) {
+            scheme--;                              // every scheme past the hole moved down
+        } else if (at == index) {
+            int left = a.mCustoms.size();
+            scheme = left == 0 ? 0 : Schemes.CUSTOM_INDEX + Math.min(index, left - 1);
+        }
+        a.applyScheme(Schemes.clampScheme(scheme, a.mCustoms.size()));
+    }
+
     @Override public int cursorColor() { return a.mPrefs.cursorColor(); }
 
     @Override public void onCursorColor(int color) {
@@ -78,18 +110,16 @@ final class SettingsHost implements SettingsSheet.Host {
 
     @Override public void onCustomSlot(int slot, int color) {
         if (slot < 0 || slot >= Schemes.CUSTOM_SLOTS) return;
+        // Built-in schemes are compiled in; only a saved one is editable.
+        int theme = CustomSchemes.themeIndexOf(a.mScheme);
+        if (theme < 0) return;
         a.mCustom[slot] = color;
-        a.mPrefs.setCustomSlot(slot, color);
+        if (a.mCustoms.setSlots(theme, a.mCustom)) {
+            a.mPrefs.setCustomSchemes(a.mCustoms.encode());
+        }
         // Editing a slot is only visible if the custom scheme is the one in use, so the edit
         // also selects it - that is what the user clicked into.
-        a.applyScheme(Schemes.CUSTOM_INDEX);
-    }
-
-    @Override public void onCustomScheme(int[] slots) {
-        if (slots == null || slots.length != Schemes.CUSTOM_SLOTS) return;
-        a.mCustom = slots.clone();
-        a.mPrefs.setCustomSlots(a.mCustom);
-        a.applyScheme(Schemes.CUSTOM_INDEX);
+        a.applyScheme(a.mScheme);
     }
 
     @Override public boolean backgroundSet() {

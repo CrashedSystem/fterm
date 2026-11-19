@@ -89,7 +89,9 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private Notifier mNotifier;
     private DaemonBoot mBoot;
     int mScheme;
-    /** The custom scheme's 19 editable slots, loaded once and kept in step with Prefs. */
+    /** Every saved custom scheme, in list order; the source of the scheme index range. */
+    CustomSchemes mCustoms;
+    /** The active scheme's 19 editable slots, kept in step with Prefs and mCustoms. */
     int[] mCustom;
     /** Fractional font size in dp, so a pinch accumulates instead of rounding every event away. */
     private float mZoomDp;
@@ -105,8 +107,9 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mPrefs = new Prefs(this);
         mFontDp = mPrefs.fontSizeDp();
         mZoomDp = mFontDp;
-        mScheme = mPrefs.scheme();
-        mCustom = mPrefs.customSlots();
+        mCustoms = mPrefs.customSchemes();
+        mScheme = Schemes.clampScheme(mPrefs.scheme(), mCustoms.size());
+        mCustom = mCustoms.slotsForScheme(mScheme);
 
         applyChrome();
         buildUi();
@@ -762,6 +765,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     void applyScheme(int index) {
         mScheme = index;
         mPrefs.setScheme(index);
+        // A custom index names one entry of the list, so the editable slots follow it here.
+        mCustom = mCustoms.slotsForScheme(index);
         // On the OLED scheme every surface goes to true black; a #1e1e1e strip next to a
         // #000000 terminal is a visible seam and, on OLED, lit pixels.
         final boolean oled = Schemes.isOled(index, mCustom);

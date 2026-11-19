@@ -131,8 +131,9 @@ public class SchemeJsonTest {
         eq(ai.openclaw.fterm.TerminalSchemeJson.parse("{\"background\":\"#123456\"}").name,
                 "가져온 구성표", "an unnamed scheme gets a name");
 
-        // The app's own scheme list is the target: import overwrites 사용자 지정.
-        check(ai.openclaw.fterm.Schemes.CUSTOM_INDEX == 6, "import lands in 사용자 지정");
+        // The app's own scheme list is the target: an import becomes a custom scheme, and the
+        // first of those is still index 6, where the single 사용자 지정 slot used to be.
+        check(ai.openclaw.fterm.Schemes.CUSTOM_INDEX == 6, "import lands in a custom scheme");
 
         System.out.println("SchemeJsonTest ALL OK (" + pass + " assertions)");
     }

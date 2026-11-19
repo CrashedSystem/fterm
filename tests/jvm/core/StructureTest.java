@@ -64,11 +64,34 @@ public class StructureTest {
         for (String page : new String[]{"SettingsUi", "SettingsPage", "SettingsRootPage",
                 "SettingsStartPage", "SettingsProfilesPage", "SettingsAppearancePage",
                 "SettingsSchemesPage", "SettingsInteractionPage", "SettingsAboutPage",
-                "SettingsFontPicker", "SettingsIconPicker"}) {
+                "SettingsFontPicker", "SettingsIconPicker", "SettingsSchemeImport",
+                "SettingsSchemeEditor"}) {
             int pageLines = lines(read(dir + page + ".java"));
             check(pageLines < 600,
                     page + " is one responsibility, not a drawer (" + pageLines + " lines)");
         }
+
+        // 2d. The user's own colour schemes are a list of up to sixteen, not one slot. What is
+        //     asserted is that the list, the migration from the old single slot, and the three
+        //     ways the page changes it live where they can be read on their own.
+        String schemesSrc = read(dir + "Schemes.java");
+        check(schemesSrc.contains("MAX_CUSTOM_SCHEMES = 16"),
+                "sixteen user colour schemes are the cap");
+        check(schemesSrc.contains("isCustom(int index)"), "and one index range names them");
+        String customs = read(dir + "CustomSchemes.java");
+        check(customs.contains("fromLegacy"),
+                "the store migrates the single palette it used to be");
+        check(read(dir + "Prefs.java").contains("customSchemes()"),
+                "and Prefs hands the whole list over as one stored string");
+        String schemesPage = read(dir + "SettingsSchemesPage.java");
+        check(schemesPage.contains("host.customSchemeCount()"),
+                "the page lists every saved scheme");
+        check(schemesPage.contains("addCustomScheme"), "and can add one");
+        check(schemesPage.contains("schemeEditor()"), "and reaches rename/delete from its row");
+        check(read(dir + "SettingsSchemeEditor.java").contains("onDeleteCustomScheme"),
+                "which is where a saved scheme is deleted");
+        check(read(dir + "SettingsSchemeImport.java").contains("addCustomScheme"),
+                "an imported Windows Terminal scheme is added, not written over another");
 
         // 3. The foreground service is what stops the freezer, so it must exist and be started.
         check(main.contains("TerminalService.start(this)"), "the service is started with the activity");

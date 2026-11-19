@@ -75,9 +75,7 @@ final class SettingsAppearancePage extends SettingsPage {
                 Fonts.labelOfHangul(activity, host.hangulFamily()),
                 () -> sheet.fonts().chooseHangulFont(), false));
         card.addView(ui.valueRow("색 구성표", "미리보기와 16색 팔레트",
-                Prefs.SCHEME_NAMES[Math.max(0, Math.min(Prefs.SCHEME_NAMES.length - 1,
-                        host.scheme()))],
-                () -> open("schemes"), false));
+                host.schemeName(), () -> open("schemes"), false));
         card.addView(ui.toggleCardRow("키 바 표시", "화면 아래 두 줄짜리 키 바",
                 host.keyBarVisible(), host::onKeyBarVisible, false));
 

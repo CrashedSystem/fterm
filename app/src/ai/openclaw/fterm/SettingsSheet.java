@@ -45,13 +45,32 @@ final class SettingsSheet {
 
         void onScheme(int index);
 
-        /** The nineteen editable slots: 16 ANSI, then foreground, background, cursor. */
+        /** The active scheme's display name, a built-in's or one the user saved. */
+        String schemeName();
+
+        /** How many custom schemes are saved; their scheme indices start at CUSTOM_INDEX. */
+        int customSchemeCount();
+
+        /** The saved name of custom scheme i, in list order. */
+        String customSchemeName(int index);
+
+        /** The nineteen editable slots of the active scheme (the first custom if a built-in is). */
         int[] customSlots();
 
         void onCustomSlot(int slot, int color);
 
-        /** All nineteen at once, from an imported Windows Terminal scheme. */
-        void onCustomScheme(int[] slots);
+        /**
+         * Saves a new custom scheme and selects it.
+         *
+         * @return its scheme index, or -1 when the sixteen are full - the caller says so
+         *         rather than dropping the palette on the floor.
+         */
+        int addCustomScheme(String name, int[] slots);
+
+        void onRenameCustomScheme(int index, String name);
+
+        /** Deletes custom scheme i; the selection moves if it named that one. */
+        void onDeleteCustomScheme(int index);
 
         /** Whether a background picture is installed. */
         boolean backgroundSet();
@@ -168,6 +187,9 @@ final class SettingsSheet {
     /** The 색 구성표 page's Windows Terminal JSON import. */
     private SettingsSchemeImport mSchemeImport;
 
+    /** The 색 구성표 page's rename/delete dialog for a saved scheme. */
+    private SettingsSchemeEditor mSchemeEditor;
+
     private android.app.Dialog mDialog;
 
     SettingsSheet(Activity activity, Host host) {
@@ -207,6 +229,12 @@ final class SettingsSheet {
     SettingsSchemeImport schemes() {
         if (mSchemeImport == null) mSchemeImport = new SettingsSchemeImport(this);
         return mSchemeImport;
+    }
+
+    /** The rename/delete dialog, one instance so a render does not stack dialogs. */
+    SettingsSchemeEditor schemeEditor() {
+        if (mSchemeEditor == null) mSchemeEditor = new SettingsSchemeEditor(this);
+        return mSchemeEditor;
     }
 
     void show() {

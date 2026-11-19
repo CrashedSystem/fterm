@@ -12,22 +12,92 @@ import com.termux.terminal.TextStyle;
  */
 public final class Schemes {
 
-    /** The index of the OLED scheme in {@link Prefs#SCHEME_NAMES}. */
+    /** The index of the OLED scheme in {@link #SCHEME_NAMES}. */
     public static final int OLED_INDEX = 4;
 
     /** One Half Dark (mterm's palette), an alternative to One Dark. */
     public static final int ONE_HALF_DARK_INDEX = 5;
 
     /**
-     * The editable scheme. Its nineteen slots (16 ANSI, foreground, background, cursor) are
-     * stored by {@link Prefs}, not compiled in, which is the whole point of it existing.
+     * The first editable scheme. Its nineteen slots (16 ANSI, foreground, background, cursor)
+     * are stored by {@link Prefs}, not compiled in, which is the whole point of it existing.
+     *
+     * <p>Custom schemes share one index range - this one through
+     * {@code CUSTOM_INDEX + MAX_CUSTOM_SCHEMES - 1} - so a scheme index is one integer
+     * everywhere: the preference, the emulator call, the settings list. Before there could be
+     * more than one, index 6 was the single "사용자 지정" slot; keeping it as the start of the
+     * range is what makes a stored {@code scheme=6} still mean the user's own palette after
+     * the upgrade.
      */
     public static final int CUSTOM_INDEX = 6;
 
-    /** The slots the custom scheme stores: sixteen ANSI, then foreground, background, cursor. */
+    /** How many user-defined schemes can be saved. */
+    public static final int MAX_CUSTOM_SCHEMES = 16;
+
+    /** The slots a custom scheme stores: sixteen ANSI, then foreground, background, cursor. */
     public static final int CUSTOM_SLOTS = 19;
 
+    /** The six schemes compiled in, in index order; the user's own follow them. */
+    public static final String[] SCHEME_NAMES = {
+            "Campbell", "One Dark", "Solarized Dark", "Dracula", "OLED (순수 검정)",
+            "One Half Dark"
+    };
+
     private Schemes() {}
+
+    /** True when the index names one of the user's own schemes rather than a built-in. */
+    public static boolean isCustom(int index) {
+        return index >= CUSTOM_INDEX && index < CUSTOM_INDEX + MAX_CUSTOM_SCHEMES;
+    }
+
+    /**
+     * The scheme a stored index should become, given how many custom schemes are saved.
+     *
+     * <p>A custom index can outlive the scheme it named: delete the third palette and every
+     * index after it shifts down. Rather than let the terminal draw Campbell while the
+     * settings say "사용자 지정", the stored index is pulled back to the first custom scheme, or
+     * to Campbell when none is left.
+     */
+    public static int clampScheme(int index, int customCount) {
+        if (index >= 0 && index < CUSTOM_INDEX) return index;
+        if (isCustom(index) && index - CUSTOM_INDEX < customCount) return index;
+        return customCount > 0 ? CUSTOM_INDEX : 0;
+    }
+
+    /**
+     * A scheme's name for the settings list: the stored name for a custom one, the compiled
+     * name for a built-in, and the first built-in's for an index that names nothing.
+     */
+    public static String nameOf(int index, CustomSchemes customs) {
+        if (isCustom(index) && customs != null) {
+            String name = customs.nameAt(index - CUSTOM_INDEX);
+            if (name != null && !name.isEmpty()) return name;
+        }
+        if (index >= 0 && index < SCHEME_NAMES.length) return SCHEME_NAMES[index];
+        return SCHEME_NAMES[0];
+    }
+
+    /** Campbell as nineteen slots, which is what a new custom scheme starts from. */
+    public static int[] campbellSlots() {
+        return slotsOf(0, null);
+    }
+
+    /**
+     * The nineteen slots a scheme would be saved as, built-in or custom.
+     *
+     * <p>This is what "duplicate the current scheme" copies: for a custom index it is that
+     * palette as stored, and for a built-in it is the built-in's own colours, so copying
+     * Campbell gives Campbell rather than whichever custom palette happens to be first.
+     */
+    public static int[] slotsOf(int index, int[] customSlots) {
+        int[] table = colors(index, customSlots);
+        int[] out = new int[CUSTOM_SLOTS];
+        System.arraycopy(table, 0, out, 0, 16);
+        out[16] = table[TextStyle.COLOR_INDEX_FOREGROUND];
+        out[17] = table[TextStyle.COLOR_INDEX_BACKGROUND];
+        out[18] = table[TextStyle.COLOR_INDEX_CURSOR];
+        return out;
+    }
 
     public static int[] colors(int index) {
         switch (index) {
@@ -49,7 +119,7 @@ public final class Schemes {
      * needs the state passed in rather than read from a singleton.
      */
     public static int[] colors(int index, int[] customSlots) {
-        if (index == CUSTOM_INDEX && customSlots != null
+        if (isCustom(index) && customSlots != null
                 && customSlots.length == CUSTOM_SLOTS) {
             return fromSlots(customSlots);
         }
@@ -123,7 +193,7 @@ public final class Schemes {
      */
     public static boolean isOled(int index, int[] slots) {
         if (isOled(index)) return true;
-        return index == CUSTOM_INDEX && slots != null
+        return isCustom(index) && slots != null
                 && slots.length == CUSTOM_SLOTS && (slots[17] & 0xffffff) == 0;
     }
 

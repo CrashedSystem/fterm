@@ -35,6 +35,8 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/WidthTest.java" \
   "$ROOT/tests/jvm/core/ScreenTest.java" \
   "$ROOT/tests/jvm/core/SchemesTest.java" \
+  "$ROOT/app/src/ai/openclaw/fterm/CustomSchemes.java" \
+  "$ROOT/tests/jvm/core/CustomSchemesTest.java" \
   "$ROOT/tests/jvm/core/PasteTest.java" \
   "$ROOT/tests/jvm/core/FontsTest.java" \
   "$ROOT/tests/jvm/core/TabCloseTest.java" \
@@ -71,6 +73,7 @@ echo "[2/3] 실행"
 java -cp "$OUT" WidthTest
 java -cp "$OUT" ScreenTest
 java -cp "$OUT" SchemesTest
+java -cp "$OUT" CustomSchemesTest
 java -cp "$OUT" BackgroundTest
 java -cp "$OUT" SchemeJsonTest
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
