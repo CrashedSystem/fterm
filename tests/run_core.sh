@@ -48,6 +48,10 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/FocusTest.java" \
   "$ROOT/tests/jvm/core/KeyBarPrefsTest.java" \
   "$ROOT/app/src/ai/openclaw/fterm/Schemes.java" \
+  "$ROOT/app/src/ai/openclaw/fterm/BackgroundSpec.java" \
+  "$ROOT/app/src/ai/openclaw/fterm/TerminalSchemeJson.java" \
+  "$ROOT/tests/jvm/core/BackgroundTest.java" \
+  "$ROOT/tests/jvm/core/SchemeJsonTest.java" \
   "$ROOT/app/src/ai/openclaw/fterm/Profiles.java" \
   "$ROOT/tests/jvm/core/ProfilesTest.java" \
   "$ROOT/tests/jvm/core/ProfileTabTest.java" \
@@ -67,6 +71,8 @@ echo "[2/3] 실행"
 java -cp "$OUT" WidthTest
 java -cp "$OUT" ScreenTest
 java -cp "$OUT" SchemesTest
+java -cp "$OUT" BackgroundTest
+java -cp "$OUT" SchemeJsonTest
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" \
   -Dclip.src="$ROOT/app/src/ai/openclaw/fterm/ClipboardImage.java" -cp "$OUT" PasteTest
 java -Dmain.src="$ROOT/app/src/ai/openclaw/fterm/MainActivity.java" -cp "$OUT" FontsTest

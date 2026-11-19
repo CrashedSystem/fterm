@@ -210,6 +210,7 @@ CI 러너는 리눅스이고 폰이 아닙니다. 아래는 **초록불이어도
 | APK 빌드(`build.sh`)와 앱 모듈 컴파일 | 러너에 `android.jar`·`aapt2` 없음 | `bash build.sh` |
 | FGS 가 실제로 6시간 상한을 피하는지 | 시간이 지나야 드러남 | `dumpsys activity services` |
 | 무음 모드에서 진동하지 않는지 | 러너에 무음 모드가 없음 | 기기 설정에서 무음 후 `printf '\a'` |
+| 배경 이미지 피커·브로드캐스트 | SAF·`Android/data`·`am` 이 러너에 없음 | `모양 → 배경 이미지`에서 고르기, `adb shell am broadcast -a ai.openclaw.fterm.action.APPLY_BACKGROUND -p ai.openclaw.fterm --es path …` |
 
 ## 이 문서를 고치는 규칙
 

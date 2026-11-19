@@ -50,6 +50,30 @@ final class SettingsSheet {
 
         void onCustomSlot(int slot, int color);
 
+        /** All nineteen at once, from an imported Windows Terminal scheme. */
+        void onCustomScheme(int[] slots);
+
+        /** Whether a background picture is installed. */
+        boolean backgroundSet();
+
+        /** The picture's file name, or null when there is none. */
+        String backgroundName();
+
+        int backgroundOpacity();
+
+        void onBackgroundOpacity(int percent);
+
+        String backgroundFit();
+
+        void onBackgroundFit(String fit);
+
+        int backgroundDim();
+
+        void onBackgroundDim(int percent);
+
+        /** The store changed outside the sheet: re-read the file and repaint. */
+        void onBackgroundChanged();
+
         /** WT's retro effect: scanlines and a vignette. */
         boolean retroEffect();
 
@@ -138,6 +162,12 @@ final class SettingsSheet {
     /** Built the first time a font row is tapped; it also owns the import result. */
     private SettingsFontPicker mFonts;
 
+    /** The 모양 page's picture rows and the image picker result. */
+    private SettingsBackgroundPicker mBackground;
+
+    /** The 색 구성표 page's Windows Terminal JSON import. */
+    private SettingsSchemeImport mSchemeImport;
+
     private android.app.Dialog mDialog;
 
     SettingsSheet(Activity activity, Host host) {
@@ -167,6 +197,16 @@ final class SettingsSheet {
     SettingsFontPicker fonts() {
         if (mFonts == null) mFonts = new SettingsFontPicker(this);
         return mFonts;
+    }
+
+    SettingsBackgroundPicker background() {
+        if (mBackground == null) mBackground = new SettingsBackgroundPicker(this);
+        return mBackground;
+    }
+
+    SettingsSchemeImport schemes() {
+        if (mSchemeImport == null) mSchemeImport = new SettingsSchemeImport(this);
+        return mSchemeImport;
     }
 
     void show() {
@@ -256,7 +296,7 @@ final class SettingsSheet {
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView crumb = new TextView(mActivity);
-        // WT renders the trail as "색 구성표 › Miku": the ancestors dimmed, the leaf bright.
+        // WT renders the trail as "색 구성표 › Campbell": the ancestors dimmed, the leaf bright.
         // There is one level here, so the trail is the page name alone unless we are at root.
         crumb.setText(mPage == null ? "설정" : "설정  ›  " + titleOf(mPage));
         crumb.setTextColor(mUi.TEXT);
@@ -308,8 +348,10 @@ final class SettingsSheet {
         return new SettingsAboutPage(this);
     }
 
-    /** The activity's file-picker result, handed straight to the picker that asked for it. */
-    void onFontImportResult(int requestCode, int resultCode, android.content.Intent data) {
+    /** The activity's file-picker result, handed to whichever picker asked for it. */
+    void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
         if (mFonts != null) mFonts.onFontImportResult(requestCode, resultCode, data);
+        if (mBackground != null) mBackground.onActivityResult(requestCode, resultCode, data);
+        if (mSchemeImport != null) mSchemeImport.onActivityResult(requestCode, resultCode, data);
     }
 }

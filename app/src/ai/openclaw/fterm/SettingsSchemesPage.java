@@ -58,6 +58,12 @@ final class SettingsSchemesPage extends SettingsPage {
                         + "오른쪽이 밝은색입니다."
                 : "색 구성표는 앱에 내장되어 있습니다. \"사용자 지정\"을 고르면 "
                         + "16색을 직접 정할 수 있습니다.");
+
+        LinearLayout importCard = ui.card(col);
+        importCard.addView(ui.cardTitle("가져오기"));
+        importCard.addView(ui.valueRow("Windows Terminal JSON",
+                "16색과 전경·배경·커서를 읽어 \"사용자 지정\"에 저장",
+                "가져오기", () -> sheet.schemes().open(), true));
     }
 
     /**

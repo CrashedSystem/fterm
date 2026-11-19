@@ -31,14 +31,6 @@ mkdir -p "$OUT/assets/fonts"
 cp "$ROOT/assets/fonts/Iosevka.ttf" "$OUT/assets/fonts/Iosevka.ttf"
 cp "$ROOT/assets/fonts/PretendardHangul.ttf" "$OUT/assets/fonts/PretendardHangul.ttf"
 cp "$ROOT/assets/fonts/NerdSymbols.ttf" "$OUT/assets/fonts/NerdSymbols.ttf"
-# 테마 배경 그림은 선택 사항이다. 원본 그림이 CC BY-NC 라 저장소에 넣지 않으므로,
-# 이 파일이 없으면 빌드는 그대로 진행되고 Miku 테마는 팔레트만으로 그려진다.
-# 직접 쓰려면 mterm의 public/img/miku.png 를 #282c34와 multiply 해서 여기에 둔다.
-if [ -f "$ROOT/assets/img/miku-dusk.png" ]; then
-  mkdir -p "$OUT/assets/img"
-  cp "$ROOT/assets/img/miku-dusk.png" "$OUT/assets/img/miku-dusk.png"
-fi
-
 aapt2 link -o "$OUT/base.apk" -I "$SDKJAR" \
   --manifest "$ROOT/AndroidManifest.xml" \
   --java "$OUT/gen" \

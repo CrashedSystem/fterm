@@ -69,7 +69,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private FrameLayout mTermFrame;
     private FindBar mFind;
     KeyBar mKeyBar;
-    private TerminalView mTermView;
+    TerminalView mTermView;
 
     final List<Tab> mTabs = new ArrayList<>();
     private Tab mActive;
@@ -80,8 +80,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private Fonts mFonts;
     /** The scanline overlay, or null when the effect is off. */
     private RetroOverlay mRetro;
-    /** Loaded once; null when the asset is missing, in which case the theme is palette-only. */
-    private MikuBackground mMiku;
+    /** Loaded once; null when the user has no picture, in which case the scheme shows alone. */
+    BackgroundLayer mBackdrop;
     private Bell mBell;
     private SettingsSheet mSettings;
     /** Windows Terminal chrome: the command palette and the icon strip. */
@@ -263,7 +263,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         });
 
         loadFonts();
-        mMiku = MikuBackground.load(this);
+        mBackdrop = new BackgroundLayer(this, mPrefs);
         // IME tracing is how the Hangul path gets diagnosed on a real device; the flag is
         // off unless someone sets it in shared prefs.
         mTermView.setIsTerminalViewKeyLoggingEnabled(mPrefs.imeLog());
@@ -791,10 +791,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             TerminalColors.COLOR_SCHEME.mDefaultColors[com.termux.terminal.TextStyle.COLOR_INDEX_CURSOR] = cursor;
             colors.mCurrentColors[com.termux.terminal.TextStyle.COLOR_INDEX_CURSOR] = cursor;
         }
-        // Only the Miku scheme has a picture; the others must clear it or the last one
-        // stays behind the new palette.
-        mTermView.setBackgroundImage(
-                Schemes.hasBackgroundImage(mScheme) ? mMiku : null);
+        // The picture is a user setting, not part of a scheme; re-bind it after a palette change.
+        if (mBackdrop != null) mBackdrop.attach();
         mTermView.invalidate();
     }
 
@@ -851,7 +849,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (mSettings != null) mSettings.onFontImportResult(requestCode, resultCode, data);
+        if (mSettings != null) mSettings.onActivityResult(requestCode, resultCode, data);
     }
 
     private void showSettings() {
@@ -977,6 +975,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     @Override
+    protected void onPause() {
+        if (mBackdrop != null) mBackdrop.pause();   // the changed-broadcast receiver
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
         // A ToneGenerator holds an audio track for its whole life. Without this, every
         // activity recreation leaves one behind until the process dies.
@@ -987,6 +991,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     @Override
     protected void onResume() {
         super.onResume();
+        if (mBackdrop != null) mBackdrop.resume();
         if (mShowKeyboardOnce && mPrefs.showKeyboardOnStart()) {
             mShowKeyboardOnce = false;
             showKeyboardSoon();

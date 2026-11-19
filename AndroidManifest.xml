@@ -67,5 +67,17 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="terminal session: holds the socket to the PTY daemon so a shell survives while the app is in the background" />
         </service>
+
+        <!-- The script-facing background door: copy a picture in and repaint, without
+             rebuilding the APK. See BackgroundReceiver for the am command and the path
+             checks that keep it from reading anything the app could not already see. -->
+        <receiver
+            android:name="ai.openclaw.fterm.BackgroundReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="ai.openclaw.fterm.action.APPLY_BACKGROUND" />
+                <action android:name="ai.openclaw.fterm.action.CLEAR_BACKGROUND" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

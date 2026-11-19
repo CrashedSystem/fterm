@@ -11,10 +11,10 @@ public final class Prefs {
     public static final String DEFAULT_HOST = "127.0.0.1";
     public static final int DEFAULT_PORT = 8791;
 
-    /** Windows Terminal "Campbell", One Dark, Solarized Dark, Dracula, OLED, Miku, 사용자 지정. */
+    /** Windows Terminal "Campbell", One Dark, Solarized Dark, Dracula, OLED, One Half Dark, 사용자 지정. */
     public static final String[] SCHEME_NAMES = {
-            "Campbell", "One Dark", "Solarized Dark", "Dracula", "OLED (순수 검정)", "Miku",
-            "사용자 지정"
+            "Campbell", "One Dark", "Solarized Dark", "Dracula", "OLED (순수 검정)",
+            "One Half Dark", "사용자 지정"
     };
 
     /** The index of "사용자 지정" in {@link #SCHEME_NAMES}; its sixteen colours are editable. */
@@ -207,4 +207,30 @@ public final class Prefs {
 
     public boolean showKeyboardOnStart() { return sp().getBoolean("kb_on_start", true); }
     public void setShowKeyboardOnStart(boolean v) { sp().edit().putBoolean("kb_on_start", v).apply(); }
+
+    // ------------------------------------------------------------- background image
+
+    /** The picture itself lives in {@link BackgroundStore}; these are how it is drawn. */
+    public int backgroundOpacity() {
+        return BackgroundSpec.opacity(sp().getInt("bg_opacity", BackgroundSpec.DEFAULT_OPACITY));
+    }
+    public void setBackgroundOpacity(int percent) {
+        sp().edit().putInt("bg_opacity", BackgroundSpec.opacity(percent)).apply();
+    }
+
+    /** "contain" or "cover"; see {@link BackgroundSpec}. */
+    public String backgroundFit() {
+        return BackgroundSpec.fit(sp().getString("bg_fit", BackgroundSpec.FIT_CONTAIN));
+    }
+    public void setBackgroundFit(String fit) {
+        sp().edit().putString("bg_fit", BackgroundSpec.fit(fit)).apply();
+    }
+
+    /** Percent of black over the picture, 0 to {@link BackgroundSpec#MAX_DIM}. */
+    public int backgroundDim() {
+        return BackgroundSpec.dim(sp().getInt("bg_dim", 0));
+    }
+    public void setBackgroundDim(int percent) {
+        sp().edit().putInt("bg_dim", BackgroundSpec.dim(percent)).apply();
+    }
 }

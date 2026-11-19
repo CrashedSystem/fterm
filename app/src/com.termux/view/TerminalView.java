@@ -1287,7 +1287,7 @@ public final class TerminalView extends View {
         }
     }
 
-    /** Optional picture drawn behind the terminal (the Miku theme). */
+    /** Optional picture drawn behind the terminal; see TerminalBackground. */
     private Drawable mBackgroundImage;
     /** Optional retro pass over the finished frame; see RetroOverlay. */
     private ai.openclaw.fterm.RetroOverlay mRetroOverlay;

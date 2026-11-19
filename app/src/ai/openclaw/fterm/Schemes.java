@@ -15,8 +15,8 @@ public final class Schemes {
     /** The index of the OLED scheme in {@link Prefs#SCHEME_NAMES}. */
     public static final int OLED_INDEX = 4;
 
-    /** mterm's Miku theme: One Half Dark plus the illustration. */
-    public static final int MIKU_INDEX = 5;
+    /** One Half Dark (mterm's palette), an alternative to One Dark. */
+    public static final int ONE_HALF_DARK_INDEX = 5;
 
     /**
      * The editable scheme. Its nineteen slots (16 ANSI, foreground, background, cursor) are
@@ -35,7 +35,7 @@ public final class Schemes {
             case 2: return solarizedDark();
             case 3: return dracula();
             case 4: return oled();
-            case 5: return miku();
+            case 5: return oneHalfDark();
             default: return campbell();
         }
     }
@@ -92,14 +92,16 @@ public final class Schemes {
     }
 
     /**
-     * mterm's Miku theme: One Half Dark, with the illustration behind it.
+     * One Half Dark, the palette mterm's theme used.
      *
-     * The palette is transcribed from `~/projects/mterm/public/js/core/appearance.js`
-     * (`ONE_HALF_DARK`), not reinvented, so the two apps show the same colours for the same
-     * ANSI codes. The image is drawn by {@link MikuBackground} at 55% opacity - mterm's
-     * measured value, chosen there because 100% puts `#dcdfe4` on `#e8e2e0` (1.9:1).
+     * <p>Only the colours remain: the illustration that theme put behind the text was a
+     * CC BY-NC picture and is no longer part of the app. Any background picture is now the
+     * user's own, chosen in 모양 settings or dropped into the app's {@code bg} folder, and is
+     * drawn on top of whichever scheme is active. Transcribed from
+     * {@code ~/projects/mterm/public/js/core/appearance.js} ({@code ONE_HALF_DARK}), not
+     * reinvented, so the two apps show the same colours for the same ANSI codes.
      */
-    public static int[] miku() {
+    public static int[] oneHalfDark() {
         int[] ansi = {
                 rgb(0x28, 0x2c, 0x34), rgb(0xe0, 0x6c, 0x75), rgb(0x98, 0xc3, 0x79), rgb(0xe5, 0xc0, 0x7b),
                 rgb(0x61, 0xaf, 0xef), rgb(0xc6, 0x78, 0xdd), rgb(0x56, 0xb6, 0xc2), rgb(0xdc, 0xdf, 0xe4),
@@ -107,11 +109,6 @@ public final class Schemes {
                 rgb(0x61, 0xaf, 0xef), rgb(0xc6, 0x78, 0xdd), rgb(0x56, 0xb6, 0xc2), rgb(0xdc, 0xdf, 0xe4),
         };
         return build(ansi, rgb(0xdc, 0xdf, 0xe4), rgb(0x28, 0x2c, 0x34), rgb(0xdc, 0xdf, 0xe4));
-    }
-
-    /** True when the scheme draws the illustration behind the text. */
-    public static boolean hasBackgroundImage(int index) {
-        return index == MIKU_INDEX;
     }
 
     /** True when the scheme paints pure black, so the chrome around it should too. */

@@ -4,7 +4,7 @@ import java.util.Map;
 /**
  * The colour tables, checked against the source they were copied from.
  *
- * `Schemes.miku()` is a transcription of mterm's `ONE_HALF_DARK` and its 16 ANSI slots must
+ * `Schemes.oneHalfDark()` is a transcription of mterm's `ONE_HALF_DARK` and its 16 ANSI slots must
  * match it exactly - a "close enough" palette is a different theme wearing the same name.
  * The OLED scheme is checked for the property that makes it worth having: a pure black
  * background. Runs on the real class with the Android stubs, not a copy.
@@ -46,15 +46,16 @@ public class SchemesTest {
         oneHalfDark.put(8, rgb(0x5a, 0x63, 0x74));
         for (int i = 1; i <= 7; i++) oneHalfDark.put(8 + i, oneHalfDark.get(i));
 
-        int[] miku = ai.openclaw.fterm.Schemes.colors(ai.openclaw.fterm.Schemes.MIKU_INDEX);
+        int[] oneHalf = ai.openclaw.fterm.Schemes.colors(
+                ai.openclaw.fterm.Schemes.ONE_HALF_DARK_INDEX);
         for (Map.Entry<Integer, Integer> e : oneHalfDark.entrySet()) {
-            eq(miku[e.getKey()], e.getValue(),
-                    "miku ANSI " + e.getKey() + " must equal ONE_HALF_DARK");
+            eq(oneHalf[e.getKey()], e.getValue(),
+                    "One Half Dark ANSI " + e.getKey() + " must match mterm's table");
         }
-        eq(miku[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND], rgb(0x28, 0x2c, 0x34),
-                "miku background is One Half Dark's");
-        eq(miku[com.termux.terminal.TextStyle.COLOR_INDEX_FOREGROUND], rgb(0xdc, 0xdf, 0xe4),
-                "miku foreground");
+        eq(oneHalf[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND], rgb(0x28, 0x2c, 0x34),
+                "One Half Dark background is its own");
+        eq(oneHalf[com.termux.terminal.TextStyle.COLOR_INDEX_FOREGROUND], rgb(0xdc, 0xdf, 0xe4),
+                "One Half Dark foreground");
 
         // Every scheme must fill the whole indexed table, or the renderer reads garbage.
         int expectedSize = com.termux.terminal.TextStyle.NUM_INDEXED_COLORS;
@@ -127,12 +128,11 @@ public class SchemesTest {
         check(ai.openclaw.fterm.Schemes.isOled(ai.openclaw.fterm.Schemes.OLED_INDEX, null),
                 "built-in OLED is still OLED");
 
-        // Only Miku carries a picture.
-        for (int i = 0; i < SCHEME_COUNT; i++) {
-            eq(ai.openclaw.fterm.Schemes.hasBackgroundImage(i),
-                    i == ai.openclaw.fterm.Schemes.MIKU_INDEX,
-                    "hasBackgroundImage(" + i + ")");
-        }
+        // No scheme carries a picture any more: the background is a user setting, independent
+        // of the palette. The reference must be gone from the source, not just unused.
+        String schemes = read("app/src/ai/openclaw/fterm/Schemes.java");
+        check(!schemes.contains("hasBackgroundImage"), "schemes do not claim a picture");
+        check(!schemes.toLowerCase().contains("miku"), "no theme image is named in Schemes");
 
         // --- cursor colour override -------------------------------------------
         // The override is applied in MainActivity on top of whatever palette won, so what is

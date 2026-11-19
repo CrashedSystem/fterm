@@ -22,7 +22,7 @@ Termux의 `terminal-emulator`/`terminal-view`(Apache-2.0)를 벤더링했으므�
 
 | | |
 |---|---|
-| 앱 | `build/fterm.apk` (`ai.openclaw.fterm`, targetSdk 36 / minSdk 26). 코드만으로 빌드하면 1.8MB이고, 테마 그림을 얹으면 2.5MB입니다 |
+| 앱 | `build/fterm.apk` (`ai.openclaw.fterm`, targetSdk 36 / minSdk 26). 그림 에셋 없이 빌드하면 1.8MB입니다 |
 | 데몬 | `termux/ftermd-rs` (Rust, Termux 안에서 실행. 같은 프로토콜의 첫 구현이던 python 데몬은 Rust 이식이 와이어 레벨에서 동일함이 증명된 뒤 제거됐습니다) |
 | 엔진 | Termux `terminal-emulator` + `terminal-view` (Apache-2.0) 벤더링 |
 | 폰트 | mterm 스택: Iosevka(라틴) + Nerd Symbols(아이콘) + Pretendard(한글) |
@@ -126,11 +126,42 @@ bash termux/install.sh
 | 항목 | 원본 | 이 앱에서 |
 |---|---|---|
 | 폰트 스택 | `mterm/public/js/core/appearance.js` `FONT_STACK` = Iosevka → Nerd Symbols → Pretendard | `Fonts.java` — 코드포인트별 `Typeface` 선택. 얼굴마다 em 크기는 같고, 두 칸을 넘는 글리프만 줄여 상자에 맞춥니다 (Windows Terminal AtlasEngine 방식) |
-| Miku 팔레트 | 같은 파일의 `ONE_HALF_DARK` | `Schemes.miku()` — 16개 ANSI 값을 그대로 옮겼습니다 (`SchemesTest`가 대조) |
-| Miku 그림 | `mterm/public/img/miku.png` (CC BY-NC) | **저장소에 넣지 않습니다.** 비영리 라이선스라 공개 배포물에 실을 수 없습니다. `MikuBackground` 는 `assets/img/miku-dusk.png` 가 있으면 그리고, 없으면 `null` 을 돌려주어 테마가 팔레트만으로 그려집니다 |
+| One Half Dark 팔레트 | 같은 파일의 `ONE_HALF_DARK` | `Schemes.oneHalfDark()` — 16개 ANSI 값을 그대로 옮겼습니다 (`SchemesTest`가 대조) |
 
-`backgroundOpacity: 0.55` 는 mterm에 **선언만 있고 소비처가 없습니다**(CSS·JS 어디서도
-읽지 않습니다). 실제 렌더는 불투명 multiply이므로 여기서도 그렇게 했습니다.
+mterm의 배경 그림은 CC BY-NC라 이 앱에 넣지 않았습니다. 대신 **누구나 자기 그림을 쓰는
+일반 기능**으로 바꿨습니다(아래 "배경 이미지"). 그래서 Miku라는 이름의 테마와 그림을 읽던
+`MikuBackground`, `assets/img/` 빌드 오버레이는 모두 없어졌습니다.
+
+## 배경 이미지
+
+터미널 글자 뒤에 기기 안의 그림 한 장을 그립니다. 색 구성표와 무관하게 적용되므로 어떤
+팔레트를 쓰든 같은 그림이 남습니다. `모양 → 배경 이미지`에서:
+
+| 항목 | 뜻 |
+|---|---|
+| 배경 이미지 | `기기에서 고르기` — `ACTION_OPEN_DOCUMENT`로 고른 그림을 앱 폴더로 복사합니다. `배경 없애기`로 지웁니다 |
+| 투명도 | 그림을 얼마나 진하게 그릴지 (0–100%) |
+| 맞춤 | `contain` 전체가 보이게 / `cover` 꽉 채우고 잘라내기 |
+| 어둡게 | 그림 위에 덮는 검정 비율 (0–90%). 글자가 묻히면 올립니다 |
+
+그림은 `getExternalFilesDir("bg")` — 실제 경로는
+`/sdcard/Android/data/ai.openclaw.fterm/files/bg/` — 에 정규화되어(긴 변 2048px) 저장됩니다.
+**그 폴더의 가장 최근 이미지 파일이 그려집니다.** 그래서 스크립트는 빌드 오버레이가 아니라
+파일 복사와 브로드캐스트만 하면 됩니다:
+
+```bash
+DIR=/sdcard/Android/data/ai.openclaw.fterm/files/bg
+adb push miku-dusk.png "$DIR"/
+adb shell am broadcast -a ai.openclaw.fterm.action.APPLY_BACKGROUND \
+  -p ai.openclaw.fterm --es path "$DIR"/miku-dusk.png \
+  --ei opacity 100 --es fit contain --ei dim 25
+adb shell am broadcast -a ai.openclaw.fterm.action.CLEAR_BACKGROUND -p ai.openclaw.fterm
+```
+
+브로드캐스트는 결과 줄(`ok: background.png` / `error: …`)을 돌려주고, 앱이 떠 있으면
+바로 다시 그립니다. 파일만 넣어도 앱으로 돌아올 때(`onResume`) 새 그림을 읽습니다.
+밝은 그림 위의 `#dcdfe4` 글자는 읽기 어려우므로, 예전 테마 그림처럼 배경색과 multiply 해
+둔 그림을 쓰거나 `--ei dim`으로 어둡게 하십시오.
 
 ## 제3자 코드와 라이선스
 

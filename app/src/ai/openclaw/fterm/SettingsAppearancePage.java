@@ -12,8 +12,9 @@ import android.widget.TextView;
  * 모양: the same rows as WT's appearance page, restricted to what this app has.
  *
  * <p>The font rows hand off to {@link SettingsFontPicker}, because choosing a face is three
- * dialogs deep and none of them is a row on this page. Everything else - size, scheme, key
- * bar, cursor, tab mark, retro effect - is a row here.
+ * dialogs deep and none of them is a row on this page. The background picture's four rows
+ * live in {@link SettingsBackgroundPicker} for the same reason: the file picker result has to
+ * come back to an object that outlives a render.
  */
 final class SettingsAppearancePage extends SettingsPage {
 
@@ -97,6 +98,12 @@ final class SettingsAppearancePage extends SettingsPage {
                 this::chooseTabIcon, false));
         card.addView(ui.toggleCardRow("레트로 효과", "형광 글로우와 주사선 (Windows Terminal)",
                 host.retroEffect(), host::onRetroEffect, true));
+
+        LinearLayout bg = ui.card(col);
+        bg.addView(ui.cardTitle("배경 이미지"));
+        sheet.background().rows(bg);
+        ui.hint(col, "그림은 구성표와 따로 적용됩니다. 기기에서 고르거나, 앱의 bg 폴더에 "
+                + "파일을 넣으면 최신 이미지가 그려집니다.");
     }
 
     private void chooseCursor() {

@@ -85,6 +85,46 @@ final class SettingsHost implements SettingsSheet.Host {
         a.applyScheme(Schemes.CUSTOM_INDEX);
     }
 
+    @Override public void onCustomScheme(int[] slots) {
+        if (slots == null || slots.length != Schemes.CUSTOM_SLOTS) return;
+        a.mCustom = slots.clone();
+        a.mPrefs.setCustomSlots(a.mCustom);
+        a.applyScheme(Schemes.CUSTOM_INDEX);
+    }
+
+    @Override public boolean backgroundSet() {
+        return a.mBackdrop != null && a.mBackdrop.image() != null;
+    }
+
+    @Override public String backgroundName() {
+        return a.mBackdrop == null ? null : a.mBackdrop.describe();
+    }
+
+    @Override public int backgroundOpacity() { return a.mPrefs.backgroundOpacity(); }
+
+    @Override public void onBackgroundOpacity(int percent) {
+        a.mPrefs.setBackgroundOpacity(percent);
+        if (a.mBackdrop != null) a.mBackdrop.reload();
+    }
+
+    @Override public String backgroundFit() { return a.mPrefs.backgroundFit(); }
+
+    @Override public void onBackgroundFit(String fit) {
+        a.mPrefs.setBackgroundFit(fit);
+        if (a.mBackdrop != null) a.mBackdrop.reload();
+    }
+
+    @Override public int backgroundDim() { return a.mPrefs.backgroundDim(); }
+
+    @Override public void onBackgroundDim(int percent) {
+        a.mPrefs.setBackgroundDim(percent);
+        if (a.mBackdrop != null) a.mBackdrop.reload();
+    }
+
+    @Override public void onBackgroundChanged() {
+        if (a.mBackdrop != null) a.mBackdrop.reload();
+    }
+
     @Override public java.util.List<Profiles.Profile> profiles() {
         return Profiles.decode(a.mPrefs.profiles());
     }
