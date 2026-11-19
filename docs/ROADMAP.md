@@ -16,13 +16,14 @@
 | 4 | 고아 셸 | `S_ERROR` 뒤 `C_CLOSE` 누락 | **완료** |
 | 5 | FGS 타입 | `dataSync` → `specialUse` | **완료** |
 | 6 | UI·알림 정리 | 동기 디코딩, 무음 무시, 누락된 정리 | **완료** |
-| 7 | 프로토콜 중복 | 3중 프레이밍, 거대 클래스 분리 | **완료** (프로토콜) / 일부 (클래스) |
+| 7 | 프로토콜 중복 | 3중 프레이밍, 거대 클래스 분리 | **완료** |
 | 8 | 업스트림 기준점 | 벤더 파일의 원본 커밋 고정 | **완료** |
 | 9 | 스크롤백 상한 | `onTrimMemory` | **완료** |
 
-1–6, 8, 9는 끝났습니다. 7은 프로토콜 중복이 끝나고 클래스 분리는 `DaemonBoot`·`TabMemory` 를
-빼는 데까지 했습니다(`SettingsSheet` 1,985줄이 남았습니다). 무엇이 그것을 증명하는지는 각 절
-끝의 "검증"에 있고, 러너가 확인하지 못하는 것은 맨 아래 "기기에서만 확인되는 것"에 남아 있습니다.
+1–6, 8, 9는 끝났습니다. 7은 프로토콜 중복이 끝나고 클래스 분리도 `DaemonBoot`·`TabMemory`,
+그리고 `SettingsSheet` 를 기능별 열두 파일로 나누는 데까지 끝났습니다. 무엇이 그것을 증명하는지는
+각 절 끝의 "검증"에 있고, 러너가 확인하지 못하는 것은 맨 아래 "기기에서만 확인되는 것"에 남아
+있습니다.
 
 ---
 
@@ -150,11 +151,24 @@ Rust 데몬·`Protocol.java` 에서 상수 표를 읽어 **값이 다르면 실�
 이 검사가 유일한 방어입니다.
 
 **클래스**: `MainActivity` 에서 데몬 준비 상태기계를 `DaemonBoot`, 메모리 정책을 `TabMemory` 로
-빼 1,406줄입니다(구조 검사 상한 1,420). `SettingsSheet`(1,985줄) 분리는 남은 작업입니다 — 지금
-나누면 이번 변경과 섞여 리뷰가 어려워집니다.
+빼 1,406줄입니다(구조 검사 상한 1,420). `SettingsSheet`(1,985줄)는 기능별 열두 파일로 나눴습니다
+— 셸(라우터) `SettingsSheet` 315줄, 공용 팔레트·행 모양 `SettingsUi` 300, 페이지 기반
+`SettingsPage` 44, 페이지 일곱 개(`SettingsRootPage` 77 · `SettingsStartPage` 55 ·
+`SettingsProfilesPage` 275 · `SettingsAppearancePage` 189 · `SettingsSchemesPage` 256 ·
+`SettingsInteractionPage` 30 · `SettingsAboutPage` 27), 둘 이상의 페이지가 함께 쓰는
+`SettingsFontPicker` 541 · `SettingsIconPicker` 172.
 
-**검증**: `tests/test_protocol.py`(상수 4중 일치), `StructureTest`(한 곳에만 있다),
-`tests/run_core.sh`(리팩터링 뒤에도 전부 통과).
+동작과 시그니처는 그대로입니다. 근거는 두 가지입니다. 분리 전후로 문자열 리터럴이 **293개로
+같고 multiset 도 같으며**(사용자에게 보이는 문구가 하나도 빠지지 않았다), Android API 호출
+개수도 항목별로 같습니다 — `addView` 146, `new LinearLayout` 43, `new TextView` 39,
+`setPadding` 44, `AlertDialog.Builder` 14, `Chrome.icon` 14, `UiFont.apply` 11. 검사가 읽는
+파일도 한 파일에서 표면 전체(`Settings*.java`)로 넓혔습니다(`tests/jvm/core/SettingsSources.java`):
+검사가 주장하는 것은 "그 설정이 설정 화면에 있다"이지 "그 줄이 이 파일에 있다"가 아닙니다.
+
+**검증**: `tests/test_protocol.py`(상수 4중 일치), `StructureTest`(한 곳에만 있다 · 셸 400줄
+상한 · 열두 파일 각 600줄 상한 — 구조 74종), `tests/run_core.sh`(리팩터링 뒤에도 전부 통과),
+API 35 `android.jar` 로컬 타입체크(`app/src` + `R.java` 스텁 73파일, 오류 0). APK 빌드는 기기 확인
+항목입니다.
 
 ## 8. 업스트림 기준점
 

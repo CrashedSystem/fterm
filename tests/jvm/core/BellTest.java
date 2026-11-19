@@ -48,7 +48,8 @@ public class BellTest {
         check(main.contains("mActive.session != session"), "and only for the active tab");
 
         // The toggles must be reachable, or the bell cannot be turned off.
-        String settings = read(root + "/app/src/ai/openclaw/fterm/SettingsSheet.java");
+        String settings = SettingsSources.all(
+                root + "/app/src/ai/openclaw/fterm/SettingsSheet.java");
         check(settings.contains("진동") && settings.contains("소리"), "both toggles are in settings");
         check(settings.contains("bellVibrate()") && settings.contains("bellSound()"),
                 "and are bound to the host");

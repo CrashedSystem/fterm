@@ -111,9 +111,8 @@ public class FontCoverageTest {
         check(main.contains("mPrefs.hangulFamily()"),
                 "which is read when the stack is built");
 
-        String sheet = new String(java.nio.file.Files.readAllBytes(
-                java.nio.file.Paths.get(System.getProperty("sheet.src",
-                        "app/src/ai/openclaw/fterm/SettingsSheet.java"))), "UTF-8");
+        String sheet = SettingsSources.all(System.getProperty("sheet.src",
+                "app/src/ai/openclaw/fterm/SettingsSheet.java"));
         check(sheet.contains("한글 글꼴"),
                 "the setting is reachable by name in 모양");
         check(sheet.contains("Fonts.hangulCatalog("),

@@ -42,6 +42,7 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/ImeComposeTest.java" \
   "$ROOT/tests/jvm/core/UiTest.java" \
   "$ROOT/tests/jvm/core/StructureTest.java" \
+  "$ROOT/tests/jvm/core/SettingsSources.java" \
   "$ROOT/tests/jvm/core/BellTest.java" \
   "$ROOT/tests/jvm/core/NotifyTest.java" \
   "$ROOT/tests/jvm/core/FocusTest.java" \

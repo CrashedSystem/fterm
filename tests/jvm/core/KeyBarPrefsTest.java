@@ -26,7 +26,8 @@ public class KeyBarPrefsTest {
     String kb = src("KeyBar.java");
     String prefs = src("Prefs.java");
     String main = src("MainActivity.java");
-    String settings = src("SettingsSheet.java");
+    String settings = SettingsSources.all(System.getProperty("root")
+            + "/app/src/ai/openclaw/fterm/SettingsSheet.java");
 
     // 1. The main layer is the two fixed rows of six, in the screenshot's order.
     for (String label : new String[]{"\"Esc\"", "\"Tab\"", "\"Home\"", "\"End\"", "\"PgUp\"", "\"PgDn\"",

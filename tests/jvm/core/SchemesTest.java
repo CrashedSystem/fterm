@@ -152,7 +152,7 @@ public class SchemesTest {
         check(prefs.contains("setCursorColor"),
                 "and the override survives a restart");
 
-        String sheet = read("app/src/ai/openclaw/fterm/SettingsSheet.java");
+        String sheet = SettingsSources.all("app/src/ai/openclaw/fterm/SettingsSheet.java");
         check(sheet.contains("커서 색"),
                 "the setting is reachable by name in 모양");
         check(sheet.contains("구성표 따름"),

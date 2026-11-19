@@ -103,9 +103,8 @@ public class FontsTest {
                 "and a path that no longer exists falls back instead of crashing");
 
         // The picker has to read the catalog and pass the id through, not an index.
-        String sheet = new String(java.nio.file.Files.readAllBytes(
-                java.nio.file.Paths.get(System.getProperty("sheet.src",
-                        "app/src/ai/openclaw/fterm/SettingsSheet.java"))), "UTF-8");
+        String sheet = SettingsSources.all(System.getProperty("sheet.src",
+                "app/src/ai/openclaw/fterm/SettingsSheet.java"));
         check(sheet.contains("Fonts.catalog("), "the picker lists the scanned catalog");
         check(sheet.contains("mHost.onFontFamily(f.id)"), "and stores the face's id");
         check(sheet.contains("ACTION_OPEN_DOCUMENT"),

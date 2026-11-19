@@ -91,9 +91,11 @@ public class ProfileTabTest {
         String chrome = read(System.getProperty("chrome.src",
                 "app/src/ai/openclaw/fterm/Chrome.java"));
         check(chrome.contains("profile.icon"), "the dropdown uses the profile's icon");
-        String sheet = read(System.getProperty("sheet.src",
+        String sheet = SettingsSources.all(System.getProperty("sheet.src",
                 "app/src/ai/openclaw/fterm/SettingsSheet.java"));
-        check(sheet.contains("pickIcon(\"프로필 아이콘\""),
+        // The grid is a file of its own now (SettingsIconPicker), so the check is that the
+        // editor goes through it and names the pick - not that the call sits on one line.
+        check(sheet.contains("SettingsIconPicker") && sheet.contains("\"프로필 아이콘\""),
                 "the editor offers the same picker as the global setting");
         check(sheet.contains("\"탭 아이콘과 같음\""),
                 "and says plainly what an empty icon means");

@@ -579,7 +579,7 @@ IDLE_PING_MS  = 8000    (8초 자고 "8초 이상 조용하면 핑" 검사)
 | 기기 영문 입력 (`abc` → `a`,`b`,`c`) | daemon 로그 바이트 확인 | 통과 |
 | 유휴/프리징 3종 (20초 유휴 후 세션 생존·사용 가능, 데몬이 클라이언트 유지, 끊긴 링크 즉시 종료) | `tests/jvm/harness/IdleTest.java` | 통과 |
 | 데몬 크래시 회귀 5종 (20회 급절단, 세션 생존, 클라이언트 예산 구조) | `tests/jvm/harness/IdleDropTest.java` | 통과 |
-| 구조 14종 (MainActivity 1264줄 상한, KeyBar/SettingsSheet 분리, 서비스·벨·keeper) | `tests/jvm/core/StructureTest.java` | 통과 |
+| 구조 74종 (MainActivity 1,420줄·SettingsSheet 400줄 상한, 설정 페이지 7개 분리, 서비스·벨·keeper) | `tests/jvm/core/StructureTest.java` | 통과 |
 | UI 19종 (드롭다운·팔레트·이름 고정·테마 색·Enter) | `tests/jvm/core/UiTest.java` | 통과 |
 | 한글 IME 조합 16종 (ㅎ→하→한, 성장/축소, commit 꼬리, delete, 소스 대조) | `tests/jvm/core/ImeComposeTest.java` | 통과 |
 

@@ -1,9 +1,9 @@
 /**
- * The split that keeps MainActivity from becoming a monolith.
+ * The split that keeps MainActivity and SettingsSheet from becoming monoliths.
  *
  * This is a structural assertion because "maintainable" is not something a runtime test can
  * see: what it can see is that responsibilities live in their own files with a narrow
- * interface, and that MainActivity did not quietly grow them back.
+ * interface, and that neither class quietly grew them back.
  */
 public class StructureTest {
 
@@ -49,6 +49,26 @@ public class StructureTest {
                 "every way the daemon can fail to come up has an ending");
         check(main.contains("new DaemonBoot("), "and the activity asks that class, not its own copy");
         check(!main.contains("pollForToken("), "the polling loop is not inlined again");
+
+        // 2c. The settings surface is one file per section, and the sheet is a router over
+        //     them. It used to be a single 1,985-line class; the cap below is what keeps it
+        //     from becoming one again, at either end - the sheet absorbing a page, or a page
+        //     absorbing the others.
+        String sheetSrc = read(dir + "SettingsSheet.java");
+        int sheetLines = lines(sheetSrc);
+        check(sheetLines < 400, "the settings sheet is a router (" + sheetLines + " lines)");
+        check(sheetSrc.contains("new SettingsAppearancePage(this)"),
+                "and builds a page object per section");
+        check(!sheetSrc.contains("private void appearancePage("),
+                "the pages are not inlined in it again");
+        for (String page : new String[]{"SettingsUi", "SettingsPage", "SettingsRootPage",
+                "SettingsStartPage", "SettingsProfilesPage", "SettingsAppearancePage",
+                "SettingsSchemesPage", "SettingsInteractionPage", "SettingsAboutPage",
+                "SettingsFontPicker", "SettingsIconPicker"}) {
+            int pageLines = lines(read(dir + page + ".java"));
+            check(pageLines < 600,
+                    page + " is one responsibility, not a drawer (" + pageLines + " lines)");
+        }
 
         // 3. The foreground service is what stops the freezer, so it must exist and be started.
         check(main.contains("TerminalService.start(this)"), "the service is started with the activity");
