@@ -110,7 +110,7 @@ public final class TerminalService extends Service {
         if (nm == null) return;
         // LOW: no sound, no heads-up. The terminal's notification is a status line, not an alert.
         NotificationChannel ch = new NotificationChannel(
-                CHANNEL_ID, "fterm 세션", NotificationManager.IMPORTANCE_LOW);
+                CHANNEL_ID, "터미널 세션", NotificationManager.IMPORTANCE_LOW);
         ch.setShowBadge(false);
         ch.setSound(null, null);
         nm.createNotificationChannel(ch);

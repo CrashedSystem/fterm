@@ -135,6 +135,60 @@ public class SchemeJsonTest {
         // first of those is still index 6, where the single 사용자 지정 slot used to be.
         check(ai.openclaw.fterm.Schemes.CUSTOM_INDEX == 6, "import lands in a custom scheme");
 
+        // --- a whole settings.json, which is what the Miku theme actually ships --------
+        // Its profile/settings.json carries eight schemes; asking a user to hand-extract one
+        // block would be the tool making work for the person it is meant to help.
+        String miku = "{"
+                + "\"$schema\": \"https://aka.ms/terminal-profiles-schema\","
+                + "\"profiles\": [{\"name\": \"Windows Powershell\", \"colorScheme\": \"Dark+\","
+                + "  \"backgroundImage\": \"ms-appdata:///local/miku.png\","
+                + "  \"backgroundImageOpacity\": 0.3,"
+                + "  \"backgroundImageAlignment\": \"bottomRight\","
+                + "  \"backgroundImageStretchMode\": \"uniform\"}],"
+                + "\"schemes\": ["
+                + "  {\"name\": \"Dark+\", \"background\": \"#0e0e0e\", \"foreground\": \"#cccccc\","
+                + "   \"black\": \"#000000\", \"red\": \"#cd3131\"},"
+                + "  {\"name\": \"deep\", \"background\": \"#090909\", \"foreground\": \"#cdcdcd\","
+                + "   \"black\": \"#000000\", \"red\": \"#d70000\"},"
+                + "  {\"name\": \"One Half Dark\", \"background\": \"#282C34\","
+                + "   \"foreground\": \"#DCDFE4\", \"black\": \"#282C34\", \"red\": \"#E06C75\"}"
+                + "]}";
+        java.util.List<ai.openclaw.fterm.TerminalSchemeJson.Scheme> many =
+                ai.openclaw.fterm.TerminalSchemeJson.parseAll(miku);
+        eq(many.size(), 3, "every scheme in a settings.json is read, not just the first");
+        eq(many.get(0).name, "Dark+", "and they keep their names, in file order");
+        eq(many.get(2).name, "One Half Dark", "including a name with a space");
+        eq(many.get(2).slots[17], rgb(0x28, 0x2C, 0x34), "the background lands in slot 17");
+        eq(many.get(2).slots[16], rgb(0xDC, 0xDF, 0xE4), "and the foreground in slot 16");
+        eq(many.get(1).slots[1], rgb(0xD7, 0x00, 0x00), "red is slot 1");
+
+        // A bare array, and a single object, still work: three shapes, one entry point.
+        java.util.List<ai.openclaw.fterm.TerminalSchemeJson.Scheme> arr =
+                ai.openclaw.fterm.TerminalSchemeJson.parseAll(
+                        "[{\"name\":\"a\",\"background\":\"#111111\"},"
+                        + "{\"name\":\"b\",\"background\":\"#222222\"}]");
+        eq(arr.size(), 2, "an array of schemes is accepted");
+        eq(ai.openclaw.fterm.TerminalSchemeJson.parseAll(
+                "{\"name\":\"solo\",\"background\":\"#333333\"}").size(), 1,
+                "so is one object, which is what a gist block is");
+
+        // One broken entry must not discard the good ones.
+        java.util.List<ai.openclaw.fterm.TerminalSchemeJson.Scheme> mixed =
+                ai.openclaw.fterm.TerminalSchemeJson.parseAll(
+                        "{\"schemes\":[{\"name\":\"good\",\"background\":\"#123456\"},"
+                        + "{\"name\":\"broken\",\"background\":\"not-a-colour\"}]}");
+        eq(mixed.size(), 1, "a broken entry is skipped, the rest survive");
+        eq(mixed.get(0).name, "good", "and it is the working one that survives");
+
+        // A settings.json with no schemes at all is a clear refusal, not an empty import.
+        try {
+            ai.openclaw.fterm.TerminalSchemeJson.parseAll("{\"profiles\":[]}");
+            check(false, "a settings.json with no schemes is refused");
+        } catch (IllegalArgumentException e) {
+            check(e.getMessage().contains("찾지 못했습니다"),
+                    "a settings.json with no schemes is refused: " + e.getMessage());
+        }
+
         System.out.println("SchemeJsonTest ALL OK (" + pass + " assertions)");
     }
 }

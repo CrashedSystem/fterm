@@ -55,6 +55,90 @@ public final class TerminalSchemeJson {
      * @throws IllegalArgumentException with a message meant for the user: the dialog shows it
      *         instead of a shrug, because "nothing happened" after a paste reads as a bug.
      */
+    /**
+     * Every scheme in a document: one object, an array of them, or a whole Windows Terminal
+     * {@code settings.json} with a {@code schemes} list.
+     *
+     * <p>A settings.json is what people actually share - the Miku theme this app's palette came
+     * from ships eight schemes in one file and a background picture beside it - so refusing the
+     * file and asking for a hand-extracted block would be the tool making work for the user.
+     *
+     * @throws IllegalArgumentException with a user-facing message when nothing could be read.
+     */
+    public static List<Scheme> parseAll(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            throw new IllegalArgumentException("JSON이 비어 있습니다");
+        }
+        Object root;
+        try {
+            root = new Parser(text).document();
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("JSON을 읽지 못했습니다: " + e.getMessage());
+        }
+        List<Object> blocks = new ArrayList<>();
+        if (root instanceof Map) {
+            Map<?, ?> object = (Map<?, ?>) root;
+            Object schemes = null;
+            for (Map.Entry<?, ?> e : object.entrySet()) {
+                if ("schemes".equalsIgnoreCase(String.valueOf(e.getKey()))) {
+                    schemes = e.getValue();
+                    break;
+                }
+            }
+            if (schemes instanceof List) {
+                blocks.addAll((List<?>) schemes);
+            } else if (containsColour(object)) {
+                // A single scheme block, which is also how a settings.json with no "schemes" key
+                // and a profile-level colour set looks. Nothing to import there, but a block
+                // pasted from a gist is exactly this.
+                blocks.add(object);
+            } else {
+                throw new IllegalArgumentException(
+                        "구성표를 찾지 못했습니다 — \"schemes\" 목록이나 색 항목이 있는 개체가 필요합니다");
+            }
+        } else if (root instanceof List) {
+            blocks.addAll((List<?>) root);
+        } else {
+            throw new IllegalArgumentException("구성표는 { … } 하나이거나 그 배열이어야 합니다");
+        }
+
+        List<Scheme> out = new ArrayList<>();
+        String firstError = null;
+        for (Object block : blocks) {
+            if (!(block instanceof Map)) continue;
+            try {
+                out.add(fromObject((Map<?, ?>) block));
+            } catch (IllegalArgumentException e) {
+                // One broken entry must not throw away the other seven: report it only if every
+                // entry failed, which is when the message is the useful part.
+                if (firstError == null) firstError = e.getMessage();
+            }
+        }
+        if (out.isEmpty()) {
+            throw new IllegalArgumentException(firstError != null
+                    ? firstError : "가져올 구성표가 없습니다");
+        }
+        return out;
+    }
+
+    private static boolean containsColour(Map<?, ?> object) {
+        for (Object k : object.keySet()) {
+            String name = String.valueOf(k).toLowerCase(java.util.Locale.ROOT);
+            if ("foreground".equals(name) || "background".equals(name)
+                    || "cursorcolor".equals(name)) {
+                return true;
+            }
+            for (String ansi : ANSI_KEYS) {
+                if (ansi.equalsIgnoreCase(name)) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @throws IllegalArgumentException with a message meant for the user: the dialog shows it
+     *         instead of a shrug, because "nothing happened" after a paste reads as a bug.
+     */
     public static Scheme parse(String text) {
         if (text == null || text.trim().isEmpty()) {
             throw new IllegalArgumentException("JSON이 비어 있습니다");
@@ -68,7 +152,10 @@ public final class TerminalSchemeJson {
         if (!(root instanceof Map)) {
             throw new IllegalArgumentException("구성표는 { … } 하나여야 합니다");
         }
-        Map<?, ?> object = (Map<?, ?>) root;
+        return fromObject((Map<?, ?>) root);
+    }
+
+    private static Scheme fromObject(Map<?, ?> object) {
         Map<String, Object> lower = new LinkedHashMap<>();
         for (Map.Entry<?, ?> e : object.entrySet()) {
             lower.put(String.valueOf(e.getKey()).toLowerCase(java.util.Locale.ROOT), e.getValue());

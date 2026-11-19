@@ -133,27 +133,43 @@ final class SettingsSchemeImport {
     }
 
     /**
-     * @return true when the scheme was added and selected, so a pasted dialog can close on
-     *         success only.
+     * @return true when at least one scheme was added and selected, so a pasted dialog can
+     *         close on success only.
      */
     private boolean apply(String text) {
+        java.util.List<TerminalSchemeJson.Scheme> schemes;
         try {
-            TerminalSchemeJson.Scheme scheme = TerminalSchemeJson.parse(text);
-            int added = mHost.addCustomScheme(scheme.name, scheme.slots);
-            if (added < 0) {
-                Toast.makeText(mActivity, "사용자 지정 구성표가 " + Schemes.MAX_CUSTOM_SCHEMES
-                        + "개입니다. 하나를 삭제한 뒤 다시 가져오세요.",
-                        Toast.LENGTH_LONG).show();
-                return false;
-            }
-            Toast.makeText(mActivity, "'" + mHost.customSchemeName(added) + "' 구성표를 추가했습니다",
-                    Toast.LENGTH_SHORT).show();
-            mSheet.render();
-            return true;
+            schemes = TerminalSchemeJson.parseAll(text);
         } catch (IllegalArgumentException e) {
             Toast.makeText(mActivity, "가져오지 못했습니다: " + e.getMessage(),
                     Toast.LENGTH_LONG).show();
             return false;
         }
+        int added = 0;
+        int skipped = 0;
+        int last = -1;
+        for (TerminalSchemeJson.Scheme scheme : schemes) {
+            int index = mHost.addCustomScheme(scheme.name, scheme.slots);
+            if (index < 0) {
+                skipped++;
+            } else {
+                last = index;
+                added++;
+            }
+        }
+        if (added == 0) {
+            Toast.makeText(mActivity, "사용자 지정 구성표가 " + Schemes.MAX_CUSTOM_SCHEMES
+                    + "개입니다. 하나를 삭제한 뒤 다시 가져오세요.",
+                    Toast.LENGTH_LONG).show();
+            return false;
+        }
+        if (last >= 0) mHost.onScheme(last);
+        String message = added == 1
+                ? "'" + mHost.customSchemeName(last) + "' 구성표를 추가했습니다"
+                : "구성표 " + added + "개를 추가했습니다";
+        if (skipped > 0) message += " (" + skipped + "개는 자리가 없어 건너뜀)";
+        Toast.makeText(mActivity, message, Toast.LENGTH_SHORT).show();
+        mSheet.render();
+        return true;
     }
 }
