@@ -31,6 +31,13 @@ mkdir -p "$OUT/assets/fonts"
 cp "$ROOT/assets/fonts/Iosevka.ttf" "$OUT/assets/fonts/Iosevka.ttf"
 cp "$ROOT/assets/fonts/PretendardHangul.ttf" "$OUT/assets/fonts/PretendardHangul.ttf"
 cp "$ROOT/assets/fonts/NerdSymbols.ttf" "$OUT/assets/fonts/NerdSymbols.ttf"
+# 고지문도 APK 안에 넣는다. MIT·Apache-2.0·OFL 모두 "라이선스 사본을 배포물에 포함"을
+# 요구하므로, 앱을 설치한 사람이 저장소 없이 읽을 수 있어야 한다. 사본은 build/ 안
+# (gitignore, 그리고 이 스크립트가 매번 rm -rf)에만 두고 저장소 assets/ 는 건드리지 않는다.
+mkdir -p "$OUT/assets/licenses"
+cp "$ROOT/LICENSE" "$OUT/assets/LICENSE"
+cp "$ROOT/NOTICE.md" "$OUT/assets/NOTICE.md"
+cp "$ROOT/licenses/"*.txt "$OUT/assets/licenses/"
 aapt2 link -o "$OUT/base.apk" -I "$SDKJAR" \
   --manifest "$ROOT/AndroidManifest.xml" \
   --java "$OUT/gen" \
@@ -71,6 +78,10 @@ import sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as z:
     names = z.namelist()
 assert 'classes.dex' in names, "classes.dex missing from the APK: %s" % names
+# 라이선스 고지는 배포 요건이다 — assets 스테이징이 조용히 빠지면 여기서 멈춘다.
+for want in ('assets/LICENSE', 'assets/NOTICE.md', 'assets/licenses/Apache-2.0.txt',
+             'assets/licenses/OFL-1.1.txt', 'assets/licenses/MIT.txt'):
+    assert want in names, "%s missing from the APK: %s" % (want, names)
 print("  dex %d bytes, %d entries" % (z.getinfo('classes.dex').file_size, len(names)))
 PY
 zipalign -f 4 "$OUT/app.apk" "$OUT/app-aligned.apk"

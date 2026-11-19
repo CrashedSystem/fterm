@@ -1,7 +1,9 @@
 # 제3자 고지
 
 fterm은 다음 제3자 코드·글꼴·아이콘을 포함한다. 각 항목의 원문 라이선스는
-`licenses/` 에 있다.
+`licenses/` 에 있다. 이 문서와 `LICENSE`, `licenses/` 는 빌드할 때 APK 안
+(`assets/NOTICE.md`, `assets/LICENSE`, `assets/licenses/`)에 함께 들어간다 —
+앱을 설치한 사람이 저장소 없이도 고지를 읽을 수 있어야 하기 때문이다.
 
 ## Termux terminal-emulator / terminal-view (Apache-2.0)
 
@@ -41,7 +43,7 @@ Apache-2.0은 다음을 요구한다(4조): 저작권 고지와 라이선스 사
 (생성 스크립트: `tests/tools/icons.py`).
 
 - 원본: https://github.com/microsoft/fluentui-system-icons
-- 라이선스: MIT
+- 라이선스: MIT (`licenses/MIT.txt`)
 
     Copyright (c) Microsoft Corporation.
 
@@ -52,12 +54,29 @@ Apache-2.0은 다음을 요구한다(4조): 저작권 고지와 라이선스 사
 원본 그대로이고, 블러 커널만 모바일 GPU에 맞게 줄였다(파일 주석에 근거 기록).
 
 - 원본: https://github.com/microsoft/terminal
-- 라이선스: MIT
+- 라이선스: MIT (`licenses/MIT.txt`)
+
+    Copyright (c) Microsoft Corporation.
+
+## 앱 아이콘 (MIT, Windows Terminal 그림에서 파생)
+
+`res/drawable/ic_launcher_fg.xml` 은 같은 저장소의 Windows Terminal 앱 아이콘
+`src/cascadia/TerminalApp/Images/Terminal.svg` 를 Android 벡터 드로어블로 다시 적은
+것이다. 3분할 헤더와 프롬프트(`>_`)의 도형 좌표를 원본에서 그대로 옮겼고, 색만 앱
+팔레트(`#36383E` → `#202227` 배경)에 맞게 바꿨다. 원본과 마찬가지로 MIT 로 배포한다.
+
+- 원본: https://github.com/microsoft/terminal/blob/main/src/cascadia/TerminalApp/Images/Terminal.svg
+- 라이선스: MIT (`licenses/MIT.txt`)
 
     Copyright (c) Microsoft Corporation.
 
 [termux/termux-app]: https://github.com/termux/termux-app
 [fluentui-system-icons]: https://github.com/microsoft/fluentui-system-icons
+
+## fterm 자체
+
+위 제3자 부분을 뺀 fterm의 나머지 코드는 MIT License 다. 전문은 저장소 루트의
+`LICENSE` 에 있다(Copyright (c) 2026 CrashedSystem).
 
 ## 포함하지 않은 것
 

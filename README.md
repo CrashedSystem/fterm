@@ -165,8 +165,10 @@ adb shell am broadcast -a ai.openclaw.fterm.action.CLEAR_BACKGROUND -p ai.opencl
 
 ## 제3자 코드와 라이선스
 
-Termux 엔진(Apache-2.0), 세 글꼴(OFL-1.1), Fluent 아이콘(MIT), Retro 셰이더(MIT)를
-포함합니다. 저작권 고지와 라이선스 전문은 `NOTICE.md` 와 `licenses/` 에 있습니다.
+fterm 자체는 MIT License 다(`LICENSE`). Termux 엔진(Apache-2.0), 세 글꼴(OFL-1.1),
+Fluent 아이콘(MIT), Retro 셰이더(MIT), 앱 아이콘 그림(MIT, Windows Terminal `Terminal.svg`
+파생)을 포함합니다. 저작권 고지와 라이선스 전문은 `NOTICE.md` 와 `licenses/` 에 있고,
+같은 파일이 빌드된 APK 안(`assets/`)에도 들어갑니다.
 
 ## 앱이 데몬을 스스로 띄운다 (keeper)
 
