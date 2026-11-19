@@ -22,8 +22,12 @@ public class ProfileTabTest {
     }
 
     public static void main(String[] args) throws Exception {
+        // The activity owns the tab; opening the shell on it is SessionOpen now. Both are read,
+        // so the assertions keep checking the code that actually does the work.
         String main = read(System.getProperty("main.src",
-                "app/src/ai/openclaw/fterm/MainActivity.java"));
+                "app/src/ai/openclaw/fterm/MainActivity.java"))
+                + read(System.getProperty("session.src",
+                        "app/src/ai/openclaw/fterm/SessionOpen.java"));
 
         // 1. The title has to be set before addTabChip(), because the chip is drawn once.
         int newTab = main.indexOf("void newTab(Profiles.Profile profile");
@@ -36,7 +40,7 @@ public class ProfileTabTest {
         check(titleAt < chipAt, "and the name is set before the chip is built");
 
         // 2. The pending command must be polled for on both paths, not only the reattach one.
-        int open = main.indexOf("private void openSession(Tab tab, boolean showKeyboard)");
+        int open = main.indexOf("void openSession(Tab tab, boolean showKeyboard)");
         String openBody = main.substring(open, main.indexOf("private void runPendingCommand"));
         check(openBody.contains("\n        pollForPrompt(tab);\n"),
                 "the poll runs at method level, not inside a branch: a fresh tab gets its command too");
@@ -44,7 +48,8 @@ public class ProfileTabTest {
                 "and the keyboard still shows eagerly");
 
         // 3. Opening a tab has to scroll the strip to it; a full strip hides the new plate.
-        String activate = main.substring(main.indexOf("private void activate(Tab tab)"));
+        // Package-private since the setup helper opens a tab too; the shape is what matters.
+        String activate = main.substring(main.indexOf("void activate(Tab tab)"));
         activate = activate.substring(0, activate.indexOf("private void confirmClose"));
         check(activate.contains("mTabScroll.smoothScrollTo"),
                 "activating a tab scrolls the strip to its plate");
@@ -76,7 +81,7 @@ public class ProfileTabTest {
         check(!resolverBody.contains("mIcon ="),
                 "nothing is cached: the fallback is re-read on every repaint");
 
-        int addChip = main.indexOf("private void addTabChip(Tab tab)");
+        int addChip = main.indexOf("void addTabChip(Tab tab)");
         String addBody = main.substring(addChip, main.indexOf("private void updateChip"));
         check(addBody.contains("tabIconFor(tab)"),
                 "the chip is created from the resolver");

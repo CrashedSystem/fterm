@@ -25,7 +25,9 @@ public class KeyBarPrefsTest {
   public static void main(String[] args) throws Exception {
     String kb = src("KeyBar.java");
     String prefs = src("Prefs.java");
-    String main = src("MainActivity.java");
+    // The key path is MainActivity + KeyInput: the activity forwards, the sequence lives in
+    // the key class. Both are read, so a hardcoded sequence in either one fails.
+    String main = src("MainActivity.java") + src("KeyInput.java");
     String settings = SettingsSources.all(System.getProperty("root")
             + "/app/src/ai/openclaw/fterm/SettingsSheet.java");
 

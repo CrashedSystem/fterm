@@ -26,11 +26,51 @@ public class StructureTest {
         String dir = System.getProperty("app.dir", "app/src/ai/openclaw/fterm/");
         String main = read(dir + "MainActivity.java");
 
-        // 1. MainActivity stays a coordinator. 1200 lines was the old number and it is the
-        //    reason the key bar and the settings sheet were extracted.
+        // 1. MainActivity stays a coordinator. 1200 lines was the old number, 1,417 was what
+        //    it grew back to, and extracting the session, key, appearance and tab roles took it
+        //    to about 1,030. The cap is where it may not creep back.
         int n = lines(main);
-        check(n < 1420, "MainActivity is a coordinator, not a drawer (" + n + " lines)");
+        check(n < 1100, "MainActivity is a coordinator, not a drawer (" + n + " lines)");
         System.out.println("ok  MainActivity " + n + " lines");
+
+        // 1b. The four roles that left have a file each, and the activity asks them instead of
+        //     keeping a copy. Every one of these was a block that only read the tab list, the
+        //     view and the prefs - which is the sign that it was never the activity's own job.
+        String sess = read(dir + "SessionOpen.java");
+        check(main.contains("new SessionOpen(this)"), "opening a shell lives in SessionOpen");
+        check(!main.contains("void openSession(Tab tab"), "and is not inlined again");
+        check(sess.contains("liveSessions(") && sess.contains("void provisioning()")
+                        && sess.contains("void requestToken(Tab tab)"),
+                "the live-session query, provisioning and the token dialog are one path");
+        check(!main.contains("pollForPrompt("), "and the prompt poll went with them");
+        check(!main.contains("DaemonClient."), "the activity does not query the daemon itself");
+
+        String keys = read(dir + "KeyInput.java");
+        check(main.contains("new KeyInput(this)"), "the key path lives in KeyInput");
+        check(!main.contains("lastEscapeAt"), "the flood guard did not stay behind");
+        check(keys.contains("lastEscapeAt") && keys.contains("KEYCODE_F1"),
+                "which is where the guard and the F-key translation are");
+        check(!main.contains("toggleSoftInput"), "and no keyboard plumbing is left in the activity");
+
+        String look = read(dir + "Appearance.java");
+        check(main.contains("new Appearance(this)"), "applying an appearance choice lives in Appearance");
+        check(!main.contains("oled ? 0xff000000"),
+                "the scheme no longer paints the chrome from the activity");
+        check(look.contains("mRoot.setBackgroundColor") && look.contains("FontZoom.dp("),
+                "but from there, sizes included");
+
+        String tabSrc = read(dir + "Tab.java");
+        check(!main.contains("private static final class Tab"),
+                "the tab is a file of its own, not an inner record");
+        check(tabSrc.contains("String pendingCommand") && tabSrc.contains("boolean userTitled"),
+                "carrying what a tab has to remember");
+
+        // 1c. Each of them is small enough to read in one go; the cap would go first if a
+        //     fifth responsibility were quietly added to one of them.
+        for (String role : new String[]{"SessionOpen", "KeyInput", "Appearance", "Tab"}) {
+            int roleLines = lines(read(dir + role + ".java"));
+            check(roleLines < 400, role + " is one responsibility (" + roleLines + " lines)");
+        }
 
         // 2. The pieces that were extracted are actually used, not copied.
         check(main.contains("new KeyBar("), "the key bar lives in KeyBar");

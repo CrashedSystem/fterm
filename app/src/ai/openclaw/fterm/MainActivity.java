@@ -14,7 +14,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
-import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -33,14 +32,11 @@ import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.termux.terminal.TerminalEmulator;
 import com.termux.terminal.TerminalSession;
 import com.termux.terminal.TerminalSessionClient;
-import com.termux.terminal.SocketTransport;
-import com.termux.terminal.DaemonClient;
 import com.termux.terminal.TerminalColors;
 import com.termux.terminal.TextStyle;
 import com.termux.view.TerminalRenderer;
@@ -62,24 +58,24 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     private static final String TAG = "fterm";
 
     Prefs mPrefs;
-    private LinearLayout mRoot;
-    private LinearLayout mTopBar;
-    private LinearLayout mTabStrip;
-    private HorizontalScrollView mTabScroll;
-    private FrameLayout mTermFrame;
+    LinearLayout mRoot;
+    LinearLayout mTopBar;
+    LinearLayout mTabStrip;
+    HorizontalScrollView mTabScroll;
+    FrameLayout mTermFrame;
     private FindBar mFind;
     KeyBar mKeyBar;
     TerminalView mTermView;
 
     final List<Tab> mTabs = new ArrayList<>();
-    private Tab mActive;
+    Tab mActive;
 
     /** Font size in dp; the view wants px, so {@link #fontPx()} converts. */
     int mFontDp;
     /** Iosevka / Nerd Symbols / Pretendard, with the Hangul size-adjust derived per size. */
     private Fonts mFonts;
-    /** The scanline overlay, or null when the effect is off. */
-    private RetroOverlay mRetro;
+    /** The scanline overlay, or null when the effect is off; see Appearance. */
+    RetroOverlay mRetro;
     /** Loaded once; null when the user has no picture, in which case the scheme shows alone. */
     BackgroundLayer mBackdrop;
     private Bell mBell;
@@ -87,19 +83,25 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     /** Windows Terminal chrome: the command palette and the icon strip. */
     private Chrome mChrome;
     private Notifier mNotifier;
-    private DaemonBoot mBoot;
+    DaemonBoot mBoot;
     int mScheme;
     /** Every saved custom scheme, in list order; the source of the scheme index range. */
     CustomSchemes mCustoms;
     /** The active scheme's 19 editable slots, kept in step with Prefs and mCustoms. */
     int[] mCustom;
     /** Fractional font size in dp, so a pinch accumulates instead of rounding every event away. */
-    private float mZoomDp;
+    float mZoomDp;
 
-    private boolean mFn;
     private boolean mShowKeyboardOnce = true;
 
-    private final Handler mUi = new Handler(Looper.getMainLooper());
+    final Handler mUi = new Handler(Looper.getMainLooper());
+
+    /** The session path: the daemon, the token, and a tab's shell. */
+    private final SessionOpen mSessions = new SessionOpen(this);
+    /** The key path: key bar, hardware keys and the sticky modifiers, in one place. */
+    private final KeyInput mKeys = new KeyInput(this);
+    /** Applying an appearance choice, as opposed to storing it. */
+    private final Appearance mLook = new Appearance(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,7 +138,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // live query returns (up to the 2.5s timeout). Say so instead of showing a void -
         // "the first shell is blank" was this empty frame, not a dead shell.
         mBoot.splash("셸에 연결하는 중…");
-        startSessions();
+        mSessions.start();
     }
 
     private void applyChrome() {
@@ -278,133 +280,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mKeyBar.setVisible(mPrefs.keyBarVisible());
     }
 
-    /**
-     * Key bar buttons. ALT/CTRL/SHIFT/FN are sticky: they latch until the next key is sent,
-     * which is how a phone keyboard has to work (there is no way to hold two keys at once
-     * with one thumb).
-     */
     // ---------------------------------------------------------------- sessions
+    //
+    // The shell itself is SessionOpen's. What is left here is the tab: creating one, keeping
+    // the strip in step, and asking SessionOpen for the session on it.
 
-    private static final class Tab {
-        TerminalSession session;
-        SocketTransport transport;
-        TextView chip;
-        LinearLayout plate;
-        TextView closeBox;
-        /** The plate, title and close box as one object; see TabStrip. */
-        TabStrip.Chip chipView;
-        String title = Profiles.DEFAULT_NAME;
-        /** Set once the user renames the tab; the shell's OSC title stops winning. */
-        boolean userTitled;
-        /** The profile this tab was opened from, or null for the default profile. */
-        Profiles.Profile profile;
-        /** Typed into the shell once it has printed something; see openSession(). */
-        String pendingCommand;
-        int id;
-        boolean running;
-    }
-
-    /**
-     * Bring the terminal up.
-     *
-     * The daemon owns the shells, so the first question is "what is still alive?". A shell
-     * left over from a previous launch keeps its screen and its running process; only when
-     * the daemon has none do we open a fresh one. That is the whole point of keeping the
-     * PTY outside the app: closing the app must not end a build.
-     */
-    private void startSessions() {
-        final String token = mPrefs.token();
-        if (token.isEmpty()) {
-            // First run (or after a reinstall): start the daemon ourselves and read the token
-            // it publishes, instead of telling the user to go and run two commands by hand.
-            beginProvisioning();
-            return;
-        }
-
-        new Thread(() -> {
-            List<Integer> live = null;
-            String failure = null;
-            try {
-                live = DaemonClient.liveSessions(mPrefs.host(), mPrefs.port(), token, 2500);
-            } catch (DaemonClient.Failure f) {
-                failure = f.getMessage();
-            }
-            final List<Integer> ids = live;
-            final String err = failure;
-            mUi.post(() -> {
-                if (err != null) {
-                    // The token exists but the daemon did not answer. This is the
-                    // "swiped the app, came back, nothing works" hole: provisioning (which
-                    // would ask the keeper to revive the daemon) only runs when the token is
-                    // MISSING, so a stale token meant the app sat on an error dialog forever.
-                    // Re-provisioning is safe here - the keeper publishes the same token
-                    // unless the daemon regenerated it, and if it did, the new token lands
-                    // and the retry below connects.
-                    beginProvisioning();
-                    return;
-                }
-                for (int id : ids) {
-                    Tab tab = new Tab();
-                    tab.id = id;
-                    mTabs.add(tab);
-                    addTabChip(tab);
-                    openSession(tab, false);
-                }
-                if (mTabs.isEmpty()) {
-                    newTab(true);
-                } else {
-                    activate(mTabs.get(0));
-                    showKeyboardSoon();
-                }
-            });
-        }, "fterm-start").start();
-    }
-
-    /**
-     * Bring the daemon up without the user leaving the app.
-     *
-     * Writes the request file the Termux-side keeper watches, then polls for the token it
-     * publishes. If the keeper is not running (never installed, or Termux was killed) the
-     * app says so once, with the single command that fixes it - instead of the old flow,
-     * which made the user open Termux and copy a token by hand on first run.
-     */
-    private void beginProvisioning() {
-        mBoot.start(new DaemonBoot.Host() {
-            @Override public void ready(String token) {
-                mPrefs.setToken(token);
-                mBoot.restore();
-                newTab(true);
-            }
-
-            @Override public void keeperMissing() {
-                mUi.post(() -> DaemonDialogs.keeperMissing(MainActivity.this,
-                        MainActivity.this::openManualTokenDialog));
-            }
-
-            @Override public void daemonSlow() {
-                mUi.post(() -> DaemonDialogs.daemonSlow(MainActivity.this,
-                        MainActivity.this::beginProvisioning,
-                        MainActivity.this::openManualTokenDialog));
-            }
-
-            @Override public void storageBlocked() {
-                mUi.post(() -> DaemonDialogs.storageBlocked(MainActivity.this,
-                        MainActivity.this::openManualTokenDialog));
-            }
-        });
-    }
-
-    /** Last resort: let the user paste a token they obtained themselves. */
-    private void openManualTokenDialog() {
-        Tab tab = new Tab();
-        tab.id = 1;
-        mTabs.add(tab);
-        addTabChip(tab);
-        activate(tab);
-        requestToken(tab);
-    }
-
-    private void newTab(boolean showKeyboard) {
+    void newTab(boolean showKeyboard) {
         newTab(null, showKeyboard);
     }
 
@@ -429,7 +310,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mTabs.add(tab);
         addTabChip(tab);
         activate(tab);
-        openSession(tab, showKeyboard);
+        mSessions.openSession(tab, showKeyboard);
     }
 
     /** Session ids are the daemon's handle; keep them small and unique in this tab set. */
@@ -439,149 +320,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         return Math.max(1, max + 1);
     }
 
-    private void openSession(Tab tab, boolean showKeyboard) {
-        String token = mPrefs.token();
-        if (token.isEmpty()) {
-            requestToken(tab);
-            return;
-        }
-
-        Profiles.Profile profile = tab.profile;
-        String shell = profile != null && !profile.shell.isEmpty()
-                ? profile.shell : mPrefs.startShell();
-        String dir = profile != null && !profile.dir.isEmpty()
-                ? profile.dir : mPrefs.startDir();
-
-        TerminalSession session = new TerminalSession("", null, null, null, 8000, this);
-        SocketTransport transport = new SocketTransport(
-                mPrefs.host(), mPrefs.port(), token, tab.id, shell, dir);
-        session.setTransport(transport);
-        tab.session = session;
-        tab.transport = transport;
-        tab.running = true;
-        tab.pendingCommand = profile != null && Profiles.commandIsOneLine(profile.command)
-                && !profile.command.isEmpty() ? profile.command : null;
-        session.mSessionName = profile != null && !profile.name.isEmpty()
-                ? profile.name : Profiles.DEFAULT_NAME + " " + tab.id;
-
-        if (mActive == tab) {
-            mBoot.restore();   // remove any "connecting…" splash still in the frame
-            mTermView.attachSession(session);
-            mTermView.setTextSize(fontPx());
-            applySchemeTo(session);
-            mTermView.requestFocus();
-        }
-
-        if (showKeyboard) {
-            // The transport connects on its own thread; the keyboard follows the window,
-            // not the socket. Showing it immediately is right: the shell is one round trip away.
-            showKeyboardSoon();
-        }
-        // A profile's command has to wait for the shell either way - a fresh session has not
-        // printed its prompt yet, and a reattached one replays its ring asynchronously. The
-        // poll is what tells those apart, so it runs in both cases.
-        pollForPrompt(tab);
-    }
-
-    /**
-     * Type the profile's command into the shell that is now running.
-     *
-     * <p>Sent as bytes to the PTY, not executed by the daemon: an ssh profile has to inherit
-     * the login shell's environment to find its keys and its config, and the daemon's
-     * allowlist stays the only thing that decides what binary a session may run.
-     */
-    private void runPendingCommand(Tab tab) {
-        String command = tab.pendingCommand;
-        if (command == null) return;
-        tab.pendingCommand = null;
-        TerminalSession s = tab.session;
-        if (s == null) return;
-        // A short pause so the shell has finished printing its prompt; a command written
-        // mid-prompt is not lost by bash, but it reads as if the user typed over it.
-        mUi.postDelayed(() -> {
-            if (tab.session != null && tab.running) tab.session.write(command + "\r");
-        }, 120);
-    }
-
-    private void pollForPrompt(Tab tab) {
-        final long deadline = System.currentTimeMillis() + 4000;
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                TerminalSession s = tab.session;
-                boolean ready = s != null && s.getDeliveredBytes() > 0;
-                if (ready) {
-                    // Clear whatever the reattach left typed, so the shell prompt is not
-                    // prefixed with a stale line.
-                    if (mActive == tab) showKeyboardSoon();
-                    runPendingCommand(tab);
-                    return;
-                }
-                if (System.currentTimeMillis() < deadline) mUi.postDelayed(this, 120);
-            }
-        };
-        mUi.postDelayed(r, 120);
-    }
-
-    /** The daemon is unreachable or refused us. Say what to run, in the app. */
-    private void showDaemonHelp(String reason) {
-        mUi.post(() -> new AlertDialog.Builder(this)
-                .setTitle("Termux 데몬에 연결하지 못했습니다")
-                .setMessage(reason + "\n\nTermux에서 한 번 실행하세요:\n\n"
-                        + "  pkg install python\n"
-                        + "  ~/fterm/ftermd start\n\n"
-                        + "그다음 이 앱으로 돌아오세요.")
-                .setPositiveButton("명령 복사", (d, w) -> {
-                    copyToClipboard("~/fterm/ftermd start");
-                    Toast.makeText(this, "복사됨 — Termux에 붙여넣고 실행하세요",
-                            Toast.LENGTH_LONG).show();
-                })
-                .setNegativeButton("닫기", null)
-                .show());
-    }
-
-    /**
-     * First run: there is no token. Kick off `ftermd token` inside Termux via
-     * RUN_COMMAND and ask the user to paste it once. Everything after that is
-     * remembered, so this happens exactly once per install.
-     */
-    private void requestToken(Tab tab) {
-        mUi.post(() -> {
-            final EditText input = new EditText(this);
-            input.setHint("Termux에서 `ftermd token` 출력값");
-            input.setSingleLine(true);
-            input.setInputType(InputType.TYPE_CLASS_TEXT);
-            input.setTextColor(0xffe6e6e6);
-            input.setHintTextColor(0xff888888);
-
-            new AlertDialog.Builder(this)
-                    .setTitle("Termux 연결")
-                    .setMessage("Termux에서 다음을 한 번 실행하세요:\n\n"
-                            + "  ~/fterm/ftermd start\n"
-                            + "  ftermd token\n\n"
-                            + "출력된 토큰을 붙여넣으세요.")
-                    .setView(input)
-                    .setCancelable(false)
-                    .setPositiveButton("저장", (d, w) -> {
-                        String t = input.getText().toString().trim();
-                        if (t.isEmpty()) {
-                            finish();
-                            return;
-                        }
-                        mPrefs.setToken(t);
-                        openSession(tab, true);
-                    })
-                    .setNegativeButton("Termux 명령 복사", (d, w) -> {
-                        copyToClipboard("ftermd start && ftermd token");
-                        Toast.makeText(this, "복사됨 — Termux에 붙여넣고 실행하세요",
-                                Toast.LENGTH_LONG).show();
-                        finish();
-                    })
-                    .show();
-        });
-    }
-
-    private void addTabChip(Tab tab) {
+    void addTabChip(Tab tab) {
         TabStrip.Chip chip = new TabStrip(this, tabIconFor(tab)).create(tab.title,
                 () -> activate(tab), () -> confirmClose(tab));
         tab.plate = chip.plate;
@@ -621,7 +360,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
 
-    private void activate(Tab tab) {
+    void activate(Tab tab) {
         mActive = tab;
         for (Tab t : mTabs) updateChip(t);
         // Scroll the strip so the newly active tab is on screen. Opening a profile from the
@@ -678,6 +417,21 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     // ---------------------------------------------------------------- appearance
+    //
+    // Applying a choice is Appearance's job; these forward the names the settings sheet and
+    // the menu already call.
+
+    void applyFontSize(int dp) { mLook.applyFontSize(dp); }
+
+    void applyFontFamily(String id) { mLook.applyFontFamily(id); }
+
+    void applyHangulFamily(String id) { mLook.applyHangulFamily(id); }
+
+    void applyCursor() { mLook.applyCursor(); }
+
+    void applyRetro() { mLook.applyRetro(); }
+
+    void applyScheme(int index) { mLook.applyScheme(index); }
 
     /**
      * Load mterm's font stack.
@@ -688,7 +442,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
      * {@link TerminalRenderer.FaceSelector} because Android holds one face per Paint, and
      * the adjustment is recomputed from the measured cell so it stays correct at any size.
      */
-    private void loadFonts() {
+    void loadFonts() {
         int px = fontPx();
         float cell = mTermView.getFontWidth();
         if (cell <= 0f) {
@@ -712,77 +466,11 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     /** dp -> px at this device's density. */
-    private int fontPx() {
+    int fontPx() {
         return Math.max(8, Math.round(mFontDp * getResources().getDisplayMetrics().density));
     }
 
-    void applyFontSize(int dp) {
-        setZoom(FontZoom.dp(dp));
-    }
-
-    /** Set the size from a fractional dp value; the fraction must survive, see FontZoom. */
-    private void setZoom(float dp) {
-        mZoomDp = Math.max(FontZoom.MIN_DP, Math.min(FontZoom.MAX_DP, dp));
-        mFontDp = FontZoom.dp(mZoomDp);
-        mPrefs.setFontSizeDp(mFontDp);
-        if (mTermView.getCurrentSession() != null) mTermView.setTextSize(fontPx());
-    }
-
-    /** Switch the Latin face; loadFonts() recomputes the cell width the face implies. */
-    void applyFontFamily(String id) {
-        mPrefs.setFontFamily(id);
-        loadFonts();
-    }
-
-    /** Switch the Korean face; it does not change the cell, so the grid is untouched. */
-    void applyHangulFamily(String id) {
-        mPrefs.setHangulFamily(id);
-        loadFonts();
-    }
-
-    /**
-     * Install the cursor's shape and blink rate.
-     *
-     * <p>The shape lives in the emulator (which is also where DECSCUSR writes it), so a
-     * running session has to be told; the rate lives in the view. Zero disables blinking,
-     * which is the view's own encoding for "off" - not a special case invented here.
-     */
-    void applyCursor() {
-        mTermView.setTerminalCursorBlinkerRate(mPrefs.cursorBlink() ? 500 : 0);
-        mTermView.setTerminalCursorBlinkerState(true, true);
-        if (mActive != null && mActive.session != null) {
-            TerminalEmulator em = mActive.session.getEmulator();
-            if (em != null) em.setCursorStyle();
-        }
-    }
-
-    /** Install or remove the scanline pass; the overlay caches per size on its own. */
-    void applyRetro() {
-        mRetro = mPrefs.retroEffect() ? new RetroOverlay() : null;
-        mTermView.setRetroOverlay(mRetro);
-    }
-
-    void applyScheme(int index) {
-        mScheme = index;
-        mPrefs.setScheme(index);
-        // A custom index names one entry of the list, so the editable slots follow it here.
-        mCustom = mCustoms.slotsForScheme(index);
-        // On the OLED scheme every surface goes to true black; a #1e1e1e strip next to a
-        // #000000 terminal is a visible seam and, on OLED, lit pixels.
-        final boolean oled = Schemes.isOled(index, mCustom);
-        final int chrome = oled ? 0xff000000 : 0xff1e1e1e;
-        final int bar = oled ? 0xff0a0a0a : 0xff2b2b2b;
-        final int keys = oled ? 0xff0d0d0d : 0xff252526;
-        mRoot.setBackgroundColor(chrome);
-        if (mTopBar != null) mTopBar.setBackgroundColor(bar);
-        if (mTabStrip != null) mTabStrip.setBackgroundColor(bar);
-        if (mKeyBar != null) mKeyBar.applyTheme(oled);
-        if (mTabScroll != null) mTabScroll.setBackgroundColor(bar);
-        if (mTermFrame != null) mTermFrame.setBackgroundColor(chrome);
-        if (mActive != null && mActive.session != null) applySchemeTo(mActive.session);
-    }
-
-    private void applySchemeTo(TerminalSession session) {
+    void applySchemeTo(TerminalSession session) {
         if (session == null || session.getEmulator() == null) return;
         TerminalColors colors = session.getEmulator().mColors;
         int[] table = Schemes.colors(mScheme, mCustom);
@@ -879,84 +567,24 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     // ---------------------------------------------------------------- keys
+    //
+    // The key path itself is KeyInput; what is left here is the forwarding the key bar, the
+    // menu and the hardware handlers call. They are named after what the caller wants, so the
+    // call sites did not have to learn a new object when the path moved.
 
-    private void toggleKeyboard() {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        if (imm == null) return;
-        imm.toggleSoftInput(InputMethodManager.SHOW_IMPLICIT, 0);
-    }
+    private void toggleKeyboard() { mKeys.toggleKeyboard(); }
 
-    private void showKeyboardSoon() {
-        mUi.postDelayed(() -> {
-            mTermView.requestFocus();
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) imm.showSoftInput(mTermView, InputMethodManager.SHOW_IMPLICIT);
-        }, 150);
-    }
+    void showKeyboardSoon() { mKeys.showKeyboardSoon(); }
 
-    private void sendRaw(String s) {
-        if (mActive == null || mActive.session == null) return;
-        mActive.session.write(s);
-        clearSticky();
-    }
+    private void sendRaw(String s) { mKeys.sendRaw(s); }
 
-    /** Last time each escape sequence went out, for the flood guard below. */
-    private final java.util.HashMap<String, Long> mLastEscapeAt = new java.util.HashMap<>();
+    private void sendEscape(String what) { mKeys.sendEscape(what); }
 
-    private void sendEscape(String what) {
-        TerminalSession s = mActive == null ? null : mActive.session;
-        if (s == null || s.getEmulator() == null) return;
-        // Flood guard: a key source gone bad (a touch listener firing on MOVE, a keyboard
-        // driver stuck on repeat) can push hundreds of the same sequence per second - the
-        // measured "18:15:52, 200 frames/sec for 9s" flood. Same sequence within 40ms is
-        // a synthetic duplicate, not a human keypress: drop it. Hold-to-repeat in the key
-        // bar fires every 60ms and stays above this floor.
-        long now = android.os.SystemClock.uptimeMillis();
-        Long last = mLastEscapeAt.get(what);
-        if (last != null && now - last < 40) return;
-        mLastEscapeAt.put(what, now);
-        TerminalEmulator e = s.getEmulator();
-        int code;
-        switch (what) {
-            case "tab": code = KeyEvent.KEYCODE_TAB; break;
-            case "esc": code = KeyEvent.KEYCODE_ESCAPE; break;
-            case "up": code = KeyEvent.KEYCODE_DPAD_UP; break;
-            case "down": code = KeyEvent.KEYCODE_DPAD_DOWN; break;
-            case "left": code = KeyEvent.KEYCODE_DPAD_LEFT; break;
-            case "right": code = KeyEvent.KEYCODE_DPAD_RIGHT; break;
-            case "home": code = KeyEvent.KEYCODE_MOVE_HOME; break;
-            case "end": code = KeyEvent.KEYCODE_MOVE_END; break;
-            case "pgup": code = KeyEvent.KEYCODE_PAGE_UP; break;
-            case "pgdn": code = KeyEvent.KEYCODE_PAGE_DOWN; break;
-            default: return;
-        }
-        mTermView.handleKeyCode(code, 0);
-        clearSticky();
-    }
+    private void sendFunctionKey(int number) { mKeys.sendFunctionKey(number); }
 
-    /**
-     * F1..F12 from the key bar's function layer.
-     *
-     * <p>Routed through {@link TerminalView#handleKeyCode} like every other special key, which
-     * is what makes the emulator translate it with the running program's terminfo: a TUI that
-     * asked for {@code kf1=\eOP} gets that, and a shell that expects {@code \e[11~} gets that.
-     * Sending a hardcoded sequence was the reason F-keys used to break inside vim.
-     *
-     * <p>No flood guard runs here. These cells repeat while held, and the point of a repeat is
-     * a stream of identical codes; the guard's 40 ms floor would swallow every other one.
-     */
-    private void sendFunctionKey(int number) {
-        if (number < 1 || number > 12) return;
-        if (mActive == null || mActive.session == null) return;
-        mTermView.handleKeyCode(KeyEvent.KEYCODE_F1 + (number - 1), 0);
-        clearSticky();
-    }
+    private void clearSticky() { mKeys.clearSticky(); }
 
-    private void clearSticky() {        mFn = false;
-        if (mKeyBar != null) mKeyBar.clear();
-    }
-
-    private void copyToClipboard(String text) {
+    void copyToClipboard(String text) {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("fterm", text));
     }
@@ -1044,7 +672,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     @Override
     public float onScale(float scale) {
-        setZoom(FontZoom.next(mZoomDp, scale));
+        mLook.setZoom(FontZoom.next(mZoomDp, scale));
         return 1f;
     }
 
@@ -1146,7 +774,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     @Override
     public boolean readFnKey() {
-        return mFn;
+        return mKeys.fn();
     }
 
     @Override
@@ -1161,26 +789,11 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             }
         }
 
-        if (mFn) {
-            final int lower = Character.toLowerCase(codePoint);
-            int key = -1;
-            switch (lower) {
-                case 'w': key = KeyEvent.KEYCODE_DPAD_UP; break;
-                case 'a': key = KeyEvent.KEYCODE_DPAD_LEFT; break;
-                case 's': key = KeyEvent.KEYCODE_DPAD_DOWN; break;
-                case 'd': key = KeyEvent.KEYCODE_DPAD_RIGHT; break;
-                case 'p': key = KeyEvent.KEYCODE_PAGE_UP; break;
-                case 'n': key = KeyEvent.KEYCODE_PAGE_DOWN; break;
-                case 't': key = KeyEvent.KEYCODE_TAB; break;
-                case 'h': key = KeyEvent.KEYCODE_MOVE_HOME; break;
-                case 'e': key = KeyEvent.KEYCODE_MOVE_END; break;
-                default: break;
-            }
-            mFn = false;
-            if (key != -1) {
-                mTermView.handleKeyCode(key, 0);
-                return true;
-            }
+        // The FN layer is a latch on one following key; KeyInput releases it either way.
+        int fnCode = mKeys.fnKey(codePoint);
+        if (fnCode != -1) {
+            mTermView.handleKeyCode(fnCode, 0);
+            return true;
         }
 
         // A sticky modifier applies to exactly one following character. The IME path
