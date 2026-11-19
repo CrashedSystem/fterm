@@ -68,7 +68,7 @@ final class Notifier {
         if (body == null || body.isEmpty()) return;
 
         // A tool that sends only a body gets a sensible title rather than an empty one.
-        final String useTitle = (title == null || title.trim().isEmpty()) ? "fterm" : title.trim();
+        final String useTitle = (title == null || title.trim().isEmpty()) ? mContext.getString(R.string.app_name) : title.trim();
 
         // Collapse repeated notifications from the same title: a build that reports every
         // step should not fill the shade. Same title replaces, different titles stack.
