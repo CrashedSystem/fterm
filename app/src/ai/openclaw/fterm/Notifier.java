@@ -87,7 +87,7 @@ final class Notifier {
         b.setContentTitle(useTitle)
                 .setContentText(body)
                 .setStyle(new Notification.BigTextStyle().bigText(body))
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.drawable.ic_notify_terminal)
                 .setContentIntent(content)
                 .setAutoCancel(true)
                 .setShowWhen(true)

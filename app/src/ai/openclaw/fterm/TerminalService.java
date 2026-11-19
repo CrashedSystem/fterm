@@ -81,7 +81,7 @@ public final class TerminalService extends Service {
     public void onCreate() {
         super.onCreate();
         createChannel(this);
-        Notification n = build(this, "fterm", "터미널 준비 중");
+        Notification n = build(this, getString(R.string.app_name), "터미널 준비 중");
         if (Build.VERSION.SDK_INT >= 34) {
             // The type is declared in the manifest too; passing it here is what Android 14+
             // asks for explicitly, and it is what makes the specialUse exemption checkable.
@@ -110,7 +110,8 @@ public final class TerminalService extends Service {
         if (nm == null) return;
         // LOW: no sound, no heads-up. The terminal's notification is a status line, not an alert.
         NotificationChannel ch = new NotificationChannel(
-                CHANNEL_ID, "터미널 세션", NotificationManager.IMPORTANCE_LOW);
+                CHANNEL_ID, context.getString(R.string.notify_channel_session),
+                NotificationManager.IMPORTANCE_LOW);
         ch.setShowBadge(false);
         ch.setSound(null, null);
         nm.createNotificationChannel(ch);
@@ -130,7 +131,7 @@ public final class TerminalService extends Service {
 
         b.setContentTitle(title)
                 .setContentText(text)
-                .setSmallIcon(android.R.drawable.ic_menu_camera)
+                .setSmallIcon(R.drawable.ic_notify_terminal)
                 .setContentIntent(content)
                 .setOngoing(true)
                 .setShowWhen(false)
