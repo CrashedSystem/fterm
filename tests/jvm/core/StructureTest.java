@@ -202,16 +202,21 @@ public class StructureTest {
                     "the set has the \"" + needed + "\" glyph the toolbar asks for");
         }
         // WT's TabRowControl: tabs, then a SplitButton (plus + chevron). Nothing else.
-        check(main.contains("Chrome.icon(this, \"chevron\""),
+        // The row itself moved to TabBar when the activity passed its line budget, so the
+        // glyphs are checked where they are built and the activity for wiring the row in.
+        String tabBar = read(dir + "TabBar.java");
+        check(tabBar.contains("\"chevron\""),
                 "the dropdown hangs off a chevron, like WT's split button");
+        check(main.contains("TabBar.build("),
+                "and the activity builds that row rather than drawing it inline");
         check(!main.contains("Chrome.icon(this, \"menu\""),
                 "no hamburger: WT's tab row does not have one");
         check(!main.contains("Chrome.icon(this, \"gear\""),
                 "no gear in the tab row: settings is a row in the dropdown");
-        check(main.contains("top.addView(plus);") && main.contains("top.addView(drop);"),
+        check(tabBar.contains("top.addView(plus)") && tabBar.contains("top.addView(drop)"),
                 "the plus and the chevron are both in the row");
-        int iPlus = main.indexOf("top.addView(plus);");
-        int iDrop = main.indexOf("top.addView(drop);");
+        int iPlus = tabBar.indexOf("top.addView(plus)");
+        int iDrop = tabBar.indexOf("top.addView(drop)");
         check(iPlus >= 0 && iDrop > iPlus, "and the chevron sits after the plus");
 
         System.out.println("ok  " + pass + " structure assertions");

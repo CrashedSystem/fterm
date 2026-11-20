@@ -95,10 +95,14 @@ public class ProfileTabTest {
                 "app/src/io/github/crashedsystem/terminal/SettingsSheet.java"));
         // The grid is a file of its own now (SettingsIconPicker), so the check is that the
         // editor goes through it and names the pick - not that the call sits on one line.
-        check(sheet.contains("SettingsIconPicker") && sheet.contains("\"프로필 아이콘\""),
+        // Labels moved into resources; the picker call and the keys are what the source has.
+        String strings = read("res/values/strings.xml");
+        check(sheet.contains("SettingsIconPicker") && sheet.contains("R.string.i18n_0233"),
                 "the editor offers the same picker as the global setting");
-        check(sheet.contains("\"탭 아이콘과 같음\""),
+        check(strings.contains(">프로필 아이콘<"), "labelled 프로필 아이콘");
+        check(sheet.contains("R.string.i18n_0232"),
                 "and says plainly what an empty icon means");
+        check(strings.contains(">탭 아이콘과 같음<"), "which is 탭 아이콘과 같음");
 
         System.out.println("ok  " + pass + " profile-tab assertions");
         System.out.println("ALL OK");

@@ -13,6 +13,8 @@ javac -nowarn -d "$OUT" \
   "$ROOT/app/src/com.termux/terminal/Protocol.java" \
   "$ROOT/app/src/com.termux/terminal/SessionTransport.java" \
   "$ROOT/app/src/com.termux/terminal/SocketTransport.java" \
+  "$ROOT/tests/corestub/io/github/crashedsystem/terminal/AppStrings.java" \
+  "$ROOT/tests/corestub/io/github/crashedsystem/terminal/R.java" \
   "$ROOT/tests/jvm/com/termux/terminal/TerminalSession.java" \
   "$ROOT/tests/jvm/harness/OrphanCloseTest.java"
 

@@ -129,8 +129,13 @@ public class FontsTest {
                 "and land in app storage through the same validation as a picked file");
         check(sheet.contains("new Thread("),
                 "the listing runs off the UI thread - it is a socket round trip");
-        check(sheet.contains("글꼴 설치"),
+        // The button text moved into resources with the rest of the UI. The key is what the
+        // picker references; the words are asserted in the XML they now live in.
+        check(sheet.contains("i18n_0184"),
                 "offered from the font list itself, where the new font will appear");
+        String strings = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get("res/values/strings.xml")), "UTF-8");
+        check(strings.contains(">글꼴 설치<"), "and the button says 설치, not an id");
 
         String daemon = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("daemon.src",

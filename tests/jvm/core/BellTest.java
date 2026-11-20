@@ -50,7 +50,13 @@ public class BellTest {
         // The toggles must be reachable, or the bell cannot be turned off.
         String settings = SettingsSources.all(
                 root + "/app/src/io/github/crashedsystem/terminal/SettingsSheet.java");
-        check(settings.contains("진동") && settings.contains("소리"), "both toggles are in settings");
+        // The labels are resource keys now; the words live in strings.xml. Both are asserted
+        // so a wrong key or a missing translation still fails.
+        check(settings.contains("i18n_0203") && settings.contains("i18n_0205"),
+                "both toggles are in settings");
+        String strings = read(root + "/res/values/strings.xml");
+        check(strings.contains(">터미널 벨 · 진동<") && strings.contains(">터미널 벨 · 소리<"),
+                "and they say 진동 and 소리");
         check(settings.contains("bellVibrate()") && settings.contains("bellSound()"),
                 "and are bound to the host");
 

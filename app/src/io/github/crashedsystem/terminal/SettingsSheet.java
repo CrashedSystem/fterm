@@ -313,82 +313,15 @@ final class SettingsSheet {
     /** Re-fit the window after the screen changed size or orientation. */
     void relayout() { if (mDialog != null && mDialog.isShowing()) DialogSize.sheet(mDialog, mActivity); }
 
-    /**
-     * Breadcrumb on the left, close glyph on the right, exactly like WT's page header.
-     *
-     * <p>The left glyph is the back arrow on a page and the app's own mark on the root; WT puts
-     * the hamburger there because its sidebar toggles, which is meaningless on a phone.
-     */
     private View header() {
-        LinearLayout row = new LinearLayout(mActivity);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, mUi.dp(8), 0, mUi.dp(8));
-
-        if (mPage != null) {
-            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
-                    mUi.dp(22), mUi.dp(22));
-            blp.leftMargin = mUi.dp(4);
-            blp.rightMargin = mUi.dp(8);
-            row.addView(Chrome.icon(mActivity, "left", 22, false, v -> show()), blp);
-        } else {
-            View mark = Chrome.icon(mActivity, "gear", 22, false, null);
-            LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(mUi.dp(22), mUi.dp(22));
-            mlp.rightMargin = mUi.dp(6);
-            mark.setLayoutParams(mlp);
-            row.addView(mark);
-        }
-
-        LinearLayout titles = new LinearLayout(mActivity);
-        titles.setOrientation(LinearLayout.VERTICAL);
-        titles.setLayoutParams(new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        TextView crumb = new TextView(mActivity);
-        // WT renders the trail as a single span: the ancestors dimmed, the leaf bright.
-        // Building it as one Spannable instead of concatenating two resources also removes the
-        // dependency on leading/trailing spaces, which aapt2 trims unless the value is quoted -
-        // that trimming was why "설정 ›" and the page name ran together.
-        if (mPage == null) {
-            crumb.setText(AppStrings.s(R.string.i18n_0306));
-        } else {
-            String ancestor = AppStrings.s(R.string.i18n_0306);
-            String separator = "  \u203a  ";
-            String leaf = titleOf(mPage);
-            android.text.SpannableString trail =
-                    new android.text.SpannableString(ancestor + separator + leaf);
-            trail.setSpan(new android.text.style.ForegroundColorSpan(mUi.HINT),
-                    0, ancestor.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            trail.setSpan(new android.text.style.ForegroundColorSpan(mUi.TEXT),
-                    ancestor.length() + separator.length(), trail.length(),
-                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            crumb.setText(trail);
-        }
-        crumb.setTextColor(mUi.TEXT);
-        crumb.setTextSize(mPage == null ? 18 : 13);
-        crumb.setSingleLine(true);
-        crumb.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        UiFont.apply(crumb, mPage == null);
-        titles.addView(crumb);
-        row.addView(titles);
-
-        row.addView(Chrome.icon(mActivity, "close", 20, false, v -> {
-            if (mDialog != null) mDialog.dismiss();
-        }));
-        return row;
+        return SettingsHeader.build(mActivity, mUi, mPage,
+                this::show,
+                () -> {
+                    if (mDialog != null) mDialog.dismiss();
+                });
     }
 
-    private static String titleOf(String page) {
-        switch (page) {
-            case "start": return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0241);
-            case "profiles": return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0240);
-            case "appearance": return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0244);
-            case "schemes": return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0128);
-            case "interaction": return AppStrings.s(R.string.i18n_0247);
-            case "language": return AppStrings.s(R.string.i18n_0388);
-            default: return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0024);
-        }
-    }
+
 
     private View body() {
         LinearLayout col = new LinearLayout(mActivity);

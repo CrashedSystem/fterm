@@ -113,8 +113,12 @@ public class FontCoverageTest {
 
         String sheet = SettingsSources.all(System.getProperty("sheet.src",
                 "app/src/io/github/crashedsystem/terminal/SettingsSheet.java"));
-        check(sheet.contains("한글 글꼴"),
+        // The label is a resource key now; the Korean words are asserted in the XML.
+        check(sheet.contains("R.string.i18n_0126"),
                 "the setting is reachable by name in 모양");
+        String strings = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get("res/values/strings.xml")), "UTF-8");
+        check(strings.contains(">한글 글꼴<"), "and it is labelled 한글 글꼴");
         check(sheet.contains("Fonts.hangulCatalog("),
                 "from the Hangul list, not the Latin one");
         check(sheet.contains("onHangulFamily("),

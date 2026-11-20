@@ -153,11 +153,17 @@ public class SchemesTest {
         check(prefs.contains("setCursorColor"),
                 "and the override survives a restart");
 
+        // The labels live in res/values/strings.xml now, not inline in the page: the sheet
+        // was extracted into resources so the app could be translated. The assertion follows
+        // it there instead of looking for a Korean literal that is no longer in the source.
         String sheet = SettingsSources.all("app/src/io/github/crashedsystem/terminal/SettingsSheet.java");
-        check(sheet.contains("커서 색"),
+        String strings = read("res/values/strings.xml");
+        check(strings.contains(">커서 색<"),
                 "the setting is reachable by name in 모양");
-        check(sheet.contains("구성표 따름"),
+        check(strings.contains(">구성표 따름<"),
                 "with a named way back to the scheme's own colour");
+        check(sheet.contains("R.string.i18n_0138"),
+                "and 모양 labels the cursor colour row from that resource");
         check(sheet.contains("onCursorColor(0)"),
                 "which clears the override rather than writing black");
         check(sheet.contains("parseHex"),

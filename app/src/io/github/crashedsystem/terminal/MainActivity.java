@@ -154,57 +154,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         mRoot.setOrientation(LinearLayout.VERTICAL);
         mRoot.setBackgroundColor(0xff1e1e1e);
 
-        // Tab strip
-        mTabStrip = new LinearLayout(this);
-        mTabStrip.setOrientation(LinearLayout.HORIZONTAL);
-        mTabStrip.setGravity(Gravity.BOTTOM);
-        mTabStrip.setBackgroundColor(0xff2b2b2b);
-        mTabStrip.setPadding(dp(4), dp(2), dp(4), 0);
-
-        mTabScroll = new HorizontalScrollView(this);
-        mTabScroll.setHorizontalScrollBarEnabled(false);
-        mTabScroll.setFillViewport(false);
-        // wrap_content, not weight 1: the strip is then exactly as wide as its tabs, so the
-        // split button follows the last one. With weight 1 the + and the chevron sat at the
-        // far right of the window, which on a 12" tablet left over a thousand dp of empty bar
-        // between the last tab and the button that adds another.
-        mTabScroll.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)));
-        mTabScroll.addView(mTabStrip);
-
-        // WT's tab row, and nothing else.
-        //
-        // TitlebarControl.xaml is a ContentPresenter (the tabs) and then the window buttons;
-        // the only control in the row itself is TabRowControl's NewTabButton, which is a
-        // SplitButton: a plus that opens a tab, and a chevron that opens the dropdown. There is
-        // no hamburger anywhere in WT, and no gear - settings is a row inside that dropdown.
-        //
-        // This app had both, so the bar was three invented buttons wide and the tab strip lost
-        // the space. Removing them is not a simplification, it is the layout WT actually has.
-        View plus = Chrome.icon(this, "plus", 28, false, v -> newTab(true));
-        View drop = Chrome.icon(this, "chevron", 22, true, v -> showCommandMenu(v));
-        // Long-press "+" still opens the dropdown: it is the gesture that was here before, and
-        // it costs nothing to keep for a hand that has already learned it.
-        plus.setOnLongClickListener(v -> {
-            showCommandMenu(v);
-            return true;
-        });
-
-        LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(Gravity.BOTTOM);
-        top.setBackgroundColor(0xff2b2b2b);
-        top.setPadding(dp(2), 0, dp(2), 0);
-        top.addView(mTabScroll);
-        top.addView(plus);
-        // The chevron sits tight against the plus with no gap: the two halves read as one
-        // split button, which is what they are.
-        top.addView(drop);
-        // Whatever width is left belongs to the bar, not to a stretched-out strip.
-        top.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
-        top.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
-        mTopBar = top;
+        // Tab strip + split button, in TabBar: the row is its own layout, and this method
+        // was over the line budget the structure test enforces.
+        TabBar.Parts bar = TabBar.build(this, () -> newTab(true), this::showCommandMenu);
+        mTopBar = bar.top;
+        mTabStrip = bar.strip;
+        mTabScroll = bar.scroll;
 
         // Terminal
         mTermFrame = new FrameLayout(this);
@@ -239,7 +194,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // focus - the user asked for "tap the clipboard", not "it pastes itself".
         ClipboardImage.selfTestIfRequested(this);
 
-        mRoot.addView(top);
+        mRoot.addView(mTopBar);
         mFind = new FindBar(this, mTermView);
         mRoot.addView(mFind.view());
         mRoot.addView(mTermFrame);
@@ -545,32 +500,32 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
      */
     private void showTabMenu(Tab tab) {
         if (mChrome == null) return;
-        java.util.List<Chrome.Row> rows = new java.util.ArrayList<>();
-        int index = mTabs.indexOf(tab);
-        boolean many = mTabs.size() > 1;
-
-        rows.add(Chrome.Row.of("pencil", AppStrings.s(R.string.i18n_0380), null,
-                () -> renameTab(tab)));
-        rows.add(Chrome.Row.of("swatch", AppStrings.s(R.string.i18n_0381), null,
-                () -> chooseTabColor(tab)));
-        rows.add(Chrome.Row.of("terminal", AppStrings.s(R.string.i18n_0382), null,
-                () -> duplicateTab(tab)));
-        // Only the moves that exist are listed: a greyed row is something the user has to
-        // read and reject, and a menu that offers what is possible is shorter and never lies.
-        if (many && index > 0) {
-            rows.add(Chrome.Row.of("left", AppStrings.s(R.string.i18n_0383), null,
-                    () -> moveTab(tab, -1)));
-        }
-        if (many && index >= 0 && index < mTabs.size() - 1) {
-            rows.add(Chrome.Row.of("right", AppStrings.s(R.string.i18n_0384), null,
-                    () -> moveTab(tab, 1)));
-        }
-        rows.add(Chrome.Row.of("close", AppStrings.s(R.string.i18n_0385), null,
-                () -> confirmClose(tab)));
-
-        mChrome.tabMenu(tab.title, rows.toArray(new Chrome.Row[0]));
+        Chrome.Row[] rows = TabMenu.rowsFor(mTabs.indexOf(tab), mTabs.size(),
+                new TabMenu.Actions() {
+                    @Override public void rename() { renameTab(tab); }
+                    @Override public void chooseColor() {
+                        TabMenu.chooseColor(MainActivity.this, tab, () -> updateChip(tab));
+                    }
+                    @Override public void duplicate() {
+                        // A duplicate is a new session with the same title and colour; two
+                        // views of one PTY would fight over the cursor and the window size.
+                        newTab(tab.profile, true);
+                        Tab fresh = mActive;
+                        if (fresh != null && fresh != tab) {
+                            fresh.title = tab.title;
+                            fresh.userTitled = tab.userTitled;
+                            fresh.color = tab.color;
+                            updateChip(fresh);
+                        }
+                    }
+                    @Override public void move(int delta) {
+                        TabMenu.move(mTabs, mTabStrip, tab, delta,
+                                () -> { for (Tab t : mTabs) updateChip(t); });
+                    }
+                    @Override public void close() { confirmClose(tab); }
+                });
+        mChrome.tabMenu(tab.title, rows);
     }
-
 
     /** Rename one tab, not necessarily the active one. */
     private void renameTab(Tab tab) {
@@ -580,76 +535,6 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             tab.userTitled = true;
             updateChip(tab);
         });
-    }
-
-    /**
-     * Pick a fill for one tab.
-     *
-     * <p>Presets rather than a colour wheel: a tab mark is a mnemonic (this one is "the build",
-     * that one is "the server"), and eight named swatches pick a mnemonic faster than a
-     * wheel does. Zero is offered first so the choice can be undone.
-     */
-    private void chooseTabColor(Tab tab) {
-        final String[] names = {
-                AppStrings.s(R.string.i18n_0387),   // 기본
-                "Blue", "Green", "Purple", "Orange", "Red", "Teal", "Gray",
-        };
-        final int[] values = {0, 0xff1f4e79, 0xff1f5c3a, 0xff4b3a7a, 0xff7a4a1f,
-                0xff6e2424, 0xff1f5f5f, 0xff3a3f45};
-        int checked = 0;
-        for (int i = 0; i < values.length; i++) if (values[i] == tab.color) checked = i;
-        new AlertDialog.Builder(this)
-                .setTitle(AppStrings.s(R.string.i18n_0381))
-                .setSingleChoiceItems(names, checked, (d, which) -> {
-                    tab.color = values[which];
-                    updateChip(tab);
-                    d.dismiss();
-                })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
-                .show();
-    }
-
-    /**
-     * Open another tab on the same profile, directory and shell.
-     *
-     * <p>A duplicate is a new session, not a second view of the first one: two views of one
-     * PTY would fight over the cursor and the window size. The point is "the same setup, in
-     * another shell" - so the profile is copied and the session is fresh.
-     */
-    private void duplicateTab(Tab tab) {
-        // A duplicate meant "this tab with its name and colour" when it was opened by hand
-        // from a profile; a shell-named tab has no profile to copy, so the copy is a plain
-        // default tab that carries the same title and colour.
-        Profiles.Profile source = tab.profile;
-        newTab(source, true);
-        Tab fresh = mActive;
-        if (fresh != null && fresh != tab) {
-            fresh.title = tab.title;
-            fresh.userTitled = tab.userTitled;
-            fresh.color = tab.color;
-            updateChip(fresh);
-        }
-    }
-
-    /**
-     * Move a tab one slot left ({@code delta = -1}) or right (+1).
-     *
-     * <p>The strip is a LinearLayout, so the view has to move too - reordering only the list
-     * would leave the screen disagreeing with the model, and the next paint would move the
-     * tab back.
-     */
-    private void moveTab(Tab tab, int delta) {
-        int from = mTabs.indexOf(tab);
-        int to = from + delta;
-        if (from < 0 || to < 0 || to >= mTabs.size()) return;
-        mTabs.remove(from);
-        mTabs.add(to, tab);
-
-        if (tab.plate != null) {
-            mTabStrip.removeView(tab.plate);
-            mTabStrip.addView(tab.plate, to);
-        }
-        for (Tab t : mTabs) updateChip(t);
     }
 
     /** Re-tint and re-build every tab's mark after the tab icon preference changes. */
@@ -679,7 +564,6 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 palette[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND],
                 Schemes.isOled(mScheme, mCustom), tab.color);
     }
-
 
     private void activate(Tab tab) {
         mActive = tab;
@@ -973,36 +857,15 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         clearSticky();
     }
 
-    /** Last time each escape sequence went out, for the flood guard below. */
-    private final java.util.HashMap<String, Long> mLastEscapeAt = new java.util.HashMap<>();
+    /** Flood guard for the key bar; see {@link KeyCodes#allow}. */
+    private final KeyCodes mKeyCodes = new KeyCodes();
 
     private void sendEscape(String what) {
         TerminalSession s = mActive == null ? null : mActive.session;
         if (s == null || s.getEmulator() == null) return;
-        // Flood guard: a key source gone bad (a touch listener firing on MOVE, a keyboard
-        // driver stuck on repeat) can push hundreds of the same sequence per second - the
-        // measured "18:15:52, 200 frames/sec for 9s" flood. Same sequence within 40ms is
-        // a synthetic duplicate, not a human keypress: drop it. Hold-to-repeat in the key
-        // bar fires every 60ms and stays above this floor.
-        long now = android.os.SystemClock.uptimeMillis();
-        Long last = mLastEscapeAt.get(what);
-        if (last != null && now - last < 40) return;
-        mLastEscapeAt.put(what, now);
-        TerminalEmulator e = s.getEmulator();
-        int code;
-        switch (what) {
-            case "tab": code = KeyEvent.KEYCODE_TAB; break;
-            case "esc": code = KeyEvent.KEYCODE_ESCAPE; break;
-            case "up": code = KeyEvent.KEYCODE_DPAD_UP; break;
-            case "down": code = KeyEvent.KEYCODE_DPAD_DOWN; break;
-            case "left": code = KeyEvent.KEYCODE_DPAD_LEFT; break;
-            case "right": code = KeyEvent.KEYCODE_DPAD_RIGHT; break;
-            case "home": code = KeyEvent.KEYCODE_MOVE_HOME; break;
-            case "end": code = KeyEvent.KEYCODE_MOVE_END; break;
-            case "pgup": code = KeyEvent.KEYCODE_PAGE_UP; break;
-            case "pgdn": code = KeyEvent.KEYCODE_PAGE_DOWN; break;
-            default: return;
-        }
+        int code = KeyCodes.codeFor(what);
+        if (code < 0) return;
+        if (!mKeyCodes.allow(what)) return;
         mTermView.handleKeyCode(code, 0);
         clearSticky();
     }
@@ -1398,7 +1261,6 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             mActive.session.write(text);
         }
     }
-
 
     // logging, routed nowhere in release
     @Override public void logError(String t, String m) { android.util.Log.e(t, m); }

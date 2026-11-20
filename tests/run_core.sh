@@ -31,6 +31,8 @@ javac -nowarn -d "$OUT" \
   "$CORE/TerminalSessionClient.java" \
   "$ROOT/tests/corestub/com/termux/terminal/TerminalSession.java" \
   "$ROOT/tests/corestub/io/github/crashedsystem/terminal/Fonts.java" \
+  "$ROOT/tests/corestub/io/github/crashedsystem/terminal/AppStrings.java" \
+  "$ROOT/tests/corestub/io/github/crashedsystem/terminal/R.java" \
   "$CORE/TerminalOutput.java" \
   "$ROOT/tests/jvm/core/WidthTest.java" \
   "$ROOT/tests/jvm/core/ScreenTest.java" \
@@ -70,12 +72,15 @@ javac -nowarn -d "$OUT" \
 
 
 echo "[2/3] 실행"
-java -cp "$OUT" WidthTest
-java -cp "$OUT" ScreenTest
-java -cp "$OUT" SchemesTest
-java -cp "$OUT" CustomSchemesTest
-java -cp "$OUT" BackgroundTest
-java -cp "$OUT" SchemeJsonTest
+# The AppStrings stub reads res/values/strings.xml through -Dmain.src so a test that asserts
+# on a label checks the shipped text. Defined once so no run can silently miss it.
+SRC_ARGS="-Dmain.src=$ROOT/app/src/io/github/crashedsystem/terminal/MainActivity.java"
+java $SRC_ARGS -cp "$OUT" WidthTest
+java $SRC_ARGS -cp "$OUT" ScreenTest
+java $SRC_ARGS -cp "$OUT" SchemesTest
+java $SRC_ARGS -cp "$OUT" CustomSchemesTest
+java $SRC_ARGS -cp "$OUT" BackgroundTest
+java $SRC_ARGS -cp "$OUT" SchemeJsonTest
 java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/terminal/MainActivity.java" \
   -Dclip.src="$ROOT/app/src/io/github/crashedsystem/terminal/ClipboardImage.java" -cp "$OUT" PasteTest
 java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/terminal/MainActivity.java" -cp "$OUT" FontsTest
@@ -90,9 +95,9 @@ java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/terminal/MainActivity.jav
   -Dnotifier.src="$ROOT/app/src/io/github/crashedsystem/terminal/Notifier.java" -cp "$OUT" NotifyTest
 java -Droot="$ROOT" -cp "$OUT" com.termux.terminal.FocusTest
 java -Droot="$ROOT" -cp "$OUT" KeyBarPrefsTest
-java -cp "$OUT" ProfilesTest
-java -cp "$OUT" ProfileTabTest
-java -cp "$OUT" SearchTest
+java $SRC_ARGS -cp "$OUT" ProfilesTest
+java $SRC_ARGS -cp "$OUT" ProfileTabTest
+java $SRC_ARGS -cp "$OUT" SearchTest
 java -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" RetroTest
 java -Dhangul.src="$ROOT/assets/fonts/PretendardHangul.ttf" \
      -Dlatin.src="$ROOT/assets/fonts/Iosevka.ttf" \

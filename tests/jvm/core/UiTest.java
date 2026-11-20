@@ -21,11 +21,17 @@ public class UiTest {
                         "app/src/io/github/crashedsystem/terminal/MainActivity.java"))), "UTF-8");
 
         // Dropdown: WT's tab row has no hamburger. What it has is a SplitButton - a plus that
-        // opens a tab, and a chevron beside it that opens the dropdown.
-        check(src.contains("showCommandMenu(v)"), "the tab bar has a dropdown trigger");
-        check(src.contains("plus.setOnLongClickListener"), "long-press on + opens it");
-        check(src.contains("Chrome.icon(this, \"chevron\""), "the trigger is the split button's chevron");
-        check(!src.contains("Chrome.icon(this, \"menu\""), "and not an invented hamburger");
+        // opens a tab, and a chevron beside it that opens the dropdown. The row itself moved
+        // to TabBar when the activity had to shrink below its line budget, so the shape is
+        // asserted there and the activity is checked for wiring it up.
+        String bar = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get("app/src/io/github/crashedsystem/terminal/TabBar.java")), "UTF-8");
+        check(bar.contains("\"chevron\""), "the tab bar has a dropdown trigger");
+        check(bar.contains("setOnLongClickListener"), "long-press on + opens it");
+        check(bar.contains("\"plus\""), "and the split button's other half opens a tab");
+        check(!bar.contains("\"menu\""), "and not an invented hamburger");
+        check(src.contains("TabBar.build("), "the activity builds the row from TabBar");
+        check(src.contains("this::showCommandMenu"), "and hands it the dropdown action");
 
         // A phone has no Ctrl+Shift+P, so the same commands must be on the menu. The menu
         // itself moved to Chrome.java, so the labels are checked where they live now.
@@ -39,8 +45,20 @@ public class UiTest {
         // had to shrink below its line budget, so the assertions follow it there.
         check(src.contains("KEYCODE_P") && src.contains("showCommandPalette()"),
                 "Ctrl+Shift+P opens the palette");
-        for (String cmd : new String[]{"새 탭 열기", "탭 닫기", "다음 탭", "글자 크기 키우기"}) {
-            check(chrome.contains(cmd), "the palette lists: " + cmd);
+        // The palette entries are resource keys now. Assert the key the code names and the
+        // word the user reads, separately - a test that only looked at the source would pass
+        // on an id, and one that only looked at the XML would not prove the palette uses it.
+        String strings = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get("res/values/strings.xml")), "UTF-8");
+        String[][] palette = {
+                {"i18n_0059", "새 탭 열기"},
+                {"i18n_0060", "탭 닫기"},
+                {"i18n_0062", "다음 탭"},
+                {"i18n_0064", "글자 크기 키우기"},
+        };
+        for (String[] cmd : palette) {
+            check(chrome.contains("R.string." + cmd[0]), "the palette lists: " + cmd[1]);
+            check(strings.contains(">" + cmd[1] + "<"), "and says it: " + cmd[1]);
         }
         check(chrome.contains("getFilter().filter"), "the palette is searchable");
 

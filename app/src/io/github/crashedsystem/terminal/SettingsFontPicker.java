@@ -23,10 +23,10 @@ import android.widget.TextView;
  */
 final class SettingsFontPicker {
 
-    private final SettingsSheet mSheet;
-    private final SettingsSheet.Host mHost;
-    private final Activity mActivity;
-    private final SettingsUi mUi;
+    final SettingsSheet mSheet;
+    final SettingsSheet.Host mHost;
+    final Activity mActivity;
+    final SettingsUi mUi;
 
     SettingsFontPicker(SettingsSheet sheet) {
         mSheet = sheet;
@@ -74,7 +74,7 @@ final class SettingsFontPicker {
         install.addView(installLabel);
         install.setOnClickListener(v -> {
             if (holder[0] != null) holder[0].dismiss();
-            installFont();
+            new SettingsFontInstall(this).show();
         });
         box.addView(install);
         box.addView(mUi.hairline(mUi.dp(12), mUi.dp(0)));
@@ -148,17 +148,53 @@ final class SettingsFontPicker {
      * conjoining jamo - the jamo line is what tells the user whether the face can follow an
      * IME, which the bundled Pretendard cannot.
      */
-    /**
-     * Pick the face for Japanese and Chinese text.
-     *
-     * <p>Same dialog shape as the Korean picker, and for the same reason: the only
-     * requirement is glyph coverage, so the list is built by asking each face rather than by
-     * naming fonts in code. The first row is the platform fallback, which is the default and
-     * the one that costs no memory.
-     */
+    /** Korean syllables: jamo coverage is marked, because the bundled face lacks it. */
+    void chooseHangulFont() {
+        chooseScript(new Script(
+                R.string.i18n_0126,
+                () -> Fonts.hangulCatalog(mActivity),
+                mHost::hangulFamily,
+                mHost::onHangulFamily,
+                bundled -> AppStrings.s(bundled ? R.string.i18n_0176 : R.string.i18n_0177),
+                f -> Fonts.faceHasJamo(mActivity, f)
+                        ? f.label + AppStrings.s(R.string.i18n_0179) : f.label,
+                (v, f) -> v.setTypeface(faceForHangul(f)),
+                Fonts::rescan));
+    }
+
+    /** Japanese and Chinese: kana and Han together, so a face answering one is not offered. */
     void chooseCjkFont() {
-        final java.util.List<Fonts.Face> faces = Fonts.cjkCatalog(mActivity);
-        String current = mHost.cjkFamily();
+        chooseScript(new Script(
+                R.string.i18n_0397,
+                () -> Fonts.cjkCatalog(mActivity),
+                mHost::cjkFamily,
+                mHost::onCjkFamily,
+                bundled -> "\u3042\u30a2\u4e00\u6f22",
+                f -> f.label,
+                (v, f) -> {
+                    if (f.path == null) return;
+                    try {
+                        v.setTypeface(android.graphics.Typeface.createFromFile(f.path));
+                    } catch (Throwable ignored) {
+                    }
+                },
+                Fonts::rescanCjk));
+    }
+
+    /**
+     * Pick the face for one script.
+     *
+     * <p>Korean and CJK are the same dialog three times over - a row per face, a sample in
+     * that face, the current one marked - so they share this. Only the sample text, the label
+     * and the setter differ, and those are the descriptor.
+     *
+     * <p>The filter for both lists is glyph coverage rather than a fixed advance: they are
+     * drawn per code point at a scale derived from the cell, so a proportional face is correct
+     * here and would be wrong as the Latin face.
+     */
+    private void chooseScript(Script script) {
+        final java.util.List<Fonts.Face> faces = script.faces.get();
+        final String current = script.current.get();
 
         LinearLayout box = new LinearLayout(mActivity);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -176,24 +212,19 @@ final class SettingsFontPicker {
             row.setClickable(true);
 
             TextView sample = new TextView(mActivity);
-            // Kana and Han together: a face that answers one and not the other is the exact
-            // failure this picker exists to avoid.
-            sample.setText("\u3042\u30a2\u4e00\u6f22");
+            // The first row is the bundled face, which answers syllables but not jamo; the
+            // sample spells that difference out instead of leaving it to the label.
+            sample.setText(script.sample.apply(i == 0));
             sample.setTextSize(15);
             sample.setTextColor(mUi.TEXT);
-            if (f.path != null) {
-                try {
-                    sample.setTypeface(android.graphics.Typeface.createFromFile(f.path));
-                } catch (Throwable ignored) {
-                }
-            }
+            script.face.accept(sample, f);
             sample.setSingleLine(true);
             sample.setLayoutParams(new LinearLayout.LayoutParams(0,
                     ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             row.addView(sample);
 
             TextView name = new TextView(mActivity);
-            name.setText(f.label);
+            name.setText(script.label.apply(f));
             name.setTextSize(11);
             name.setTextColor(f.id.equals(current) ? mUi.ACCENT : mUi.HINT);
             name.setPadding(0, 0, mUi.dp(10), 0);
@@ -202,7 +233,7 @@ final class SettingsFontPicker {
             if (f.id.equals(current)) row.addView(Chrome.icon(mActivity, "check", 16, false, null));
 
             row.setOnClickListener(v -> {
-                mHost.onCjkFamily(f.id);
+                script.set.accept(f.id);
                 if (holder[0] != null) holder[0].dismiss();
                 mSheet.render();
             });
@@ -217,87 +248,49 @@ final class SettingsFontPicker {
                 ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(340)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0397))
+                .setTitle(AppStrings.s(script.title))
                 .setView(scroll)
                 .setPositiveButton(AppStrings.s(R.string.i18n_0175), (d, w) -> {
-                    Fonts.rescanCjk();
+                    script.rescan.run();
                     mSheet.render();
-                    chooseCjkFont();
+                    chooseScript(script);
                 })
+                .setNeutralButton(AppStrings.s(R.string.i18n_0180),
+                        (d, w) -> new SettingsFontInstall(this).show())
                 .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
                 .create();
         holder[0].show();
     }
 
-    void chooseHangulFont() {
-        final java.util.List<Fonts.Face> faces = Fonts.hangulCatalog(mActivity);
-        String current = mHost.hangulFamily();
+    /** What differs between the Korean and CJK pickers: the list, the sample, the setter. */
+    private static final class Script {
+        final int title;
+        final java.util.function.Supplier<java.util.List<Fonts.Face>> faces;
+        final java.util.function.Supplier<String> current;
+        final java.util.function.Consumer<String> set;
+        final java.util.function.Function<Boolean, String> sample;
+        final java.util.function.Function<Fonts.Face, String> label;
+        final java.util.function.BiConsumer<TextView, Fonts.Face> face;
+        final Runnable rescan;
 
-        LinearLayout box = new LinearLayout(mActivity);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(mUi.dp(8), mUi.dp(4), mUi.dp(8), 0);
-
-        final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
-
-        for (int i = 0; i < faces.size(); i++) {
-            final Fonts.Face f = faces.get(i);
-            LinearLayout row = new LinearLayout(mActivity);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(mUi.dp(12), mUi.dp(11), mUi.dp(12), mUi.dp(11));
-            row.setBackground(mUi.touchable());
-            row.setClickable(true);
-
-            TextView sample = new TextView(mActivity);
-            sample.setText(i == 0 ? io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0176) : io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0177));
-            sample.setTextSize(15);
-            sample.setTextColor(mUi.TEXT);
-            sample.setTypeface(faceForHangul(f));
-            sample.setSingleLine(true);
-            sample.setLayoutParams(new LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            row.addView(sample);
-
-            TextView name = new TextView(mActivity);
-            // io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0178) marks a face whose own cmap has conjoining jamo. The bundled Pretendard
-            // does not - syllables only - and the platform fills the gap with a fallback face,
-            // so the mark is about which font draws the text, not about whether it appears.
-            name.setText(Fonts.faceHasJamo(mActivity, f) ? f.label + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0179) : f.label);
-            name.setTextSize(11);
-            name.setTextColor(f.id.equals(current) ? mUi.ACCENT : mUi.HINT);
-            name.setPadding(0, 0, mUi.dp(10), 0);
-            row.addView(name);
-
-            if (f.id.equals(current)) row.addView(Chrome.icon(mActivity, "check", 16, false, null));
-
-            row.setOnClickListener(v -> {
-                mHost.onHangulFamily(f.id);
-                if (holder[0] != null) holder[0].dismiss();
-                mSheet.render();
-            });
-            box.addView(row);
-            if (i < faces.size() - 1) box.addView(mUi.hairline(mUi.dp(12), mUi.dp(0)));
+        Script(int title, java.util.function.Supplier<java.util.List<Fonts.Face>> faces,
+               java.util.function.Supplier<String> current,
+               java.util.function.Consumer<String> set,
+               java.util.function.Function<Boolean, String> sample,
+               java.util.function.Function<Fonts.Face, String> label,
+               java.util.function.BiConsumer<TextView, Fonts.Face> face,
+               Runnable rescan) {
+            this.title = title;
+            this.faces = faces;
+            this.current = current;
+            this.set = set;
+            this.sample = sample;
+            this.label = label;
+            this.face = face;
+            this.rescan = rescan;
         }
-
-        ScrollView scroll = new ScrollView(mActivity);
-        scroll.setFillViewport(true);
-        scroll.addView(box);
-        scroll.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(340)));
-
-        holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0126))
-                .setView(scroll)
-                .setPositiveButton(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0175), (d, w) -> {
-                    Fonts.rescan();
-                    mSheet.render();
-                    chooseHangulFont();
-                })
-                .setNeutralButton(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0180), (d, w) -> installFont())
-                .setNegativeButton(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0029), null)
-                .create();
-        holder[0].show();
     }
+
 
     /**
      * Every way a font gets in, in one dialog.
@@ -312,256 +305,6 @@ final class SettingsFontPicker {
      * a directory scan on the far end; doing it on the UI thread is the freeze that makes a
      * settings screen feel broken.
      */
-    private void installFont() {
-        LinearLayout box = new LinearLayout(mActivity);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(mUi.dp(8), mUi.dp(6), mUi.dp(8), 0);
-
-        LinearLayout status = new LinearLayout(mActivity);
-        status.setOrientation(LinearLayout.VERTICAL);
-        status.setPadding(mUi.dp(12), mUi.dp(4), mUi.dp(12), mUi.dp(8));
-        box.addView(status);
-
-        TextView loading = new TextView(mActivity);
-        loading.setText(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0181));
-        loading.setTextColor(mUi.HINT);
-        loading.setTextSize(12);
-        status.addView(loading);
-
-        final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
-
-        LinearLayout device = new LinearLayout(mActivity);
-        device.setOrientation(LinearLayout.HORIZONTAL);
-        device.setGravity(Gravity.CENTER_VERTICAL);
-        device.setPadding(mUi.dp(12), mUi.dp(12), mUi.dp(12), mUi.dp(12));
-        device.setBackground(mUi.touchable());
-        device.setClickable(true);
-        device.addView(Chrome.icon(mActivity, "folder", 16, false, null));
-        TextView deviceLabel = new TextView(mActivity);
-        deviceLabel.setText(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0182));
-        deviceLabel.setTextColor(mUi.TEXT);
-        deviceLabel.setTextSize(13);
-        deviceLabel.setPadding(mUi.dp(10), 0, 0, 0);
-        device.addView(deviceLabel);
-        device.setOnClickListener(v -> {
-            if (holder[0] != null) holder[0].dismiss();
-            fontImport();
-        });
-        box.addView(device);
-        box.addView(mUi.hairline(mUi.dp(12), mUi.dp(0)));
-
-        LinearLayout url = new LinearLayout(mActivity);
-        url.setOrientation(LinearLayout.HORIZONTAL);
-        url.setGravity(Gravity.CENTER_VERTICAL);
-        url.setPadding(mUi.dp(12), mUi.dp(12), mUi.dp(12), mUi.dp(12));
-        url.setBackground(mUi.touchable());
-        url.setClickable(true);
-        url.addView(Chrome.icon(mActivity, "cloud", 16, false, null));
-        TextView urlLabel = new TextView(mActivity);
-        urlLabel.setText(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0183));
-        urlLabel.setTextColor(mUi.TEXT);
-        urlLabel.setTextSize(13);
-        urlLabel.setPadding(mUi.dp(10), 0, 0, 0);
-        url.addView(urlLabel);
-        url.setOnClickListener(v -> {
-            if (holder[0] != null) holder[0].dismiss();
-            fontFromUrl();
-        });
-        box.addView(url);
-        box.addView(mUi.hairline(mUi.dp(12), mUi.dp(0)));
-
-        ScrollView scroll = new ScrollView(mActivity);
-        scroll.addView(box);
-        scroll.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(360)));
-
-        holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0184))
-                .setView(scroll)
-                .setNegativeButton(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0029), null)
-                .create();
-        holder[0].show();
-
-        new Thread(() -> {
-            final java.util.List<com.termux.terminal.DaemonClient.RemoteFont> remote;
-            final String error;
-            try {
-                remote = com.termux.terminal.DaemonClient.fonts(
-                        mHost.daemonHost(), mHost.daemonPort(), mHost.daemonToken(), 4000);
-                error = null;
-            } catch (com.termux.terminal.DaemonClient.Failure f) {
-                mActivity.runOnUiThread(() -> reportFonts(status, loading, null, f.getMessage()));
-                return;
-            }
-            mActivity.runOnUiThread(() -> reportFonts(status, loading, remote, error));
-        }, "fterm-font-list").start();
-    }
-
-    /**
-     * Replace the "looking…" line with what Termux has, or with why it could not be asked.
-     *
-     * <p>A daemon that cannot be reached is not an error worth a modal: the other two ways in
-     * still work, so the message says so and stays out of the way.
-     */
-    private void reportFonts(LinearLayout status, TextView loading,
-                             java.util.List<com.termux.terminal.DaemonClient.RemoteFont> fonts,
-                             String error) {
-        status.removeAllViews();
-        if (error != null) {
-            TextView t = new TextView(mActivity);
-            t.setText(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0185) + error);
-            t.setTextColor(mUi.HINT);
-            t.setTextSize(11);
-            status.addView(t);
-            return;
-        }
-        if (fonts == null || fonts.isEmpty()) {
-            TextView t = new TextView(mActivity);
-            t.setText(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0186)
-                    + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0187));
-            t.setTextColor(mUi.HINT);
-            t.setTextSize(11);
-            status.addView(t);
-            return;
-        }
-        TextView head = new TextView(mActivity);
-        head.setText(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0188) + fonts.size() + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0189));
-        head.setTextColor(mUi.HINT);
-        head.setTextSize(11);
-        status.addView(head);
-        for (com.termux.terminal.DaemonClient.RemoteFont f : fonts) {
-            LinearLayout row = new LinearLayout(mActivity);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(mUi.dp(12), mUi.dp(10), mUi.dp(12), mUi.dp(10));
-            row.setBackground(mUi.touchable());
-            row.setClickable(true);
-
-            TextView name = new TextView(mActivity);
-            name.setText(f.name());
-            name.setTextColor(mUi.TEXT);
-            name.setTextSize(12.5f);
-            name.setSingleLine(true);
-            name.setLayoutParams(new LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            row.addView(name);
-
-            TextView size = new TextView(mActivity);
-            size.setText((f.size / 1024) + " KB");
-            size.setTextColor(mUi.HINT);
-            size.setTextSize(10.5f);
-            row.addView(size);
-
-            row.setOnClickListener(v -> pullFromTermux(f));
-            status.addView(row);
-        }
-    }
-
-    /** Fetch one Termux-side font and install it as if it had been picked locally. */
-    private void pullFromTermux(com.termux.terminal.DaemonClient.RemoteFont f) {
-        android.widget.Toast.makeText(mActivity, f.name() + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0190),
-                android.widget.Toast.LENGTH_SHORT).show();
-        new Thread(() -> {
-            final Fonts.Import result;
-            try {
-                byte[] data = com.termux.terminal.DaemonClient.font(
-                        mHost.daemonHost(), mHost.daemonPort(), mHost.daemonToken(),
-                        f.path, 8000);
-                result = Fonts.install(mActivity, f.name(), data);
-            } catch (com.termux.terminal.DaemonClient.Failure e) {
-                mActivity.runOnUiThread(() -> showFontError(e.getMessage()));
-                return;
-            }
-            mActivity.runOnUiThread(() -> applyImported(result));
-        }, "fterm-font-get").start();
-    }
-
-    /** A URL for the daemon to download, because this app has no way to fetch one itself. */
-    private void fontFromUrl() {
-        mUi.prompt(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0191), "", "https://example.com/MyFont.ttf",
-                io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0192)
-                        + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0193),
-                v -> {
-                    if (v.isEmpty()) return;
-                    if (!v.startsWith("http://") && !v.startsWith("https://")) {
-                        showFontError(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0194));
-                        return;
-                    }
-                    android.widget.Toast.makeText(mActivity, io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0195),
-                            android.widget.Toast.LENGTH_SHORT).show();
-                    new Thread(() -> {
-                        final Fonts.Import result;
-                        try {
-                            String path = com.termux.terminal.DaemonClient.fetchFont(
-                                    mHost.daemonHost(), mHost.daemonPort(), mHost.daemonToken(),
-                                    v, 12000);
-                            byte[] data = com.termux.terminal.DaemonClient.font(
-                                    mHost.daemonHost(), mHost.daemonPort(), mHost.daemonToken(),
-                                    path, 8000);
-                            String name = path.substring(path.lastIndexOf('/') + 1);
-                            result = Fonts.install(mActivity, name, data);
-                        } catch (com.termux.terminal.DaemonClient.Failure e) {
-                            mActivity.runOnUiThread(() -> showFontError(e.getMessage()));
-                            return;
-                        }
-                        mActivity.runOnUiThread(() -> applyImported(result));
-                    }, "fterm-font-url").start();
-                });
-    }
-
-    private void showFontError(String message) {
-        new android.app.AlertDialog.Builder(mActivity)
-                .setTitle(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0124))
-                .setMessage(message)
-                .setPositiveButton(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0172), null)
-                .show();
-    }
-
-    /**
-     * Install a font, select it, and reopen the picker it belongs in.
-     *
-     * <p>A Korean font is proportional, so the Latin list can never contain it - reopening
-     * that list after installing one would show a list the new row is not in and read as a
-     * failed install. The rule is the same one {@link Fonts#adopt} uses to accept the file.
-     */
-    private void applyImported(Fonts.Import imported) {
-        if (imported.id == null) {
-            showFontError(imported.reason);
-            return;
-        }
-        // Three destinations, not two. A CJK face is proportional like a Korean one, so the
-        // old "latin or hangul" split filed a Japanese font as the Korean face - which then
-        // rendered nothing, because it has no Hangul glyphs. The file is asked what it
-        // actually covers, in the order that matches the pickers.
-        boolean latin = Fonts.isLatinFace(imported.id);
-        if (latin) {
-            mHost.onFontFamily(imported.id);
-            mSheet.render();
-            chooseFont();
-            return;
-        }
-        String path = imported.id.startsWith(Fonts.FILE_PREFIX)
-                ? imported.id.substring(Fonts.FILE_PREFIX.length()) : null;
-        java.io.File file = path == null ? null : new java.io.File(path);
-        if (file != null && Fonts.hasHangul(file) && !Fonts.hasCjk(file)) {
-            mHost.onHangulFamily(imported.id);
-            mSheet.render();
-            chooseHangulFont();
-            return;
-        }
-        if (file != null && Fonts.hasCjk(file)) {
-            mHost.onCjkFamily(imported.id);
-            mSheet.render();
-            chooseCjkFont();
-            return;
-        }
-        // Neither: treat it as the Korean face, which is where a proportional font with no
-        // CJK coverage belongs on this app.
-        mHost.onHangulFamily(imported.id);
-        mSheet.render();
-        chooseHangulFont();
-    }
-
     /**
      * Import a font file the user picked, by copying it into app storage.
      *
@@ -578,7 +321,7 @@ final class SettingsFontPicker {
      */
     private static final int REQ_IMPORT_FONT = 0x4f4e;
 
-    private void fontImport() {
+    void fontImport() {
         android.content.Intent i = new android.content.Intent(
                 android.content.Intent.ACTION_OPEN_DOCUMENT);
         i.addCategory(android.content.Intent.CATEGORY_OPENABLE);
@@ -610,7 +353,7 @@ final class SettingsFontPicker {
         if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) return;
         // The reason, not a shrug: a wrong file and a broken picker need different responses
         // from the user, and "could not read that" reads as the latter.
-        applyImported(Fonts.importFont(mActivity, data.getData()));
+        new SettingsFontInstall(this).onImported(Fonts.importFont(mActivity, data.getData()));
     }
 
     /** The actual face for one catalog entry, so the sample is the font and not a lookalike. */

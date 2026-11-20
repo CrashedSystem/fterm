@@ -64,7 +64,7 @@ public class CustomSchemesTest {
         int[] legacy = slots(1);
         io.github.crashedsystem.terminal.CustomSchemes store =
                 io.github.crashedsystem.terminal.CustomSchemes.fromLegacy(
-                        io.github.crashedsystem.terminal.CustomSchemes.DEFAULT_NAME, legacy);
+                        io.github.crashedsystem.terminal.CustomSchemes.defaultName(), legacy);
         eq(store.size(), 1, "the old palette becomes one scheme");
         eq(store.nameAt(0), "사용자 지정", "under the name the single slot carried");
         for (int i = 0; i < legacy.length; i++) {
