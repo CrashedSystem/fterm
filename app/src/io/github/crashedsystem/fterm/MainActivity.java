@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -685,7 +686,9 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
      * which is the view's own encoding for "off" - not a special case invented here.
      */
     void applyCursor() {
-        mTermView.setTerminalCursorBlinkerRate(mPrefs.cursorBlink() ? 500 : 0);
+        int rate = mPrefs.cursorBlink() ? 500 : 0;
+        boolean ok = mTermView.setTerminalCursorBlinkerRate(rate);
+        Log.d("TerminalView", "MainActivity.applyCursor: set rate=" + rate + " result=" + ok + " view=" + mTermView);
         mTermView.setTerminalCursorBlinkerState(true, true);
         if (mActive != null && mActive.session != null) {
             TerminalEmulator em = mActive.session.getEmulator();
