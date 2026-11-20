@@ -31,7 +31,7 @@ for elem in root.findall('string'):
 
 # find all string literals containing Hangul in java files
 lit_pattern = re.compile(r'"((?:[^"\\]|\\.)*)"')
-hangul_re = re.compile(r'[\uac00-\ud7a3]')
+hangul_re = re.compile('[\uac00-\ud7a3]')
 unique_literals = OrderedDict()  # decoded -> raw_literal_form
 
 # helper to decode Java string escapes
@@ -191,9 +191,19 @@ for jf in java_files:
 
 print(f'Replaced literals in {replacements} files')
 
-# Git: create branch and commit
+# Git: create branch and commit (idempotent)
 import subprocess
-subprocess.check_call(['git', 'checkout', '-b', 'i18n/extract-strings'])
+try:
+    subprocess.check_call(['git', 'rev-parse', '--verify', 'i18n/extract-strings'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.check_call(['git', 'checkout', 'i18n/extract-strings'])
+except subprocess.CalledProcessError:
+    subprocess.check_call(['git', 'checkout', '-b', 'i18n/extract-strings'])
 subprocess.check_call(['git', 'add', '.'])
-subprocess.check_call(['git', 'commit', '-m', 'i18n: extract Korean literals to res/values and AppStrings helper (auto)'])
-print('Committed to branch i18n/extract-strings')
+# commit only if there are staged changes
+st = subprocess.check_output(['git', 'diff', '--cached', '--name-only']).decode().strip()
+if st:
+    subprocess.check_call(['git', 'commit', '-m', 'i18n: extract Korean literals to res/values and AppStrings helper (auto)'])
+    print('Committed to branch i18n/extract-strings')
+else:
+    print('No changes to commit')
+
