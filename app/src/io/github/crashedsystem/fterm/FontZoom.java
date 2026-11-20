@@ -28,6 +28,18 @@ public final class FontZoom {
         return Math.max(MIN_DP, Math.min(MAX_DP, current * scale));
     }
 
+    /**
+     * The size as it is offered and stored: one decimal place, inside the allowed range.
+     *
+     * <p>One decimal, not whole dp: 12.5 is a size a person types and a size the renderer
+     * handles, and rounding it to 12 or 13 makes the field reject an answer it should take.
+     */
+    public static float oneDecimal(float size) {
+        if (Float.isNaN(size)) return DEFAULT_DP;
+        float clamped = Math.max(MIN_DP, Math.min(MAX_DP, size));
+        return Math.round(clamped * 10f) / 10f;
+    }
+
     /** The whole dp size to render at, for a fractional size. */
     public static int dp(float size) {
         return Math.max(MIN_DP, Math.min(MAX_DP, Math.round(size)));

@@ -122,6 +122,11 @@ final class SettingsSheet {
 
         void onCursorBlink(boolean on);
 
+        /** How long the cursor stays in each phase, in milliseconds. */
+        int cursorBlinkMs();
+
+        void onCursorBlinkMs(int ms);
+
         /** The daemon's address, for one-shot font questions. */
         String daemonHost();
 
@@ -138,6 +143,11 @@ final class SettingsSheet {
         String hangulFamily();
 
         void onHangulFamily(String id);
+
+        /** The Japanese/Chinese face id; empty means the platform fallback. */
+        String cjkFamily();
+
+        void onCjkFamily(String id);
 
         /** The directory new sessions start in; empty means the daemon's home. */
         String startDir();
@@ -316,13 +326,11 @@ final class SettingsSheet {
         row.setPadding(0, mUi.dp(8), 0, mUi.dp(8));
 
         if (mPage != null) {
-            row.addView(Chrome.icon(mActivity, "left", 22, false, v -> show()));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    mUi.dp(20), mUi.dp(20));
-            lp.leftMargin = mUi.dp(4);
-            lp.rightMargin = mUi.dp(8);
-            // Spacer keeps the title from sliding under the close glyph when the title is long.
-            row.addView(new View(mActivity), new LinearLayout.LayoutParams(0, 1, 0f));
+            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                    mUi.dp(22), mUi.dp(22));
+            blp.leftMargin = mUi.dp(4);
+            blp.rightMargin = mUi.dp(8);
+            row.addView(Chrome.icon(mActivity, "left", 22, false, v -> show()), blp);
         } else {
             View mark = Chrome.icon(mActivity, "gear", 22, false, null);
             LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(mUi.dp(22), mUi.dp(22));
@@ -337,9 +345,25 @@ final class SettingsSheet {
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView crumb = new TextView(mActivity);
-        // WT renders the trail as io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0305): the ancestors dimmed, the leaf bright.
-        // There is one level here, so the trail is the page name alone unless we are at root.
-        crumb.setText(mPage == null ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0306) : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0307) + titleOf(mPage));
+        // WT renders the trail as a single span: the ancestors dimmed, the leaf bright.
+        // Building it as one Spannable instead of concatenating two resources also removes the
+        // dependency on leading/trailing spaces, which aapt2 trims unless the value is quoted -
+        // that trimming was why "설정 ›" and the page name ran together.
+        if (mPage == null) {
+            crumb.setText(AppStrings.s(R.string.i18n_0306));
+        } else {
+            String ancestor = AppStrings.s(R.string.i18n_0306);
+            String separator = "  \u203a  ";
+            String leaf = titleOf(mPage);
+            android.text.SpannableString trail =
+                    new android.text.SpannableString(ancestor + separator + leaf);
+            trail.setSpan(new android.text.style.ForegroundColorSpan(mUi.HINT),
+                    0, ancestor.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            trail.setSpan(new android.text.style.ForegroundColorSpan(mUi.TEXT),
+                    ancestor.length() + separator.length(), trail.length(),
+                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            crumb.setText(trail);
+        }
         crumb.setTextColor(mUi.TEXT);
         crumb.setTextSize(mPage == null ? 18 : 13);
         crumb.setSingleLine(true);
@@ -360,7 +384,8 @@ final class SettingsSheet {
             case "profiles": return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0240);
             case "appearance": return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0244);
             case "schemes": return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0128);
-            case "interaction": return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0247);
+            case "interaction": return AppStrings.s(R.string.i18n_0247);
+            case "language": return AppStrings.s(R.string.i18n_0388);
             default: return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0024);
         }
     }
@@ -386,6 +411,7 @@ final class SettingsSheet {
         if ("appearance".equals(mPage)) return new SettingsAppearancePage(this);
         if ("schemes".equals(mPage)) return new SettingsSchemesPage(this);
         if ("interaction".equals(mPage)) return new SettingsInteractionPage(this);
+        if ("language".equals(mPage)) return new SettingsLanguagePage(this);
         return new SettingsAboutPage(this);
     }
 

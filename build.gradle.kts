@@ -100,6 +100,9 @@ val linkResources = tasks.register<Exec>("linkResources") {
     inputs.files(fileTree("assets") { include("fonts/*.ttf") })
     inputs.files(fileTree("licenses") { include("*.txt") })
     inputs.files("NOTICE.md", "LICENSE")
+    // The manifest is an input of the link step, not just a build-file read: without this,
+    // bumping versionCode left linkResources UP-TO-DATE and the APK kept the old version.
+    inputs.file("AndroidManifest.xml")
     inputs.dir("res")
     outputs.dir(layout.buildDirectory.dir("gen"))
     outputs.file(layout.buildDirectory.file("base.apk"))

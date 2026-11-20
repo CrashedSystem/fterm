@@ -26,6 +26,7 @@ final class SettingsRootPage extends SettingsPage {
         col.addView(navRow("pencil", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0244), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0245), "appearance"));
         col.addView(navRow("swatch", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0128), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0246), "schemes"));
         col.addView(navRow("keyboard", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0247), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0248), "interaction"));
+        col.addView(navRow("gear", AppStrings.s(R.string.i18n_0388), AppStrings.s(R.string.i18n_0391), "language"));
         col.addView(navRow("info", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0024), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0249), "about"));
     }
 

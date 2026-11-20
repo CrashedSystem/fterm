@@ -82,6 +82,12 @@ final class SettingsHost implements SettingsSheet.Host {
         a.applyCursor();
     }
 
+    @Override public int cursorBlinkMs() { return a.mPrefs.cursorBlinkMs(); }
+    @Override public void onCursorBlinkMs(int ms) {
+        a.mPrefs.setCursorBlinkMs(ms);
+        a.applyCursor();
+    }
+
     @Override public boolean retroEffect() { return a.mPrefs.retroEffect(); }
     @Override public void onRetroEffect(boolean on) {
         a.mPrefs.setRetroEffect(on);
@@ -99,6 +105,9 @@ final class SettingsHost implements SettingsSheet.Host {
 
     @Override public String hangulFamily() { return a.mPrefs.hangulFamily(); }
     @Override public void onHangulFamily(String id) { a.applyHangulFamily(id); }
+
+    @Override public String cjkFamily() { return a.mPrefs.cjkFamily(); }
+    @Override public void onCjkFamily(String id) { a.applyCjkFamily(id); }
 
     @Override public String startDir() { return a.mPrefs.startDir(); }
     @Override public void onStartDir(String dir) { a.mPrefs.setStartDir(dir); }

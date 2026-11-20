@@ -32,4 +32,6 @@ final class Tab {
     String pendingCommand;
     int id;
     boolean running;
+    /** A colour chosen for this tab's plate, or 0 to follow the active/inactive default. */
+    int color;
 }

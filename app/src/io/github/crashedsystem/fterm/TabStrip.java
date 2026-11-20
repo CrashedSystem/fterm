@@ -59,7 +59,7 @@ final class TabStrip {
      * platform's marquee is driven by the selected state, not by focus), and a bounded width -
      * a wrap_content TextView always has room for its text, so it has nothing to scroll.
      */
-    Chip create(String title, Runnable onActivate, Runnable onClose) {
+    Chip create(String title, Runnable onActivate, Runnable onClose, Runnable onMenu) {
         Chip chip = new Chip();
 
         LinearLayout plate = new LinearLayout(mActivity);
@@ -69,10 +69,14 @@ final class TabStrip {
         plate.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)));
         plate.setOnClickListener(v -> onActivate.run());
+        // Long press opens the tab's own menu (rename / colour / duplicate / move). It used
+        // to close the tab, which made the visible X redundant and turned a slip of the
+        // finger into a killed shell.
         plate.setOnLongClickListener(v -> {
-            onClose.run();
+            onMenu.run();
             return true;
         });
+        chip.plate = plate;
 
         // The icon is added by paint(), not here: paint is the one place that knows the
         // active state, and building it twice would show the dim glyph on the active tab
@@ -112,15 +116,19 @@ final class TabStrip {
         chip.plate = plate;
         chip.title = label;
         chip.close = close;
-        paint(chip, title, false, 0, false);
+        paint(chip, title, false, 0, false, 0);
         return chip;
     }
 
     /**
      * Active tab: the terminal's own background, so the plate and the pane are one surface.
      * Inactive: the bar's colour, dimmed text, and no close box.
+     *
+     * <p>{@code tabColor} is a colour the user picked for this tab, or 0 for the defaults. It
+     * replaces the fill only: the accent rule and the dimmed title still carry the active
+     * state, so a coloured tab does not have to guess which one is on screen.
      */
-    void paint(Chip chip, String title, boolean active, int termBg, boolean oled) {
+    void paint(Chip chip, String title, boolean active, int termBg, boolean oled, int tabColor) {
         if (chip == null || chip.title == null || chip.plate == null) return;
         chip.title.setText(title);
         // The marquee runs only on the active tab. The platform drives a marquee from the
@@ -135,8 +143,11 @@ final class TabStrip {
 
         GradientDrawable d = new GradientDrawable();
         // Inactive tabs are a slightly lighter gray than the bar so they read as tabs; the
-        // active one takes the terminal's own background and grows into the pane.
-        d.setColor(active ? termBg : (oled ? 0xff0a0a0a : 0xff303338));
+        // active one takes the terminal's own background and grows into the pane. A colour
+        // the user picked wins over both, so the tab can be marked without being active.
+        int fill = tabColor != 0 ? tabColor
+                : (active ? termBg : (oled ? 0xff0a0a0a : 0xff303338));
+        d.setColor(fill);
         d.setCornerRadii(new float[]{dp(7), dp(7), dp(7), dp(7), 0, 0, 0, 0});
         // A 2dp accent at the bottom of the active tab is the cue that survives a dark theme,
         // where the tab fill and the pane are the same colour by design.

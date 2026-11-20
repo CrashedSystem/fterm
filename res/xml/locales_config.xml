@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The languages this app ships, for Android 13+'s per-app language picker.
+
+  Without this file the system settings list ("앱 언어") does not show the app at all, so the
+  only way to change its language was the whole-device locale. Every `values-XX` directory
+  below must have an entry here or the picker will not offer it.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="ko" />
+    <locale android:name="en" />
+</locale-config>

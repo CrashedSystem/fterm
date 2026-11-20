@@ -34,7 +34,11 @@ import android.os.VibratorManager;
 final class Notifier {
 
     private static final String CHANNEL_ID = "fterm.notify";
-    private static final String CHANNEL_NAME = io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0035);
+    /** Resolved lazily: a static initializer can run before AppStrings holds a Context. */
+    private String channelName() {
+        String name = mContext.getString(R.string.i18n_0035);
+        return name == null || name.trim().isEmpty() ? "Shell notifications" : name;
+    }
 
     /** The service's notification owns low ids; these start where it cannot collide. */
     private static final int BASE_ID = 2000;
@@ -143,7 +147,7 @@ final class Notifier {
         if (nm == null) return;
         // DEFAULT, not LOW: this one is meant to be noticed, unlike the service's status line.
         NotificationChannel ch = new NotificationChannel(
-                CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+                CHANNEL_ID, channelName(), NotificationManager.IMPORTANCE_DEFAULT);
         ch.setShowBadge(true);
         nm.createNotificationChannel(ch);
     }

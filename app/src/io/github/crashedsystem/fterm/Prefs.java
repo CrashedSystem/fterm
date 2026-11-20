@@ -56,7 +56,7 @@ public final class Prefs {
     public CustomSchemes customSchemes() {
         String stored = sp().getString(CUSTOM_SCHEMES_KEY, null);
         if (stored != null) return CustomSchemes.decode(stored);
-        CustomSchemes out = CustomSchemes.fromLegacy(CustomSchemes.DEFAULT_NAME,
+        CustomSchemes out = CustomSchemes.fromLegacy(CustomSchemes.defaultName(),
                 legacyCustomSlots());
         setCustomSchemes(out.encode());
         return out;
@@ -138,6 +138,23 @@ public final class Prefs {
     public String hangulFamily() {
         return sp().getString("hangul_family", Fonts.HANGUL_ASSET_ID);
     }
+    /**
+     * The face for Japanese and Chinese text, or empty to let the platform choose.
+     *
+     * <p>Empty is the default on purpose: a terminal that prints an ASCII program should not
+     * have to load a 30 MB CJK face to be correct, and the platform's own fallback chain
+     * answer the occasional kanji. The setting exists because a device's fallback is often
+     * the wrong regional variant - a Korean phone picks the Korean glyph forms for Han - and
+     * a user reading Japanese wants the Japanese ones.
+     */
+    public String cjkFamily() {
+        return sp().getString("cjk_font", "");
+    }
+
+    public void setCjkFamily(String v) {
+        sp().edit().putString("cjk_font", v == null ? "" : v).apply();
+    }
+
     public void setHangulFamily(String v) {
         sp().edit().putString("hangul_family", v == null ? Fonts.HANGUL_ASSET_ID : v).apply();
     }
@@ -190,6 +207,7 @@ public final class Prefs {
     public void setBackIsEscape(boolean v) { sp().edit().putBoolean("back_escape", v).apply(); }
 
     public int cursorBlinkMs() { return sp().getInt("cursor_blink", 500); }
+    public void setCursorBlinkMs(int ms) { sp().edit().putInt("cursor_blink", ms).apply(); }
 
     /**
      * The cursor shape: 0 block, 1 underline, 2 bar. Stored as the emulator's own constants

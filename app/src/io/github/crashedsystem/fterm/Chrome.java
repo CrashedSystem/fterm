@@ -210,7 +210,7 @@ final class Chrome {
      * the WT menu read as one surface is exactly the three things that were lost: a glyph per
      * row, a shortcut column that really lines up, and hairlines between groups.
      */
-    private static final class Row {
+    static final class Row {
         final String glyph;
         final String label;
         final String shortcut;
@@ -218,7 +218,7 @@ final class Chrome {
         /** A rule instead of a row: the divider between groups. */
         final boolean divider;
 
-        private Row(String glyph, String label, String shortcut, Runnable action, boolean divider) {
+        Row(String glyph, String label, String shortcut, Runnable action, boolean divider) {
             this.glyph = glyph;
             this.label = label;
             this.shortcut = shortcut;
@@ -243,6 +243,69 @@ final class Chrome {
      * that never mentions them cannot teach its own gestures. Tapping a row is the primary path;
      * the hints are secondary.
      */
+    /**
+     * The menu a long-pressed tab opens.
+     *
+     * <p>Drawn with the same rows, plate and divider as {@link #menu(View)}: a tab menu that
+     * used the platform's AlertDialog list was a second visual language in the same app, and
+     * the one thing a menu must not do is look like it came from somewhere else.
+     *
+     * @param title  the tab's own title, used as the plate's heading
+     * @param rows   the entries, already filtered by the caller to those that apply
+     */
+    void tabMenu(String title, final Row[] rows) {
+        LinearLayout list = new LinearLayout(mActivity);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(0, dp(mActivity, 4), 0, dp(mActivity, 4));
+        list.setBackground(plate(SHEET_BG, 10));
+
+        final android.app.Dialog dialog = new android.app.Dialog(mActivity);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+
+        TextView heading = new TextView(mActivity);
+        heading.setText(title);
+        heading.setTextSize(11);
+        heading.setTextColor(HINT);
+        heading.setSingleLine(true);
+        heading.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        heading.setPadding(dp(mActivity, 12), dp(mActivity, 8), dp(mActivity, 12),
+                dp(mActivity, 6));
+        UiFont.apply(heading, true);
+        list.addView(heading);
+        list.addView(rule());
+
+        for (Row r : rows) list.addView(menuRow(r, dialog));
+
+        dialog.setContentView(list);
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.show();
+
+        // Centred, not hung off the tab: the tab is somewhere along a scrolling strip, and a
+        // dropdown anchored to it would open off-screen for the first and last tabs.
+        android.view.Window w = dialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
+            w.setLayout(dp(mActivity, 240), ViewGroup.LayoutParams.WRAP_CONTENT);
+            android.view.WindowManager.LayoutParams lp = w.getAttributes();
+            lp.gravity = Gravity.CENTER;
+            w.setAttributes(lp);
+        }
+    }
+
+    /** A divider, the same one the dropdown uses between groups. */
+    private View rule() {
+        View line = new View(mActivity);
+        line.setBackgroundColor(HAIRLINE);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(mActivity, 0.8f)));
+        lp.leftMargin = dp(mActivity, 10);
+        lp.rightMargin = dp(mActivity, 10);
+        lp.topMargin = dp(mActivity, 4);
+        lp.bottomMargin = dp(mActivity, 4);
+        line.setLayoutParams(lp);
+        return line;
+    }
+
     void menu(View anchor) {
         final Row[] rows = {
                 Row.of("terminal", "새 탭", "Ctrl+Shift+T", mCommands::newTab),

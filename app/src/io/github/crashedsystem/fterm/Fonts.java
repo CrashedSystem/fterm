@@ -53,6 +53,23 @@ final class Fonts {
     static final String HANGUL_ASSET_ID = "asset:pretendard";
 
     /**
+     * The monospaced faces compiled into the app.
+     *
+     * <p>They are here because a phone usually ships two or three monospaced faces at most -
+     * measured on this device: CutiveMono, DroidSansMono and one Samsung face - so scanning
+     * alone made the "font" setting look broken. Each is fixed-advance by construction, so
+     * none of them can break the grid.
+     *
+     * <p>Order is the picker's order: the default first, then the rest alphabetically.
+     */
+    static final String[][] BUNDLED_LATIN = {
+            {ASSET_ID, ASSET_PATH, "asset:iosevka"},
+            {"asset:jetbrains", "fonts/JetBrainsMono.ttf", "asset:jetbrains"},
+            {"asset:fira", "fonts/FiraCode.ttf", "asset:fira"},
+            {"asset:sourcecode", "fonts/SourceCodePro.ttf", "asset:sourcecode"},
+    };
+
+    /**
      * Where an imported font is kept: this app's own files directory.
      *
      * <p>Not {@code /sdcard/Download}. Since Android 11 an app cannot list or open an
@@ -228,6 +245,9 @@ final class Fonts {
     /** Conjoining jamo, which is what a decomposed paste and some IMEs send. */
     private static final int[] JAMO_PROBES = {0x1100, 0x1161, 0x11A8};
 
+    /** Hiragana あ, katakana ア, and Han 一 and 漢: one face must answer all four. */
+    private static final int[] CJK_PROBES = {0x3042, 0x30A2, 0x4E00, 0x6F22};
+
     /**
      * Whether a font file's own cmap contains every one of these code points.
      *
@@ -288,7 +308,9 @@ final class Fonts {
     static java.util.List<Face> catalog(Context context) {
         if (sCatalog != null) return sCatalog;
         java.util.List<Face> out = new java.util.ArrayList<>();
-        out.add(new Face(ASSET_ID, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0106), null, true));
+        for (String[] b : BUNDLED_LATIN) {
+            out.add(new Face(b[0], labelOfBundled(context, b[0]), null, true));
+        }
 
         java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
         addDir(out, seen, new java.io.File(SYSTEM_DIR), "");
@@ -317,6 +339,7 @@ final class Fonts {
     static void rescan() {
         sCatalog = null;
         sHangulCatalog = null;
+        sCjkCatalog = null;
     }
 
     private static java.util.List<Face> sHangulCatalog;
@@ -401,6 +424,22 @@ final class Fonts {
      * <p>Total on purpose: a prefs file written by another build, or a font the user has
      * since deleted, must still open a terminal.
      */
+    /** The asset path a bundled id names, or null when the id is not one of ours. */
+    static String bundledPath(String id) {
+        for (String[] b : BUNDLED_LATIN) if (b[0].equals(id)) return b[1];
+        return null;
+    }
+
+    /** The picker label for a bundled face id. */
+    private static String labelOfBundled(Context context, String id) {
+        if (ASSET_ID.equals(id)) return AppStrings.s(R.string.i18n_0106);
+        String key = "i18n_0392";
+        if ("asset:jetbrains".equals(id)) key = "i18n_0393";
+        else if ("asset:fira".equals(id)) key = "i18n_0394";
+        else if ("asset:sourcecode".equals(id)) key = "i18n_0395";
+        return AppStrings.s(context.getResources().getIdentifier(key, "string", context.getPackageName()));
+    }
+
     static Face find(Context context, String id) {
         java.util.List<Face> all = catalog(context);
         for (Face f : all) {
@@ -414,6 +453,65 @@ final class Fonts {
         Face typed = typedPath(id);
         if (typed != null) return typed;
         return all.get(0);
+    }
+
+    private static java.util.List<Face> sCjkCatalog;
+
+    /**
+     * The faces that can render Japanese and Chinese text, for the CJK picker.
+     *
+     * <p>Same shape as {@link #hangulCatalog} and for the same reason: the filter is "does it
+     * carry the glyphs", not "is it monospaced", because the face is drawn per code point at a
+     * scale derived from the cell. The first entry is the platform's own fallback - the
+     * default, and the only entry that costs nothing to load.
+     */
+    static java.util.List<Face> cjkCatalog(Context context) {
+        if (sCjkCatalog != null) return sCjkCatalog;
+        java.util.List<Face> out = new java.util.ArrayList<>();
+        out.add(new Face("", AppStrings.s(R.string.i18n_0396), null, true));
+
+        java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
+        addCjkDir(out, seen, new java.io.File(SYSTEM_DIR), "");
+        addCjkDir(out, seen, userDir(context), AppStrings.s(R.string.i18n_0107));
+        sCjkCatalog = out;
+        return out;
+    }
+
+    private static void addCjkDir(java.util.List<Face> out, java.util.Set<String> seen,
+                                  java.io.File dir, String suffix) {
+        java.io.File[] files = dir.listFiles();
+        if (files == null) return;
+        java.util.Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        for (java.io.File f : files) {
+            String name = f.getName().toLowerCase(java.util.Locale.ROOT);
+            if (!name.endsWith(".ttf") && !name.endsWith(".otf") && !name.endsWith(".ttc")) continue;
+            if (!f.isFile() || f.length() == 0) continue;
+            // Bold and italic cuts of one family render the same four sample glyphs, so
+            // offering all of them is four rows the user has to read to learn nothing. The
+            // regular cut is the one a terminal wants anyway; the others are skipped by name.
+            if (name.contains("bold") || name.contains("italic") || name.contains("-vf")) continue;
+            if (!seen.add(f.getAbsolutePath())) continue;
+            if (!hasCjk(f)) continue;
+            out.add(new Face(FILE_PREFIX + f.getAbsolutePath(),
+                    stripExtension(f.getName()) + suffix, f.getAbsolutePath(), false));
+        }
+    }
+
+    /**
+     * Kana and Han must both be in the file's own cmap.
+     *
+     * <p>Asked of the cmap, not of {@code Paint.hasGlyph()}: that call answers for the whole
+     * resolved font chain, so a Tamil face with no Han at all still reported true and the
+     * picker filled up with SECSerifTibetan and SECTamil. {@link FontCoverage} reads the
+     * cmap table directly, which is the same test the Korean list uses.
+     */
+    static boolean hasCjk(java.io.File file) {
+        return covers(file, CJK_PROBES);
+    }
+
+    /** Rescan hook for the CJK list; see {@link #rescan()}. */
+    static void rescanCjk() {
+        sCjkCatalog = null;
     }
 
     /**
@@ -509,18 +607,34 @@ final class Fonts {
     private final Typeface mIosevka;
     private final Typeface mHangul;
     private final Typeface mSymbols;
-    /** How much (at most 1) a Hangul glyph is shrunk to sit inside its two cells. */
+    /**
+     * The face for everything the two chosen faces do not answer: Japanese kana, Han, and
+     * whatever else a program prints.
+     *
+     * <p>Deliberately not a third picker. A terminal has one Latin cell and one wide cell;
+     * asking the user to choose four faces so that one screenshot of a Japanese program looks
+     * right is a setting nobody wants. {@code sans-serif} resolves through the platform's own
+     * fallback chain, which on every shipping Android includes Noto Sans CJK, so the common
+     * case is answered without a download.
+     */
+    private final Typeface mFallback;
+    /** How much (at most 1) a wide glyph is shrunk to sit inside its two cells. */
     private final float mHangulFit;
-    /** Baseline shift for Hangul, as a fraction of the em, to centre it in the row. */
+    /** Baseline shift for wide glyphs, as a fraction of the em, to centre them in the row. */
     private final float mHangulShift;
+    private final float mCjkFit;
+    private final float mCjkShift;
 
-    private Fonts(Typeface iosevka, Typeface hangul, Typeface symbols, float hangulFit,
-                  float hangulShift) {
+    private Fonts(Typeface iosevka, Typeface hangul, Typeface symbols, Typeface fallback,
+                  float hangulFit, float hangulShift, float cjkFit, float cjkShift) {
         mIosevka = iosevka;
         mHangul = hangul;
         mSymbols = symbols;
+        mFallback = fallback;
         mHangulFit = hangulFit;
         mHangulShift = hangulShift;
+        mCjkFit = cjkFit;
+        mCjkShift = cjkShift;
     }
 
     /**
@@ -554,11 +668,37 @@ final class Fonts {
      */
     static Fonts load(Context context, float latinCellPx, float textSizePx, String id,
                       String hangulId) {
+        return load(context, latinCellPx, textSizePx, id, hangulId, "");
+    }
+
+    /**
+     * As above, plus the face for Japanese and Chinese text.
+     *
+     * <p>{@code cjkId} empty means "the platform's fallback", which is what the app used
+     * before this setting existed and is still the right answer for most devices. A non-empty
+     * id names a specific file, which is how a user on a Korean phone gets Japanese glyph
+     * forms instead of the Korean ones the fallback chain picks.
+     */
+    static Fonts load(Context context, float latinCellPx, float textSizePx, String id,
+                      String hangulId, String cjkId) {
         Typeface mono = null;
         Typeface hangul = null;
         Typeface symbols = null;
         Face chosen = find(context, id);
-        if (chosen.path != null) mono = loadFile(chosen.path);
+        if (chosen.path != null) {
+            mono = loadFile(chosen.path);
+        } else {
+            // A bundled face has no path - it lives in the APK's assets - so the id is what
+            // says which asset to open. Only falling back to Iosevka here is why picking
+            // JetBrains Mono changed the label and nothing else.
+            String asset = bundledPath(chosen.id);
+            if (asset != null) {
+                try {
+                    mono = Typeface.createFromAsset(context.getAssets(), asset);
+                } catch (Throwable ignored) {
+                }
+            }
+        }
         if (mono == null) {
             try {
                 mono = Typeface.createFromAsset(context.getAssets(), ASSET_PATH);
@@ -578,6 +718,23 @@ final class Fonts {
             symbols = Typeface.createFromAsset(context.getAssets(), "fonts/NerdSymbols.ttf");
         } catch (Throwable ignored) {
         }
+        // The CJK face: the user's choice when there is one, else the platform's own chain.
+        // Typeface.create("sans-serif") is the documented way to reach the system family; it
+        // resolves through the device's fallback list, so Japanese and Chinese text renders
+        // even though the app ships no CJK face.
+        Typeface fallback = null;
+        if (cjkId != null && cjkId.startsWith(FILE_PREFIX)) {
+            String path = cjkId.substring(FILE_PREFIX.length());
+            fallback = loadFile(path);
+        }
+        if (fallback == null) {
+            try {
+                fallback = Typeface.create("sans-serif", Typeface.NORMAL);
+            } catch (Throwable t) {
+                fallback = null;
+            }
+        }
+        if (fallback == null) fallback = mono;
 
         // Measure the cell from the chosen face rather than trusting the caller's number:
         // the caller's is the previous face's width, and switching faces is exactly when it
@@ -634,8 +791,43 @@ final class Fonts {
                 shift = (rowCentre - glyphCentre) / textSizePx;
             }
         }
+        // The CJK face is measured exactly like the Korean one: same two-cell box, same
+        // "shrink only, never enlarge" rule. Sharing the code keeps the two from drifting.
+        float cjkFit = 1f;
+        float cjkShift = 0f;
+        if (fallback != null && cell > 0f) {
+            Paint fp = new Paint();
+            fp.setTypeface(fallback);
+            fp.setTextSize(textSizePx);
+            float wide = fp.measureText("\u3042");   // あ, the glyph Japanese types most
+            if (wide <= 0f) wide = fp.measureText("\u4e00");   // 一
+            Paint.FontMetrics fm = fp.getFontMetrics();
+            float inkHeight = fm.descent - fm.ascent;
+
+            Paint lp = new Paint();
+            lp.setTypeface(mono);
+            lp.setTextSize(textSizePx);
+            float rowHeight = lp.getFontSpacing();
+
+            float byWidth = wide > 0f && wide > 2f * cell ? (2f * cell) / wide : 1f;
+            float byHeight = inkHeight > rowHeight ? rowHeight / inkHeight : 1f;
+            cjkFit = Math.min(1f, Math.min(byWidth, byHeight));
+            if (cjkFit < 0.5f) cjkFit = 1f;
+
+            Paint.FontMetrics hf = new Paint.FontMetrics();
+            Paint scaled = new Paint();
+            scaled.setTypeface(fallback);
+            scaled.setTextSize(textSizePx * cjkFit);
+            scaled.getFontMetrics(hf);
+            if (textSizePx > 0f) {
+                float glyphCentre = (hf.ascent + hf.descent) / 2f;
+                float rowCentre = (lp.ascent() + lp.descent()) / 2f;
+                cjkShift = (rowCentre - glyphCentre) / textSizePx;
+            }
+        }
+
         return new Fonts(mono, hangul != null ? hangul : mono,
-                symbols != null ? symbols : mono, fit, shift);
+                symbols != null ? symbols : mono, fallback, fit, shift, cjkFit, cjkShift);
     }
 
     Typeface latin() {
@@ -661,6 +853,23 @@ final class Fonts {
                 || (codePoint >= 0xD7B0 && codePoint <= 0xD7FF); // jamo extended-B
     }
 
+    /**
+     * True when the code point belongs to a CJK block the chosen faces do not cover.
+     *
+     * <p>Hangul is handled first and separately - it has its own picker - so this is the
+     * Japanese and Chinese ranges: kana, CJK ideographs, compatibility ideographs, and the
+     * fullwidth forms. Everything here lands in the two-cell box.
+     */
+    static boolean isCjk(int codePoint) {
+        return (codePoint >= 0x3000 && codePoint <= 0x30FF)      // CJK punctuation + kana
+                || (codePoint >= 0x3400 && codePoint <= 0x4DBF)   // ext A
+                || (codePoint >= 0x4E00 && codePoint <= 0x9FFF)   // unified ideographs
+                || (codePoint >= 0xF900 && codePoint <= 0xFAFF)   // compatibility ideographs
+                || (codePoint >= 0xFF00 && codePoint <= 0xFF60)   // fullwidth forms
+                || (codePoint >= 0xFFE0 && codePoint <= 0xFFE6)
+                || (codePoint >= 0x20000 && codePoint <= 0x2FA1F); // ext B..
+    }
+
     /** Private-use range a Nerd Font uses for icons. */
     static boolean isNerdIcon(int codePoint) {
         return (codePoint >= 0xE0A0 && codePoint <= 0xE0B3)
@@ -676,8 +885,19 @@ final class Fonts {
      */
     Typeface typefaceFor(int codePoint) {
         if (isHangul(codePoint)) return mHangul;
+        if (isCjk(codePoint)) return mFallback;
         if (isNerdIcon(codePoint)) return mSymbols;
         return mIosevka;
+    }
+
+    /** The scale a CJK glyph is drawn at; 1 unless the face overhangs its box. */
+    float cjkFit() {
+        return mCjkFit;
+    }
+
+    /** How far, in px at this size, to move a CJK baseline down to centre it in the row. */
+    float cjkShift(float textSizePx) {
+        return mCjkShift * textSizePx;
     }
 
     /**
@@ -688,7 +908,9 @@ final class Fonts {
      * its line - measured on the device as 41.3px of line spacing drawn into a 37.5px row.
      */
     float scaleFor(int codePoint) {
-        return isHangul(codePoint) ? mHangulFit : 1f;
+        if (isHangul(codePoint)) return mHangulFit;
+        if (isCjk(codePoint)) return mCjkFit;
+        return 1f;
     }
 
     static float dpToPx(Context context, float dp) {

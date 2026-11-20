@@ -18,54 +18,91 @@ import android.widget.TextView;
  */
 final class SettingsAppearancePage extends SettingsPage {
 
-    private static final String[] CURSOR_NAMES = {io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0120), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0121), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0122)};
-
     SettingsAppearancePage(SettingsSheet sheet) {
         super(sheet);
+    }
+
+    /** Built per render: the names are localized, so they cannot be a static snapshot. */
+    private static String[] cursorNames() {
+        return new String[]{
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0120),
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0121),
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0122)};
     }
 
     @Override
     void build(LinearLayout col) {
         LinearLayout card = ui.card(col);
 
+        // A number, not a slider: the size is a value people quote and type ("12dp"), and a
+        // slider cannot land on a particular number on purpose. It is also not a unit anyone
+        // should have to think about - dp is the same apparent size on every screen density -
+        // so the field is labelled with it and otherwise left alone.
         LinearLayout sizeRow = new LinearLayout(activity);
         sizeRow.setOrientation(LinearLayout.HORIZONTAL);
         sizeRow.setGravity(Gravity.CENTER_VERTICAL);
         sizeRow.setPadding(0, ui.dp(10), 0, ui.dp(10));
 
-        LinearLayout text = new LinearLayout(activity);
-        text.setOrientation(LinearLayout.VERTICAL);
-        text.setLayoutParams(new LinearLayout.LayoutParams(0,
+        LinearLayout sizeText = new LinearLayout(activity);
+        sizeText.setOrientation(LinearLayout.VERTICAL);
+        sizeText.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView t = new TextView(activity);
-        t.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0123));
-        t.setTextColor(ui.TEXT);
-        t.setTextSize(14);
-        UiFont.apply(t, false);
-        text.addView(t);
-        TextView sub = new TextView(activity);
-        sub.setText(host.fontSizeDp() + "dp");
-        sub.setTextColor(ui.HINT);
-        sub.setTextSize(11);
-        text.addView(sub);
-        sizeRow.addView(text);
+        TextView sizeTitle = new TextView(activity);
+        sizeTitle.setText(AppStrings.s(R.string.i18n_0123));
+        sizeTitle.setTextColor(ui.TEXT);
+        sizeTitle.setTextSize(14);
+        UiFont.apply(sizeTitle, false);
+        sizeText.addView(sizeTitle);
+        TextView sizeHint = new TextView(activity);
+        sizeHint.setText(FontZoom.MIN_DP + "\u2013" + FontZoom.MAX_DP + " dp");
+        sizeHint.setTextColor(ui.HINT);
+        sizeHint.setTextSize(11);
+        sizeText.addView(sizeHint);
+        sizeRow.addView(sizeText);
 
-        SeekBar size = new SeekBar(activity);
-        size.setMax(FontZoom.MAX_DP - FontZoom.MIN_DP);
-        size.setProgress(Math.max(0, host.fontSizeDp() - FontZoom.MIN_DP));
-        size.setLayoutParams(new LinearLayout.LayoutParams(ui.dp(150),
+        final android.widget.EditText sizeField = new android.widget.EditText(activity);
+        sizeField.setText(String.valueOf(host.fontSizeDp()));
+        sizeField.setHint(String.valueOf(FontZoom.DEFAULT_DP));
+        sizeField.setHintTextColor(ui.HINT);
+        sizeField.setTextColor(ui.TEXT);
+        sizeField.setTextSize(14);
+        sizeField.setSingleLine(true);
+        sizeField.setGravity(Gravity.END);
+        sizeField.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        sizeField.setLayoutParams(new LinearLayout.LayoutParams(ui.dp(80),
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        size.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar sb, int p, boolean fromUser) {
-                if (fromUser) {
-                    host.onFontSize(p + FontZoom.MIN_DP);
-                    sub.setText((p + FontZoom.MIN_DP) + "dp");
-                }
-            }
-            @Override public void onStartTrackingTouch(SeekBar sb) {}
-            @Override public void onStopTrackingTouch(SeekBar sb) {}
+        sizeField.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) applySizeField(sizeField);
         });
-        sizeRow.addView(size);
+        sizeField.setOnEditorActionListener((v, actionId, event) -> {
+            applySizeField(sizeField);
+            return true;
+        });
+        sizeRow.addView(sizeField);
+
+        TextView sizeUnit = new TextView(activity);
+        sizeUnit.setText("dp");
+        sizeUnit.setTextColor(ui.HINT);
+        sizeUnit.setTextSize(12);
+        sizeUnit.setPadding(ui.dp(6), 0, ui.dp(8), 0);
+        sizeRow.addView(sizeUnit);
+
+        // A stepper beside the field: the common change is "one bigger", and reaching for the
+        // keyboard to type 13 is more work than tapping an arrow. The field stays editable for
+        // the uncommon case.
+        sizeRow.addView(stepper("\u2212", () -> {
+            int next = host.fontSizeDp() - 1;
+            if (next < FontZoom.MIN_DP) return;
+            host.onFontSize(next);
+            sizeField.setText(String.valueOf(next));
+        }));
+        sizeRow.addView(stepper("+", () -> {
+            int next = host.fontSizeDp() + 1;
+            if (next > FontZoom.MAX_DP) return;
+            host.onFontSize(next);
+            sizeField.setText(String.valueOf(next));
+        }));
+
         card.addView(ui.cardRow(sizeRow, false));
 
         card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0124), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0125),
@@ -74,6 +111,8 @@ final class SettingsAppearancePage extends SettingsPage {
         card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0126), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0127),
                 Fonts.labelOfHangul(activity, host.hangulFamily()),
                 () -> sheet.fonts().chooseHangulFont(), false));
+        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0397), AppStrings.s(R.string.i18n_0398),
+                cjkLabel(), () -> sheet.fonts().chooseCjkFont(), false));
         card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0128), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0129),
                 host.schemeName(), () -> open("schemes"), false));
         card.addView(ui.toggleCardRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0130), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0131),
@@ -84,10 +123,11 @@ final class SettingsAppearancePage extends SettingsPage {
 
         // WT's cursor page, folded into this one: three shapes and a blink switch.
         card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0134), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0135),
-                CURSOR_NAMES[Math.max(0, Math.min(CURSOR_NAMES.length - 1, host.cursorStyle()))],
+                cursorNames()[Math.max(0, Math.min(2, host.cursorStyle()))],
                 this::chooseCursor, false));
         card.addView(ui.toggleCardRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0136), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0137),
                 host.cursorBlink(), host::onCursorBlink, true));
+        card.addView(cursorBlinkSpeedRow());
         card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0138), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0139),
                 host.cursorColor() == 0 ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0140)
                         : String.format("#%06X", host.cursorColor() & 0xffffff),
@@ -107,10 +147,154 @@ final class SettingsAppearancePage extends SettingsPage {
                 + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0146));
     }
 
-    private void chooseCursor() {
-        new android.app.AlertDialog.Builder(activity)
+    /**
+     * One arrow of the stepper: a square, the glyph centred, the bar's own hint colour.
+     *
+     * <p>Not {@link Chrome#icon}, because those glyphs are Fluent paths for actions and the
+     * stepper needs the two characters every numeric field on every platform uses.
+     */
+    private View stepper(String glyph, Runnable action) {
+        TextView v = new TextView(activity);
+        v.setText(glyph);
+        v.setTextSize(17);
+        v.setTextColor(ui.TEXT);
+        v.setGravity(Gravity.CENTER);
+        v.setIncludeFontPadding(false);
+        v.setLayoutParams(new LinearLayout.LayoutParams(ui.dp(32), ui.dp(32)));
+        v.setBackground(ui.touchable());
+        v.setClickable(true);
+        v.setOnClickListener(x -> action.run());
+        return v;
+    }
+
+    /**
+     * Commit the typed font size, or put the old one back.
+     *
+     * <p>The range is stated in the hint rather than enforced by clamping: a size outside it
+     * would be quietly changed to something the user did not ask for, and "I typed 40 and got
+     * 28" reads as a bug. Refusing and restoring is the honest answer.
+     */
+    private void applySizeField(android.widget.EditText field) {
+        String raw = field.getText().toString().trim();
+        int dp;
+        try {
+            dp = Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            dp = -1;
+        }
+        if (dp < FontZoom.MIN_DP || dp > FontZoom.MAX_DP) {
+            field.setText(String.valueOf(host.fontSizeDp()));
+            android.widget.Toast.makeText(activity,
+                    AppStrings.s(R.string.i18n_0399)
+                            + FontZoom.MIN_DP + "\u2013" + FontZoom.MAX_DP + " dp",
+                    android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        field.setText(String.valueOf(dp));
+        host.onFontSize(dp);
+    }
+
+    /**
+     * The blink speed as a number, not a slider.
+     *
+     * <p>A rate is a value people quote and compare ("500ms", "1s"), so it has to be exact:
+     * a 20-step slider cannot land on 600 or 1000 and the stored value drifts from what
+     * anyone meant. The field takes milliseconds directly and rejects out-of-range input
+     * instead of silently clamping it, so a typo never becomes a mystery setting.
+     */
+    private View cursorBlinkSpeedRow() {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, ui.dp(10), 0, ui.dp(10));
+
+        LinearLayout text = new LinearLayout(activity);
+        text.setOrientation(LinearLayout.VERTICAL);
+        text.setLayoutParams(new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView t = new TextView(activity);
+        t.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0378));
+        t.setTextColor(ui.TEXT);
+        t.setTextSize(14);
+        UiFont.apply(t, false);
+        text.addView(t);
+        row.addView(text);
+
+        final android.widget.EditText field = new android.widget.EditText(activity);
+        field.setText(String.valueOf(host.cursorBlinkMs()));
+        field.setHint("500");
+        field.setHintTextColor(ui.HINT);
+        field.setTextColor(ui.TEXT);
+        field.setTextSize(14);
+        field.setSingleLine(true);
+        field.setGravity(Gravity.END);
+        field.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        field.setLayoutParams(new LinearLayout.LayoutParams(ui.dp(90),
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        field.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) return;
+            applyBlinkField(field);
+        });
+        field.setOnEditorActionListener((v, actionId, event) -> {
+            applyBlinkField(field);
+            return true;
+        });
+        row.addView(field);
+
+        TextView unit = new TextView(activity);
+        unit.setText("ms");
+        unit.setTextColor(ui.HINT);
+        unit.setTextSize(12);
+        unit.setPadding(ui.dp(6), 0, 0, 0);
+        row.addView(unit);
+
+        return ui.cardRow(row, false);
+    }
+
+    /**
+     * Commit the typed rate, or put the old one back.
+     *
+     * <p>Out-of-range values are refused rather than clamped: TerminalView disables the
+     * blinker entirely for a rate it does not accept, so clamping here would look like it
+     * worked while the cursor froze.
+     */
+    private void applyBlinkField(android.widget.EditText field) {
+        String raw = field.getText().toString().trim();
+        int ms;
+        try {
+            ms = Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            ms = -1;
+        }
+        if (ms < BLINK_MIN_MS || ms > BLINK_MAX_MS) {
+            field.setText(String.valueOf(host.cursorBlinkMs()));
+            android.widget.Toast.makeText(activity,
+                    io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0379)
+                            + BLINK_MIN_MS + "-" + BLINK_MAX_MS,
+                    android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        field.setText(String.valueOf(ms));
+        host.onCursorBlinkMs(ms);
+    }
+
+    /** The range TerminalView accepts; a rate outside it turns blinking off. */
+    private static final int BLINK_MIN_MS = 100;
+    private static final int BLINK_MAX_MS = 2000;
+
+    /** What the CJK row prints: the chosen face, or that the platform is choosing. */
+    private String cjkLabel() {
+        String id = host.cjkFamily();
+        if (id == null || id.isEmpty()) return AppStrings.s(R.string.i18n_0396);
+        for (Fonts.Face f : Fonts.cjkCatalog(activity)) {
+            if (f.id.equals(id)) return f.label;
+        }
+        return AppStrings.s(R.string.i18n_0396);
+    }
+
+    private void chooseCursor() {        new android.app.AlertDialog.Builder(activity)
                 .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0134))
-                .setSingleChoiceItems(CURSOR_NAMES, host.cursorStyle(), (d, which) -> {
+                .setSingleChoiceItems(cursorNames(), host.cursorStyle(), (d, which) -> {
                     host.onCursorStyle(which);
                     d.dismiss();
                     render();

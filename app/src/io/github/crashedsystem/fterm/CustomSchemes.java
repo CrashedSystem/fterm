@@ -24,7 +24,10 @@ import java.util.List;
 public final class CustomSchemes {
 
     /** What a palette is called when it has no name: the single slot's old label. */
-    public static final String DEFAULT_NAME = io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0070);
+    public static String defaultName() {
+        String name = AppStrings.s(R.string.i18n_0070);
+        return name == null || name.trim().isEmpty() ? "Custom" : name;
+    }
 
     private static final char UNIT = '\u001f';
     private static final char RECORD = '\u001e';
@@ -35,7 +38,7 @@ public final class CustomSchemes {
         public final int[] slots;
 
         public Theme(String name, int[] slots) {
-            this.name = clean(name).isEmpty() ? DEFAULT_NAME : clean(name);
+            this.name = clean(name).isEmpty() ? defaultName() : clean(name);
             this.slots = slots == null || slots.length != Schemes.CUSTOM_SLOTS
                     ? Schemes.campbellSlots() : slots.clone();
         }
@@ -194,7 +197,7 @@ public final class CustomSchemes {
      */
     public static String uniqueName(List<String> taken, String wanted) {
         String base = clean(wanted);
-        if (base.isEmpty()) base = DEFAULT_NAME;
+        if (base.isEmpty()) base = defaultName();
         if (base.length() > 40) base = base.substring(0, 40).trim();
         if (!has(taken, base)) return base;
         for (int n = 2; n < 1000; n++) {

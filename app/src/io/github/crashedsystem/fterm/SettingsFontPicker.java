@@ -148,6 +148,87 @@ final class SettingsFontPicker {
      * conjoining jamo - the jamo line is what tells the user whether the face can follow an
      * IME, which the bundled Pretendard cannot.
      */
+    /**
+     * Pick the face for Japanese and Chinese text.
+     *
+     * <p>Same dialog shape as the Korean picker, and for the same reason: the only
+     * requirement is glyph coverage, so the list is built by asking each face rather than by
+     * naming fonts in code. The first row is the platform fallback, which is the default and
+     * the one that costs no memory.
+     */
+    void chooseCjkFont() {
+        final java.util.List<Fonts.Face> faces = Fonts.cjkCatalog(mActivity);
+        String current = mHost.cjkFamily();
+
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(mUi.dp(8), mUi.dp(4), mUi.dp(8), 0);
+
+        final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
+
+        for (int i = 0; i < faces.size(); i++) {
+            final Fonts.Face f = faces.get(i);
+            LinearLayout row = new LinearLayout(mActivity);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(mUi.dp(12), mUi.dp(11), mUi.dp(12), mUi.dp(11));
+            row.setBackground(mUi.touchable());
+            row.setClickable(true);
+
+            TextView sample = new TextView(mActivity);
+            // Kana and Han together: a face that answers one and not the other is the exact
+            // failure this picker exists to avoid.
+            sample.setText("\u3042\u30a2\u4e00\u6f22");
+            sample.setTextSize(15);
+            sample.setTextColor(mUi.TEXT);
+            if (f.path != null) {
+                try {
+                    sample.setTypeface(android.graphics.Typeface.createFromFile(f.path));
+                } catch (Throwable ignored) {
+                }
+            }
+            sample.setSingleLine(true);
+            sample.setLayoutParams(new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            row.addView(sample);
+
+            TextView name = new TextView(mActivity);
+            name.setText(f.label);
+            name.setTextSize(11);
+            name.setTextColor(f.id.equals(current) ? mUi.ACCENT : mUi.HINT);
+            name.setPadding(0, 0, mUi.dp(10), 0);
+            row.addView(name);
+
+            if (f.id.equals(current)) row.addView(Chrome.icon(mActivity, "check", 16, false, null));
+
+            row.setOnClickListener(v -> {
+                mHost.onCjkFamily(f.id);
+                if (holder[0] != null) holder[0].dismiss();
+                mSheet.render();
+            });
+            box.addView(row);
+            if (i < faces.size() - 1) box.addView(mUi.hairline(mUi.dp(12), mUi.dp(0)));
+        }
+
+        ScrollView scroll = new ScrollView(mActivity);
+        scroll.setFillViewport(true);
+        scroll.addView(box);
+        scroll.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(340)));
+
+        holder[0] = new android.app.AlertDialog.Builder(mActivity)
+                .setTitle(AppStrings.s(R.string.i18n_0397))
+                .setView(scroll)
+                .setPositiveButton(AppStrings.s(R.string.i18n_0175), (d, w) -> {
+                    Fonts.rescanCjk();
+                    mSheet.render();
+                    chooseCjkFont();
+                })
+                .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
+                .create();
+        holder[0].show();
+    }
+
     void chooseHangulFont() {
         final java.util.List<Fonts.Face> faces = Fonts.hangulCatalog(mActivity);
         String current = mHost.hangulFamily();
@@ -448,12 +529,37 @@ final class SettingsFontPicker {
             showFontError(imported.reason);
             return;
         }
+        // Three destinations, not two. A CJK face is proportional like a Korean one, so the
+        // old "latin or hangul" split filed a Japanese font as the Korean face - which then
+        // rendered nothing, because it has no Hangul glyphs. The file is asked what it
+        // actually covers, in the order that matches the pickers.
         boolean latin = Fonts.isLatinFace(imported.id);
-        if (latin) mHost.onFontFamily(imported.id);
-        else mHost.onHangulFamily(imported.id);
+        if (latin) {
+            mHost.onFontFamily(imported.id);
+            mSheet.render();
+            chooseFont();
+            return;
+        }
+        String path = imported.id.startsWith(Fonts.FILE_PREFIX)
+                ? imported.id.substring(Fonts.FILE_PREFIX.length()) : null;
+        java.io.File file = path == null ? null : new java.io.File(path);
+        if (file != null && Fonts.hasHangul(file) && !Fonts.hasCjk(file)) {
+            mHost.onHangulFamily(imported.id);
+            mSheet.render();
+            chooseHangulFont();
+            return;
+        }
+        if (file != null && Fonts.hasCjk(file)) {
+            mHost.onCjkFamily(imported.id);
+            mSheet.render();
+            chooseCjkFont();
+            return;
+        }
+        // Neither: treat it as the Korean face, which is where a proportional font with no
+        // CJK coverage belongs on this app.
+        mHost.onHangulFamily(imported.id);
         mSheet.render();
-        if (latin) chooseFont();
-        else chooseHangulFont();
+        chooseHangulFont();
     }
 
     /**

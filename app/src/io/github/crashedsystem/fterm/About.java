@@ -27,7 +27,7 @@ final class About {
         } catch (Exception ignored) {
         }
         new AlertDialog.Builder(activity)
-                .setTitle("fterm")
+                .setTitle(activity.getString(R.string.app_name))
                 .setMessage(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0025) + version + "\n"
                         + status + "\n\n"
                         + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0026)

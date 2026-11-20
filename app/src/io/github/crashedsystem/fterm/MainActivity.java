@@ -12,7 +12,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -97,6 +96,9 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Must run before any UI is built: every label in this app goes through
+        // AppStrings.s(), which returns "" until it holds a Context.
+        AppStrings.init(this);
         mPrefs = new Prefs(this);
         mDensityDpi = getResources().getConfiguration().densityDpi;
         mFontDp = mPrefs.fontSizeDp();
@@ -521,13 +523,133 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     private void addTabChip(Tab tab) {
         TabStrip.Chip chip = new TabStrip(this, tabIconFor(tab)).create(tab.title,
-                () -> activate(tab), () -> confirmClose(tab));
+                () -> activate(tab), () -> confirmClose(tab), () -> showTabMenu(tab));
         tab.plate = chip.plate;
         tab.chip = chip.title;
         tab.closeBox = chip.close;
         tab.chipView = chip;
         mTabStrip.addView(chip.plate);
         updateChip(tab);
+    }
+
+    /**
+     * The tab's own menu: what you get by holding the tab instead of hitting its X.
+     *
+     * <p>Rename and colour are per tab and cosmetic; duplicate and move change the tab set.
+     * Close is repeated here so the menu is the one place that lists the tab's whole
+     * vocabulary - the X stays the fast path, not the only path.
+     *
+     * <p>Move entries are only listed when there is somewhere to move to. A greyed-out row
+     * is a row the user has to read and reject; a list that only offers what is possible is
+     * shorter and never lies.
+     */
+    private void showTabMenu(Tab tab) {
+        if (mChrome == null) return;
+        java.util.List<Chrome.Row> rows = new java.util.ArrayList<>();
+        int index = mTabs.indexOf(tab);
+        boolean many = mTabs.size() > 1;
+
+        rows.add(Chrome.Row.of("pencil", AppStrings.s(R.string.i18n_0380), null,
+                () -> renameTab(tab)));
+        rows.add(Chrome.Row.of("swatch", AppStrings.s(R.string.i18n_0381), null,
+                () -> chooseTabColor(tab)));
+        rows.add(Chrome.Row.of("terminal", AppStrings.s(R.string.i18n_0382), null,
+                () -> duplicateTab(tab)));
+        // Only the moves that exist are listed: a greyed row is something the user has to
+        // read and reject, and a menu that offers what is possible is shorter and never lies.
+        if (many && index > 0) {
+            rows.add(Chrome.Row.of("left", AppStrings.s(R.string.i18n_0383), null,
+                    () -> moveTab(tab, -1)));
+        }
+        if (many && index >= 0 && index < mTabs.size() - 1) {
+            rows.add(Chrome.Row.of("right", AppStrings.s(R.string.i18n_0384), null,
+                    () -> moveTab(tab, 1)));
+        }
+        rows.add(Chrome.Row.of("close", AppStrings.s(R.string.i18n_0385), null,
+                () -> confirmClose(tab)));
+
+        mChrome.tabMenu(tab.title, rows.toArray(new Chrome.Row[0]));
+    }
+
+
+    /** Rename one tab, not necessarily the active one. */
+    private void renameTab(Tab tab) {
+        Chrome.renameTab(this, tab.title, name -> {
+            if (name.isEmpty()) return;
+            tab.title = name;
+            tab.userTitled = true;
+            updateChip(tab);
+        });
+    }
+
+    /**
+     * Pick a fill for one tab.
+     *
+     * <p>Presets rather than a colour wheel: a tab mark is a mnemonic (this one is "the build",
+     * that one is "the server"), and eight named swatches pick a mnemonic faster than a
+     * wheel does. Zero is offered first so the choice can be undone.
+     */
+    private void chooseTabColor(Tab tab) {
+        final String[] names = {
+                AppStrings.s(R.string.i18n_0387),   // 기본
+                "Blue", "Green", "Purple", "Orange", "Red", "Teal", "Gray",
+        };
+        final int[] values = {0, 0xff1f4e79, 0xff1f5c3a, 0xff4b3a7a, 0xff7a4a1f,
+                0xff6e2424, 0xff1f5f5f, 0xff3a3f45};
+        int checked = 0;
+        for (int i = 0; i < values.length; i++) if (values[i] == tab.color) checked = i;
+        new AlertDialog.Builder(this)
+                .setTitle(AppStrings.s(R.string.i18n_0381))
+                .setSingleChoiceItems(names, checked, (d, which) -> {
+                    tab.color = values[which];
+                    updateChip(tab);
+                    d.dismiss();
+                })
+                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .show();
+    }
+
+    /**
+     * Open another tab on the same profile, directory and shell.
+     *
+     * <p>A duplicate is a new session, not a second view of the first one: two views of one
+     * PTY would fight over the cursor and the window size. The point is "the same setup, in
+     * another shell" - so the profile is copied and the session is fresh.
+     */
+    private void duplicateTab(Tab tab) {
+        // A duplicate meant "this tab with its name and colour" when it was opened by hand
+        // from a profile; a shell-named tab has no profile to copy, so the copy is a plain
+        // default tab that carries the same title and colour.
+        Profiles.Profile source = tab.profile;
+        newTab(source, true);
+        Tab fresh = mActive;
+        if (fresh != null && fresh != tab) {
+            fresh.title = tab.title;
+            fresh.userTitled = tab.userTitled;
+            fresh.color = tab.color;
+            updateChip(fresh);
+        }
+    }
+
+    /**
+     * Move a tab one slot left ({@code delta = -1}) or right (+1).
+     *
+     * <p>The strip is a LinearLayout, so the view has to move too - reordering only the list
+     * would leave the screen disagreeing with the model, and the next paint would move the
+     * tab back.
+     */
+    private void moveTab(Tab tab, int delta) {
+        int from = mTabs.indexOf(tab);
+        int to = from + delta;
+        if (from < 0 || to < 0 || to >= mTabs.size()) return;
+        mTabs.remove(from);
+        mTabs.add(to, tab);
+
+        if (tab.plate != null) {
+            mTabStrip.removeView(tab.plate);
+            mTabStrip.addView(tab.plate, to);
+        }
+        for (Tab t : mTabs) updateChip(t);
     }
 
     /** Re-tint and re-build every tab's mark after the tab icon preference changes. */
@@ -555,7 +677,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         int[] palette = Schemes.colors(mScheme, mCustom);
         new TabStrip(this, tabIconFor(tab)).paint(tab.chipView, tab.title, tab == mActive,
                 palette[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND],
-                Schemes.isOled(mScheme, mCustom));
+                Schemes.isOled(mScheme, mCustom), tab.color);
     }
 
 
@@ -636,14 +758,17 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             probe.setTextSize(px);
             cell = probe.measureText("M");
         }
-        mFonts = Fonts.load(this, cell, px, mPrefs.fontFamily(), mPrefs.hangulFamily());
+        mFonts = Fonts.load(this, cell, px, mPrefs.fontFamily(), mPrefs.hangulFamily(),
+                mPrefs.cjkFamily());
         mTermView.setFaceSelector(new TerminalRenderer.FaceSelector() {
             @Override public Typeface typefaceFor(int cp) { return mFonts.typefaceFor(cp); }
             @Override public float scaleFor(int cp) { return mFonts.scaleFor(cp); }
             @Override public float shiftFor(int cp) {
                 // Read the size live: a pinch changes it without reloading the faces, and the
                 // shift is a fraction of the em, so a stale px would drift with every zoom.
-                return mFonts.isHangul(cp) ? mFonts.hangulShift(fontPx()) : 0f;
+                if (mFonts.isHangul(cp)) return mFonts.hangulShift(fontPx());
+                if (Fonts.isCjk(cp)) return mFonts.cjkShift(fontPx());
+                return 0f;
             }
         });
         mTermView.setTypeface(mFonts.latin());
@@ -678,6 +803,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         loadFonts();
     }
 
+    /** Switch the CJK face; like the Korean one it never changes the cell. */
+    void applyCjkFamily(String id) {
+        mPrefs.setCjkFamily(id);
+        loadFonts();
+    }
+
     /**
      * Install the cursor's shape and blink rate.
      *
@@ -686,9 +817,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
      * which is the view's own encoding for "off" - not a special case invented here.
      */
     void applyCursor() {
-        int rate = mPrefs.cursorBlink() ? 500 : 0;
-        boolean ok = mTermView.setTerminalCursorBlinkerRate(rate);
-        Log.d("TerminalView", "MainActivity.applyCursor: set rate=" + rate + " result=" + ok + " view=" + mTermView);
+        int rate = mPrefs.cursorBlink() ? mPrefs.cursorBlinkMs() : 0;
+        mTermView.setTerminalCursorBlinkerRate(rate);
         mTermView.setTerminalCursorBlinkerState(true, true);
         if (mActive != null && mActive.session != null) {
             TerminalEmulator em = mActive.session.getEmulator();
