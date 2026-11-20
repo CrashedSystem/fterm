@@ -89,11 +89,11 @@ final class Chrome {
         input.setSingleLine(true);
         input.setSelectAllOnFocus(true);
         new android.app.AlertDialog.Builder(activity)
-                .setTitle(AppStrings.s(R.string.i18n_0056))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0056))
                 .setView(input)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) ->
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0057), (d, w) ->
                         apply.onName(input.getText().toString().trim()))
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
                 .show();
     }
 
@@ -113,18 +113,18 @@ final class Chrome {
      */
     void palette() {
         final Entry[] entries = {
-                new Entry(AppStrings.s(R.string.i18n_0059), mCommands::newTab),
-                new Entry(AppStrings.s(R.string.i18n_0060), mCommands::closeTab),
-                new Entry(AppStrings.s(R.string.i18n_0061), mCommands::renameTab),
-                new Entry(AppStrings.s(R.string.i18n_0062), mCommands::nextTab),
-                new Entry(AppStrings.s(R.string.i18n_0032), mCommands::paste),
-                new Entry(AppStrings.s(R.string.i18n_0031), mCommands::copy),
-                new Entry(AppStrings.s(R.string.i18n_0063), mCommands::find),
-                new Entry(AppStrings.s(R.string.i18n_0064), mCommands::biggerFont),
-                new Entry(AppStrings.s(R.string.i18n_0065), mCommands::smallerFont),
-                new Entry(AppStrings.s(R.string.i18n_0066), mCommands::settings),
-                new Entry(AppStrings.s(R.string.i18n_0067), mCommands::toggleKeyboard),
-                new Entry(AppStrings.s(R.string.i18n_0024), mCommands::about),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0059), mCommands::newTab),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0060), mCommands::closeTab),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0061), mCommands::renameTab),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0062), mCommands::nextTab),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0032), mCommands::paste),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0031), mCommands::copy),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0063), mCommands::find),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0064), mCommands::biggerFont),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0065), mCommands::smallerFont),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0066), mCommands::settings),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0067), mCommands::toggleKeyboard),
+                new Entry(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0024), mCommands::about),
         };
 
         final android.widget.ArrayAdapter<Entry> adapter =
@@ -136,7 +136,7 @@ final class Chrome {
         list.setPadding(0, dp(mActivity, 2), 0, dp(mActivity, 2));
 
         final EditText filter = new EditText(mActivity);
-        filter.setHint(AppStrings.s(R.string.i18n_0068));
+        filter.setHint(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0068));
         filter.setSingleLine(true);
         filter.setTextSize(13.5f);
         filter.setTextColor(TEXT);

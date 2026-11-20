@@ -103,7 +103,7 @@ final class ClipboardImage {
             postToUi.post(() -> {
                 if (path == null) {
                     Log.w(TAG, "clip save failed: " + uri);
-                    Toast.makeText(context, AppStrings.s(R.string.i18n_0069), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0069), Toast.LENGTH_SHORT).show();
                     return;
                 }
                 Log.i(TAG, "clip saved: " + path);

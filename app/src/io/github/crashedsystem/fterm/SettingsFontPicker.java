@@ -67,7 +67,7 @@ final class SettingsFontPicker {
         install.setClickable(true);
         install.addView(Chrome.icon(mActivity, "folder", 18, false, null));
         TextView installLabel = new TextView(mActivity);
-        installLabel.setText(AppStrings.s(R.string.i18n_0173));
+        installLabel.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0173));
         installLabel.setTextColor(mUi.ACCENT);
         installLabel.setTextSize(12.5f);
         installLabel.setPadding(mUi.dp(10), 0, 0, 0);
@@ -89,7 +89,7 @@ final class SettingsFontPicker {
             row.setClickable(true);
 
             TextView sample = new TextView(mActivity);
-            sample.setText(AppStrings.s(R.string.i18n_0174));
+            sample.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0174));
             sample.setTextSize(15);
             sample.setTextColor(mUi.TEXT);
             sample.setTypeface(faceFor(f));
@@ -126,14 +126,14 @@ final class SettingsFontPicker {
                 ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(340)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0124))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0124))
                 .setView(scroll)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0175), (d, w) -> {
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0175), (d, w) -> {
                     Fonts.rescan();
                     mSheet.render();
                     chooseFont();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0029), null)
                 .create();
         holder[0].show();
     }
@@ -168,7 +168,7 @@ final class SettingsFontPicker {
             row.setClickable(true);
 
             TextView sample = new TextView(mActivity);
-            sample.setText(i == 0 ? AppStrings.s(R.string.i18n_0176) : AppStrings.s(R.string.i18n_0177));
+            sample.setText(i == 0 ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0176) : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0177));
             sample.setTextSize(15);
             sample.setTextColor(mUi.TEXT);
             sample.setTypeface(faceForHangul(f));
@@ -178,10 +178,10 @@ final class SettingsFontPicker {
             row.addView(sample);
 
             TextView name = new TextView(mActivity);
-            // AppStrings.s(R.string.i18n_0178) marks a face whose own cmap has conjoining jamo. The bundled Pretendard
+            // io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0178) marks a face whose own cmap has conjoining jamo. The bundled Pretendard
             // does not - syllables only - and the platform fills the gap with a fallback face,
             // so the mark is about which font draws the text, not about whether it appears.
-            name.setText(Fonts.faceHasJamo(mActivity, f) ? f.label + AppStrings.s(R.string.i18n_0179) : f.label);
+            name.setText(Fonts.faceHasJamo(mActivity, f) ? f.label + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0179) : f.label);
             name.setTextSize(11);
             name.setTextColor(f.id.equals(current) ? mUi.ACCENT : mUi.HINT);
             name.setPadding(0, 0, mUi.dp(10), 0);
@@ -205,15 +205,15 @@ final class SettingsFontPicker {
                 ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(340)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0126))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0126))
                 .setView(scroll)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0175), (d, w) -> {
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0175), (d, w) -> {
                     Fonts.rescan();
                     mSheet.render();
                     chooseHangulFont();
                 })
-                .setNeutralButton(AppStrings.s(R.string.i18n_0180), (d, w) -> installFont())
-                .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
+                .setNeutralButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0180), (d, w) -> installFont())
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0029), null)
                 .create();
         holder[0].show();
     }
@@ -242,7 +242,7 @@ final class SettingsFontPicker {
         box.addView(status);
 
         TextView loading = new TextView(mActivity);
-        loading.setText(AppStrings.s(R.string.i18n_0181));
+        loading.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0181));
         loading.setTextColor(mUi.HINT);
         loading.setTextSize(12);
         status.addView(loading);
@@ -257,7 +257,7 @@ final class SettingsFontPicker {
         device.setClickable(true);
         device.addView(Chrome.icon(mActivity, "folder", 16, false, null));
         TextView deviceLabel = new TextView(mActivity);
-        deviceLabel.setText(AppStrings.s(R.string.i18n_0182));
+        deviceLabel.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0182));
         deviceLabel.setTextColor(mUi.TEXT);
         deviceLabel.setTextSize(13);
         deviceLabel.setPadding(mUi.dp(10), 0, 0, 0);
@@ -277,7 +277,7 @@ final class SettingsFontPicker {
         url.setClickable(true);
         url.addView(Chrome.icon(mActivity, "cloud", 16, false, null));
         TextView urlLabel = new TextView(mActivity);
-        urlLabel.setText(AppStrings.s(R.string.i18n_0183));
+        urlLabel.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0183));
         urlLabel.setTextColor(mUi.TEXT);
         urlLabel.setTextSize(13);
         urlLabel.setPadding(mUi.dp(10), 0, 0, 0);
@@ -295,9 +295,9 @@ final class SettingsFontPicker {
                 ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(360)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0184))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0184))
                 .setView(scroll)
-                .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0029), null)
                 .create();
         holder[0].show();
 
@@ -328,7 +328,7 @@ final class SettingsFontPicker {
         status.removeAllViews();
         if (error != null) {
             TextView t = new TextView(mActivity);
-            t.setText(AppStrings.s(R.string.i18n_0185) + error);
+            t.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0185) + error);
             t.setTextColor(mUi.HINT);
             t.setTextSize(11);
             status.addView(t);
@@ -336,15 +336,15 @@ final class SettingsFontPicker {
         }
         if (fonts == null || fonts.isEmpty()) {
             TextView t = new TextView(mActivity);
-            t.setText(AppStrings.s(R.string.i18n_0186)
-                    + AppStrings.s(R.string.i18n_0187));
+            t.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0186)
+                    + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0187));
             t.setTextColor(mUi.HINT);
             t.setTextSize(11);
             status.addView(t);
             return;
         }
         TextView head = new TextView(mActivity);
-        head.setText(AppStrings.s(R.string.i18n_0188) + fonts.size() + AppStrings.s(R.string.i18n_0189));
+        head.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0188) + fonts.size() + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0189));
         head.setTextColor(mUi.HINT);
         head.setTextSize(11);
         status.addView(head);
@@ -378,7 +378,7 @@ final class SettingsFontPicker {
 
     /** Fetch one Termux-side font and install it as if it had been picked locally. */
     private void pullFromTermux(com.termux.terminal.DaemonClient.RemoteFont f) {
-        android.widget.Toast.makeText(mActivity, f.name() + AppStrings.s(R.string.i18n_0190),
+        android.widget.Toast.makeText(mActivity, f.name() + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0190),
                 android.widget.Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             final Fonts.Import result;
@@ -397,16 +397,16 @@ final class SettingsFontPicker {
 
     /** A URL for the daemon to download, because this app has no way to fetch one itself. */
     private void fontFromUrl() {
-        mUi.prompt(AppStrings.s(R.string.i18n_0191), "", "https://example.com/MyFont.ttf",
-                AppStrings.s(R.string.i18n_0192)
-                        + AppStrings.s(R.string.i18n_0193),
+        mUi.prompt(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0191), "", "https://example.com/MyFont.ttf",
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0192)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0193),
                 v -> {
                     if (v.isEmpty()) return;
                     if (!v.startsWith("http://") && !v.startsWith("https://")) {
-                        showFontError(AppStrings.s(R.string.i18n_0194));
+                        showFontError(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0194));
                         return;
                     }
-                    android.widget.Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0195),
+                    android.widget.Toast.makeText(mActivity, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0195),
                             android.widget.Toast.LENGTH_SHORT).show();
                     new Thread(() -> {
                         final Fonts.Import result;
@@ -430,9 +430,9 @@ final class SettingsFontPicker {
 
     private void showFontError(String message) {
         new android.app.AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0124))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0124))
                 .setMessage(message)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0172), null)
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0172), null)
                 .show();
     }
 
@@ -486,9 +486,9 @@ final class SettingsFontPicker {
             mActivity.startActivityForResult(i, REQ_IMPORT_FONT);
         } catch (Throwable t) {
             new android.app.AlertDialog.Builder(mActivity)
-                    .setTitle(AppStrings.s(R.string.i18n_0124))
-                    .setMessage(AppStrings.s(R.string.i18n_0196) + t)
-                    .setPositiveButton(AppStrings.s(R.string.i18n_0172), null)
+                    .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0124))
+                    .setMessage(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0196) + t)
+                    .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0172), null)
                     .show();
         }
     }

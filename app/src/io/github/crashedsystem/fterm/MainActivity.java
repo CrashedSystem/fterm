@@ -128,7 +128,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // Nothing is attached yet, so the frame would sit as a blank black area until the
         // live query returns (up to the 2.5s timeout). Say so instead of showing a void -
         // "the first shell is blank" was this empty frame, not a dead shell.
-        mBoot.splash(AppStrings.s(R.string.i18n_0110));
+        mBoot.splash(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0110));
         startSessions();
     }
 

@@ -63,14 +63,14 @@ public final class DaemonClient {
             while (true) {
                 int type = in.readUnsignedByte();
                 int len = Protocol.readInt(in);
-                if (len < 0 || len > (1 << 20)) throw new Failure(AppStrings.s(R.string.i18n_0001));
+                if (len < 0 || len > (1 << 20)) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0001));
                 byte[] p = new byte[len];
                 in.readFully(p);
                 if (type == S_ERROR) {
                     int code = p.length >= 1 ? (p[0] & 0xff) : 0;
                     throw new Failure(code == 3
-                            ? AppStrings.s(R.string.i18n_0002)
-                            : AppStrings.s(R.string.i18n_0003) + code + ")");
+                            ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0002)
+                            : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0003) + code + ")");
                 }
                 if (type == S_HELLO_OK) {
                     send(out, C_SYNC, new byte[0]);
@@ -89,7 +89,7 @@ public final class DaemonClient {
                 }
             }
         } catch (IOException e) {
-            throw new Failure(AppStrings.s(R.string.i18n_0004) + e.getMessage());
+            throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0004) + e.getMessage());
         } finally {
             try {
                 s.close();
@@ -138,14 +138,14 @@ public final class DaemonClient {
             while (true) {
                 int type = in.readUnsignedByte();
                 int len = Protocol.readInt(in);
-                if (len < 0 || len > (1 << 20)) throw new Failure(AppStrings.s(R.string.i18n_0001));
+                if (len < 0 || len > (1 << 20)) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0001));
                 byte[] p = new byte[len];
                 in.readFully(p);
                 if (type == S_ERROR) throw errorOf(p);
                 if (type == S_FONT_LIST) return parseFontList(p);
             }
         } catch (IOException e) {
-            throw new Failure(AppStrings.s(R.string.i18n_0004) + e.getMessage());
+            throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0004) + e.getMessage());
         } finally {
             close(s);
         }
@@ -183,28 +183,28 @@ public final class DaemonClient {
             while (true) {
                 int type = in.readUnsignedByte();
                 int len = Protocol.readInt(in);
-                if (len < 0 || len > (1 << 20)) throw new Failure(AppStrings.s(R.string.i18n_0001));
+                if (len < 0 || len > (1 << 20)) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0001));
                 byte[] p = new byte[len];
                 in.readFully(p);
                 if (type == S_ERROR) throw errorOf(p);
                 if (type != S_FONT_DATA) continue;
-                if (p.length < 10) throw new Failure(AppStrings.s(R.string.i18n_0005));
+                if (p.length < 10) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0005));
                 int total = (int) le32(p, 0);
                 int off = (int) le32(p, 4);
                 int nlen = (p[8] & 0xff) | ((p[9] & 0xff) << 8);
                 int start = 10 + nlen;
                 if (total <= 0 || total > (32 << 20) || start > p.length) {
-                    throw new Failure(AppStrings.s(R.string.i18n_0005));
+                    throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0005));
                 }
                 if (data == null) data = new byte[total];
                 int n = Math.min(p.length - start, total - off);
-                if (n < 0 || off + n > total) throw new Failure(AppStrings.s(R.string.i18n_0005));
+                if (n < 0 || off + n > total) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0005));
                 System.arraycopy(p, start, data, off, n);
                 got += n;
                 if (got >= total) return data;
             }
         } catch (IOException e) {
-            throw new Failure(AppStrings.s(R.string.i18n_0006) + e.getMessage());
+            throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0006) + e.getMessage());
         } finally {
             close(s);
         }
@@ -218,7 +218,7 @@ public final class DaemonClient {
      * open. One URL in, one path out, and the path is then fetched with {@link #font}.
      *
      * @return the absolute path the daemon wrote, or a {@link Failure} whose message is the
-     *         daemon's own refusal (AppStrings.s(R.string.i18n_0007))
+     *         daemon's own refusal (io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0007))
      */
     public static String fetchFont(String host, int port, String token, String url, int timeoutMs)
             throws Failure {
@@ -242,26 +242,26 @@ public final class DaemonClient {
             while (true) {
                 int type = in.readUnsignedByte();
                 int len = Protocol.readInt(in);
-                if (len < 0 || len > (1 << 20)) throw new Failure(AppStrings.s(R.string.i18n_0001));
+                if (len < 0 || len > (1 << 20)) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0001));
                 byte[] p = new byte[len];
                 in.readFully(p);
                 if (type == S_ERROR) throw errorOf(p);
                 if (type != S_FONT_FETCHED) continue;
-                if (p.length < 2) throw new Failure(AppStrings.s(R.string.i18n_0008));
+                if (p.length < 2) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0008));
                 int plen = (p[0] & 0xff) | ((p[1] & 0xff) << 8);
                 if (plen == 0) {
-                    if (p.length < 4) throw new Failure(AppStrings.s(R.string.i18n_0009));
+                    if (p.length < 4) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0009));
                     int mlen = (p[2] & 0xff) | ((p[3] & 0xff) << 8);
                     int at = 4;
                     String msg = mlen > 0 && at + mlen <= p.length
-                            ? new String(p, at, mlen, StandardCharsets.UTF_8) : AppStrings.s(R.string.i18n_0009);
+                            ? new String(p, at, mlen, StandardCharsets.UTF_8) : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0009);
                     throw new Failure(msg);
                 }
-                if (2 + plen > p.length) throw new Failure(AppStrings.s(R.string.i18n_0008));
+                if (2 + plen > p.length) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0008));
                 return new String(p, 2, plen, StandardCharsets.UTF_8);
             }
         } catch (IOException e) {
-            throw new Failure(AppStrings.s(R.string.i18n_0006) + e.getMessage());
+            throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0006) + e.getMessage());
         } finally {
             close(s);
         }
@@ -272,18 +272,18 @@ public final class DaemonClient {
         send(out, C_HELLO, Protocol.hello(token));
         int type = in.readUnsignedByte();
         int len = Protocol.readInt(in);
-        if (len < 0 || len > (1 << 20)) throw new Failure(AppStrings.s(R.string.i18n_0001));
+        if (len < 0 || len > (1 << 20)) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0001));
         byte[] p = new byte[len];
         in.readFully(p);
         if (type == S_ERROR) throw errorOf(p);
-        if (type != S_HELLO_OK) throw new Failure(AppStrings.s(R.string.i18n_0010) + type + ")");
+        if (type != S_HELLO_OK) throw new Failure(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0010) + type + ")");
     }
 
     private static Failure errorOf(byte[] p) {
         int code = p.length >= 1 ? (p[0] & 0xff) : 0;
         return new Failure(code == 3
-                ? AppStrings.s(R.string.i18n_0002)
-                : AppStrings.s(R.string.i18n_0003) + code + ")");
+                ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0002)
+                : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0003) + code + ")");
     }
 
     private static List<RemoteFont> parseFontList(byte[] p) throws Failure {

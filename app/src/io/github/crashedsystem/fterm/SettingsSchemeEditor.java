@@ -36,11 +36,11 @@ final class SettingsSchemeEditor {
         if (name.isEmpty()) return;
         new AlertDialog.Builder(mActivity)
                 .setTitle(name)
-                .setItems(new String[]{AppStrings.s(R.string.i18n_0250), AppStrings.s(R.string.i18n_0239)}, (d, which) -> {
+                .setItems(new String[]{io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0250), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0239)}, (d, which) -> {
                     if (which == 0) rename(index, name);
                     else confirmDelete(index, name);
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
                 .show();
     }
 
@@ -56,37 +56,37 @@ final class SettingsSchemeEditor {
         field.setTypeface(Typeface.MONOSPACE);
         field.setTextColor(mUi.TEXT);
         field.setHintTextColor(mUi.HINT);
-        field.setHint(AppStrings.s(R.string.i18n_0251));
+        field.setHint(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0251));
         box.addView(field, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView note = new TextView(mActivity);
-        note.setText(AppStrings.s(R.string.i18n_0252));
+        note.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0252));
         note.setTextColor(mUi.HINT);
         note.setTextSize(10.5f);
         note.setPadding(0, mUi.dp(6), 0, 0);
         box.addView(note);
 
         new AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0251))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0251))
                 .setView(box)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) -> {
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0057), (d, w) -> {
                     mHost.onRenameCustomScheme(index, field.getText().toString().trim());
                     mSheet.render();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
                 .show();
     }
 
     private void confirmDelete(final int index, String name) {
         new AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0253))
-                .setMessage("'" + name + AppStrings.s(R.string.i18n_0254))
-                .setPositiveButton(AppStrings.s(R.string.i18n_0239), (d, w) -> {
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0253))
+                .setMessage("'" + name + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0254))
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0239), (d, w) -> {
                     mHost.onDeleteCustomScheme(index);
                     mSheet.render();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
                 .show();
     }
 }

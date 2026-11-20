@@ -29,12 +29,12 @@ final class SettingsProfilesPage extends SettingsPage {
             empty.setOrientation(LinearLayout.VERTICAL);
             empty.setPadding(ui.dp(14), ui.dp(14), ui.dp(14), ui.dp(14));
             TextView t = new TextView(activity);
-            t.setText(AppStrings.s(R.string.i18n_0210));
+            t.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0210));
             t.setTextColor(ui.TEXT);
             t.setTextSize(13);
             empty.addView(t);
             TextView sub = new TextView(activity);
-            sub.setText(AppStrings.s(R.string.i18n_0211));
+            sub.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0211));
             sub.setTextColor(ui.HINT);
             sub.setTextSize(10.5f);
             sub.setPadding(0, ui.dp(3), 0, 0);
@@ -49,19 +49,19 @@ final class SettingsProfilesPage extends SettingsPage {
             }
         }
 
-        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0212), AppStrings.s(R.string.i18n_0213), "+",
+        card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0212), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0213), "+",
                 () -> editProfile(-1, true), false));
 
-        // An example, not documentation. AppStrings.s(R.string.i18n_0214) is a sentence the user
+        // An example, not documentation. io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0214) is a sentence the user
         // has to translate into four fields and an icon; a row that installs the finished
         // profile is the same information in one tap, and it doubles as the only place the
         // OpenCode mark is discoverable without opening the icon grid.
-        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0215), AppStrings.s(R.string.i18n_0216), "",
+        card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0215), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0216), "",
                 this::addOpencodeExample, true));
 
-        ui.hint(col, AppStrings.s(R.string.i18n_0217)
-                + AppStrings.s(R.string.i18n_0218)
-                + AppStrings.s(R.string.i18n_0219));
+        ui.hint(col, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0217)
+                + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0218)
+                + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0219));
     }
 
     /**
@@ -79,25 +79,25 @@ final class SettingsProfilesPage extends SettingsPage {
         }
         if (present) {
             new android.app.AlertDialog.Builder(activity)
-                    .setTitle(AppStrings.s(R.string.i18n_0215))
-                    .setMessage(AppStrings.s(R.string.i18n_0220))
-                    .setPositiveButton(AppStrings.s(R.string.i18n_0172), null)
+                    .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0215))
+                    .setMessage(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0220))
+                    .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0172), null)
                     .show();
             return;
         }
         new android.app.AlertDialog.Builder(activity)
-                .setTitle(AppStrings.s(R.string.i18n_0215))
-                .setMessage(AppStrings.s(R.string.i18n_0221) + example.name + AppStrings.s(R.string.i18n_0222) + example.command
-                        + AppStrings.s(R.string.i18n_0223)
-                        + AppStrings.s(R.string.i18n_0224)
-                        + AppStrings.s(R.string.i18n_0225))
-                .setPositiveButton(AppStrings.s(R.string.i18n_0226), (d, w) -> {
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0215))
+                .setMessage(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0221) + example.name + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0222) + example.command
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0223)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0224)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0225))
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0226), (d, w) -> {
                     java.util.List<Profiles.Profile> list = host.profiles();
                     list.add(example);
                     host.onProfiles(list);
                     render();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
                 .show();
     }
 
@@ -105,7 +105,7 @@ final class SettingsProfilesPage extends SettingsPage {
      * One row of the profile list: the mark the tab will carry, the name, the subtitle.
      *
      * <p>The mark is shown here rather than only in the editor because the list is where the
-     * user decides which profile is which. A name alone makes two profiles called AppStrings.s(R.string.i18n_0227)
+     * user decides which profile is which. A name alone makes two profiles called io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0227)
      * indistinguishable; the icon is the thing that would have told them apart in the tab
      * strip, so it belongs in the list that configures the strip.
      */
@@ -135,7 +135,7 @@ final class SettingsProfilesPage extends SettingsPage {
         text.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView name = new TextView(activity);
-        name.setText(p.name.isEmpty() ? AppStrings.s(R.string.i18n_0228) : p.name);
+        name.setText(p.name.isEmpty() ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0228) : p.name);
         name.setTextColor(ui.TEXT);
         name.setTextSize(13.5f);
         UiFont.apply(name, false);
@@ -170,7 +170,7 @@ final class SettingsProfilesPage extends SettingsPage {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(ui.dp(20), ui.dp(4), ui.dp(20), 0);
 
-        final EditText name = ui.field(existing.name, AppStrings.s(R.string.i18n_0229));
+        final EditText name = ui.field(existing.name, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0229));
         final EditText dir = ui.field(existing.dir, "/data/data/com.termux/files/home");
         final EditText shell = ui.field(existing.shell, "/data/data/com.termux/files/usr/bin/bash");
         final EditText command = ui.field(existing.command, "ssh myhost");
@@ -179,7 +179,7 @@ final class SettingsProfilesPage extends SettingsPage {
         // EditText: the dialog reads it when Save is pressed, exactly like the fields.
         final String[] icon = {existing.icon == null ? "" : existing.icon};
 
-        box.addView(ui.label(AppStrings.s(R.string.i18n_0230)));
+        box.addView(ui.label(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0230)));
         box.addView(name);
 
         LinearLayout iconRow = new LinearLayout(activity);
@@ -193,7 +193,7 @@ final class SettingsProfilesPage extends SettingsPage {
         iconText.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView iconTitle = new TextView(activity);
-        iconTitle.setText(AppStrings.s(R.string.i18n_0231));
+        iconTitle.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0231));
         iconTitle.setTextColor(ui.TEXT);
         iconTitle.setTextSize(13.5f);
         UiFont.apply(iconTitle, false);
@@ -212,7 +212,7 @@ final class SettingsProfilesPage extends SettingsPage {
 
         final Runnable repaintIcon = () -> {
             String id = icon[0];
-            String shown = id.isEmpty() ? AppStrings.s(R.string.i18n_0232)
+            String shown = id.isEmpty() ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0232)
                     : TabIcons.isGlyph(id)
                             ? TabIcons.GLYPH_NAMES[SettingsIconPicker.glyphIndexOf(id)]
                             : id;
@@ -223,28 +223,28 @@ final class SettingsProfilesPage extends SettingsPage {
         };
         repaintIcon.run();
         iconRow.setOnClickListener(v -> SettingsIconPicker.pick(activity, ui,
-                AppStrings.s(R.string.i18n_0233), icon[0], AppStrings.s(R.string.i18n_0094), id -> {
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0233), icon[0], io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0094), id -> {
                     icon[0] = id;
                     repaintIcon.run();
                 }));
 
-        box.addView(ui.label(AppStrings.s(R.string.i18n_0234)));
+        box.addView(ui.label(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0234)));
         box.addView(dir);
-        box.addView(ui.label(AppStrings.s(R.string.i18n_0235)));
+        box.addView(ui.label(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0235)));
         box.addView(shell);
-        box.addView(ui.label(AppStrings.s(R.string.i18n_0236)));
+        box.addView(ui.label(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0236)));
         box.addView(command);
         TextView note = new TextView(activity);
-        note.setText(AppStrings.s(R.string.i18n_0237));
+        note.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0237));
         note.setTextColor(ui.HINT);
         note.setTextSize(10.5f);
         note.setPadding(0, ui.dp(6), 0, 0);
         box.addView(note);
 
         android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(activity)
-                .setTitle(isNew ? AppStrings.s(R.string.i18n_0212) : AppStrings.s(R.string.i18n_0238))
+                .setTitle(isNew ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0212) : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0238))
                 .setView(box)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) -> {
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0057), (d, w) -> {
                     Profiles.Profile p = new Profiles.Profile(
                             name.getText().toString().trim(),
                             dir.getText().toString().trim(),
@@ -261,9 +261,9 @@ final class SettingsProfilesPage extends SettingsPage {
                     host.onProfiles(list);
                     render();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null);
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null);
         if (!isNew) {
-            b.setNeutralButton(AppStrings.s(R.string.i18n_0239), (d, w) -> {
+            b.setNeutralButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0239), (d, w) -> {
                 java.util.List<Profiles.Profile> list = host.profiles();
                 if (index < list.size()) list.remove(index);
                 host.onProfiles(list);

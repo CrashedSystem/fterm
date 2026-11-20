@@ -42,16 +42,16 @@ final class SettingsSchemesPage extends SettingsPage {
         col.addView(preview(scheme, slots));
 
         LinearLayout colours = ui.card(col);
-        colours.addView(ui.cardTitle(AppStrings.s(R.string.i18n_0270)));
+        colours.addView(ui.cardTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0270)));
         int[] table = Schemes.colors(scheme, slots);
-        String[] names = {AppStrings.s(R.string.i18n_0271), AppStrings.s(R.string.i18n_0272), AppStrings.s(R.string.i18n_0273), AppStrings.s(R.string.i18n_0274), AppStrings.s(R.string.i18n_0275), AppStrings.s(R.string.i18n_0276), AppStrings.s(R.string.i18n_0277), AppStrings.s(R.string.i18n_0278)};
+        String[] names = {io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0271), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0272), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0273), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0274), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0275), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0276), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0277), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0278)};
         for (int i = 0; i < names.length; i++) {
             colours.addView(swatchRow(names[i], table[i], table[i + 8], i == names.length - 1,
                     editable, i, slots));
         }
 
         LinearLayout list = ui.card(col);
-        list.addView(ui.cardTitle(AppStrings.s(R.string.i18n_0279)));
+        list.addView(ui.cardTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0279)));
         final int rows = Schemes.SCHEME_NAMES.length + customCount;
         int shown = 0;
         for (int i = 0; i < Schemes.SCHEME_NAMES.length; i++) {
@@ -75,25 +75,25 @@ final class SettingsSchemesPage extends SettingsPage {
         }
 
         ui.hint(col, editable
-                ? AppStrings.s(R.string.i18n_0280)
-                        + AppStrings.s(R.string.i18n_0281)
-                : AppStrings.s(R.string.i18n_0282)
-                        + AppStrings.s(R.string.i18n_0283));
+                ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0280)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0281)
+                : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0282)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0283));
 
         LinearLayout add = ui.card(col);
-        add.addView(ui.cardTitle(AppStrings.s(R.string.i18n_0284) + customCount + "/"
+        add.addView(ui.cardTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0284) + customCount + "/"
                 + Schemes.MAX_CUSTOM_SCHEMES));
-        add.addView(ui.valueRow(AppStrings.s(R.string.i18n_0285), AppStrings.s(R.string.i18n_0286),
-                AppStrings.s(R.string.i18n_0287), () -> addCustom(host.schemeName() + AppStrings.s(R.string.i18n_0288),
+        add.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0285), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0286),
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0287), () -> addCustom(host.schemeName() + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0288),
                         Schemes.slotsOf(scheme, slots)), false));
-        add.addView(ui.valueRow(AppStrings.s(R.string.i18n_0289), AppStrings.s(R.string.i18n_0290),
-                AppStrings.s(R.string.i18n_0291), () -> addCustom(AppStrings.s(R.string.i18n_0289), Schemes.campbellSlots()), true));
+        add.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0289), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0290),
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0291), () -> addCustom(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0289), Schemes.campbellSlots()), true));
 
         LinearLayout importCard = ui.card(col);
-        importCard.addView(ui.cardTitle(AppStrings.s(R.string.i18n_0260)));
+        importCard.addView(ui.cardTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0260)));
         importCard.addView(ui.valueRow("Windows Terminal JSON",
-                AppStrings.s(R.string.i18n_0292),
-                AppStrings.s(R.string.i18n_0260), () -> sheet.schemes().open(), true));
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0292),
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0260), () -> sheet.schemes().open(), true));
     }
 
     /**
@@ -105,8 +105,8 @@ final class SettingsSchemesPage extends SettingsPage {
      */
     private void addCustom(String name, int[] slots) {
         if (host.addCustomScheme(name, slots) < 0) {
-            Toast.makeText(activity, AppStrings.s(R.string.i18n_0264) + Schemes.MAX_CUSTOM_SCHEMES
-                    + AppStrings.s(R.string.i18n_0293),
+            Toast.makeText(activity, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0264) + Schemes.MAX_CUSTOM_SCHEMES
+                    + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0293),
                     Toast.LENGTH_LONG).show();
             return;
         }
@@ -143,8 +143,8 @@ final class SettingsSchemesPage extends SettingsPage {
         box.addView(hex);
 
         TextView label = new TextView(activity);
-        label.setText(slot < 16 ? (slot < 8 ? AppStrings.s(R.string.i18n_0294) : AppStrings.s(R.string.i18n_0295)) + (slot % 8 + 1) + AppStrings.s(R.string.i18n_0296)
-                : slot == 16 ? AppStrings.s(R.string.i18n_0297) : slot == 17 ? AppStrings.s(R.string.i18n_0298) : AppStrings.s(R.string.i18n_0299));
+        label.setText(slot < 16 ? (slot < 8 ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0294) : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0295)) + (slot % 8 + 1) + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0296)
+                : slot == 16 ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0297) : slot == 17 ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0298) : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0299));
         label.setTextColor(ui.HINT);
         label.setTextSize(11);
         label.setPadding(0, ui.dp(6), 0, 0);
@@ -160,9 +160,9 @@ final class SettingsSchemesPage extends SettingsPage {
         });
 
         new android.app.AlertDialog.Builder(activity)
-                .setTitle(AppStrings.s(R.string.i18n_0300))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0300))
                 .setView(box)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) -> {
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0057), (d, w) -> {
                     Integer c = SettingsUi.parseHex(hex.getText().toString());
                     if (c != null) {
                         host.onCustomSlot(slot, c);
@@ -170,8 +170,8 @@ final class SettingsSchemesPage extends SettingsPage {
                         render();
                     }
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
-                .setNeutralButton(AppStrings.s(R.string.i18n_0301), (d, w) -> {
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
+                .setNeutralButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0301), (d, w) -> {
                     host.onCustomSlot(slot, slots[16]);
                     slots[slot] = slots[16];
                     render();
@@ -194,7 +194,7 @@ final class SettingsSchemesPage extends SettingsPage {
         lp.bottomMargin = ui.dp(10);
         box.setLayoutParams(lp);
 
-        String[] names = {AppStrings.s(R.string.i18n_0297), AppStrings.s(R.string.i18n_0272), AppStrings.s(R.string.i18n_0273), AppStrings.s(R.string.i18n_0274), AppStrings.s(R.string.i18n_0275), AppStrings.s(R.string.i18n_0276), AppStrings.s(R.string.i18n_0277), AppStrings.s(R.string.i18n_0278)};
+        String[] names = {io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0297), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0272), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0273), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0274), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0275), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0276), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0277), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0278)};
         int[] normal = {table[TextStyle.COLOR_INDEX_FOREGROUND],
                 table[1], table[2], table[3], table[4], table[5], table[6], table[7]};
         int[] bright = {table[15], table[9], table[10], table[11], table[12], table[13],
@@ -208,7 +208,7 @@ final class SettingsSchemesPage extends SettingsPage {
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             sb.append("  ");
             s = sb.length();
-            sb.append(AppStrings.s(R.string.i18n_0302)).append(names[i]);
+            sb.append(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0302)).append(names[i]);
             sb.setSpan(new ForegroundColorSpan(bright[i]), s, sb.length(),
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 

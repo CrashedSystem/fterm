@@ -18,13 +18,13 @@ final class SettingsInteractionPage extends SettingsPage {
     @Override
     void build(LinearLayout col) {
         LinearLayout card = ui.card(col);
-        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0203), AppStrings.s(R.string.i18n_0204),
+        card.addView(ui.toggleCardRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0203), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0204),
                 host.bellVibrate(), on -> host.onBell(on, host.bellSound()), false));
-        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0205), AppStrings.s(R.string.i18n_0206),
+        card.addView(ui.toggleCardRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0205), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0206),
                 host.bellSound(), on -> host.onBell(host.bellVibrate(), on), false));
-        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0207), AppStrings.s(R.string.i18n_0208),
+        card.addView(ui.toggleCardRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0207), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0208),
                 host.backIsEscape(), host::onBackIsEscape, true));
 
-        ui.hint(col, AppStrings.s(R.string.i18n_0209));
+        ui.hint(col, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0209));
     }
 }

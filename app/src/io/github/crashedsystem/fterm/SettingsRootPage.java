@@ -9,7 +9,7 @@ import android.widget.TextView;
 /**
  * The navigation column: WT's list of pages, as glyph + label + hint.
  *
- * <p>WT draws each entry as glyph + label, and so does this; AppStrings.s(R.string.i18n_0240) is not a real page on the
+ * <p>WT draws each entry as glyph + label, and so does this; io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0240) is not a real page on the
  * desktop build, so unlike WT it is listed here as one. Every row leads somewhere, which is why
  * every row carries the right-pointing chevron WT puts on the same rows.
  */
@@ -21,12 +21,12 @@ final class SettingsRootPage extends SettingsPage {
 
     @Override
     void build(LinearLayout col) {
-        col.addView(navRow("terminal", AppStrings.s(R.string.i18n_0241), AppStrings.s(R.string.i18n_0242), "start"));
-        col.addView(navRow("ssh", AppStrings.s(R.string.i18n_0240), AppStrings.s(R.string.i18n_0243), "profiles"));
-        col.addView(navRow("pencil", AppStrings.s(R.string.i18n_0244), AppStrings.s(R.string.i18n_0245), "appearance"));
-        col.addView(navRow("swatch", AppStrings.s(R.string.i18n_0128), AppStrings.s(R.string.i18n_0246), "schemes"));
-        col.addView(navRow("keyboard", AppStrings.s(R.string.i18n_0247), AppStrings.s(R.string.i18n_0248), "interaction"));
-        col.addView(navRow("info", AppStrings.s(R.string.i18n_0024), AppStrings.s(R.string.i18n_0249), "about"));
+        col.addView(navRow("terminal", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0241), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0242), "start"));
+        col.addView(navRow("ssh", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0240), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0243), "profiles"));
+        col.addView(navRow("pencil", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0244), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0245), "appearance"));
+        col.addView(navRow("swatch", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0128), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0246), "schemes"));
+        col.addView(navRow("keyboard", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0247), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0248), "interaction"));
+        col.addView(navRow("info", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0024), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0249), "about"));
     }
 
     private View navRow(String glyph, String label, String hint, final String page) {

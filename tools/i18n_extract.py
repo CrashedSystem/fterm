@@ -39,21 +39,19 @@ import codecs
 
 def decode_java(s):
     # s is the inside of quotes, with Java escapes.
-    # If there are explicit unicode escapes (\uXXXX), replace them; otherwise
-    # perform a minimal unescape for common escapes and leave existing Unicode untouched.
+    # Replace explicit unicode escapes (\uXXXX) and common escapes; leave existing Unicode untouched.
     def replace_uni(m):
         return chr(int(m.group(1),16))
     if "\u" in s:
-        s = re.sub(r'\\u([0-9a-fA-F]{4})', replace_uni, s)
         s = re.sub(r'\u([0-9a-fA-F]{4})', replace_uni, s)
     # Common escapes
-    s = s.replace('\\', '\')
     s = s.replace('\n', '
 ')
     s = s.replace('\r', '')
     s = s.replace('\t', '	')
     s = s.replace('\"', '"')
     s = s.replace("\'", "'")
+
     return s
 
 

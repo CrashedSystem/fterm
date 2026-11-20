@@ -46,19 +46,19 @@ final class SettingsBackgroundPicker {
     /** Appends the four rows to the appearance card. */
     void rows(LinearLayout card) {
         String name = mHost.backgroundName();
-        card.addView(mUi.valueRow(AppStrings.s(R.string.i18n_0051), AppStrings.s(R.string.i18n_0149),
-                name == null ? AppStrings.s(R.string.i18n_0094) : name, this::choose, false));
+        card.addView(mUi.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0051), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0149),
+                name == null ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0094) : name, this::choose, false));
 
-        card.addView(sliderRow(AppStrings.s(R.string.i18n_0150), AppStrings.s(R.string.i18n_0151),
+        card.addView(sliderRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0150), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0151),
                 mHost.backgroundOpacity(), 100, false, mHost::onBackgroundOpacity));
 
-        card.addView(mUi.valueRow(AppStrings.s(R.string.i18n_0152), AppStrings.s(R.string.i18n_0153),
+        card.addView(mUi.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0152), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0153),
                 BackgroundSpec.fitLabel(mHost.backgroundFit()), this::chooseFit, false));
 
-        card.addView(mUi.valueRow(AppStrings.s(R.string.i18n_0154), AppStrings.s(R.string.i18n_0155),
+        card.addView(mUi.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0154), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0155),
                 BackgroundSpec.alignLabel(mHost.backgroundAlign()), this::chooseAlign, false));
 
-        card.addView(sliderRow(AppStrings.s(R.string.i18n_0156), AppStrings.s(R.string.i18n_0157),
+        card.addView(sliderRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0156), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0157),
                 mHost.backgroundDim(), BackgroundSpec.MAX_DIM, true, mHost::onBackgroundDim));
     }
 
@@ -117,16 +117,16 @@ final class SettingsBackgroundPicker {
     private void choose() {
         final boolean has = mHost.backgroundSet();
         String[] items = has
-                ? new String[]{AppStrings.s(R.string.i18n_0158), AppStrings.s(R.string.i18n_0159), AppStrings.s(R.string.i18n_0160)}
-                : new String[]{AppStrings.s(R.string.i18n_0158), AppStrings.s(R.string.i18n_0159)};
+                ? new String[]{io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0158), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0159), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0160)}
+                : new String[]{io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0158), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0159)};
         new AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0051))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0051))
                 .setItems(items, (d, which) -> {
                     if (which == 0) pick();
                     else if (which == 1) showScriptHelp();
                     else clear();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0029), null)
                 .show();
     }
 
@@ -142,7 +142,7 @@ final class SettingsBackgroundPicker {
         try {
             mActivity.startActivityForResult(i, REQ_PICK);
         } catch (Throwable t) {
-            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0161) + t.getMessage(),
+            Toast.makeText(mActivity, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0161) + t.getMessage(),
                     Toast.LENGTH_LONG).show();
         }
     }
@@ -154,8 +154,8 @@ final class SettingsBackgroundPicker {
         Uri uri = data.getData();
         if (uri == null) return;
         boolean ok = BackgroundStore.install(mActivity, uri);
-        Toast.makeText(mActivity, ok ? AppStrings.s(R.string.i18n_0162)
-                : AppStrings.s(R.string.i18n_0163),
+        Toast.makeText(mActivity, ok ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0162)
+                : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0163),
                 Toast.LENGTH_SHORT).show();
         if (ok) {
             mHost.onBackgroundChanged();
@@ -166,23 +166,23 @@ final class SettingsBackgroundPicker {
     private void clear() {
         BackgroundStore.clear(mActivity);
         mHost.onBackgroundChanged();
-        Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0164), Toast.LENGTH_SHORT).show();
+        Toast.makeText(mActivity, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0164), Toast.LENGTH_SHORT).show();
         mSheet.render();
     }
 
     private void chooseFit() {
         final String[] values = BackgroundSpec.FIT_NAMES;
-        String[] labels = {AppStrings.s(R.string.i18n_0165), AppStrings.s(R.string.i18n_0166)};
+        String[] labels = {io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0165), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0166)};
         int current = BackgroundSpec.FIT_COVER.equals(BackgroundSpec.fit(mHost.backgroundFit()))
                 ? 1 : 0;
         new AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0152))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0152))
                 .setSingleChoiceItems(labels, current, (d, which) -> {
                     mHost.onBackgroundFit(values[which]);
                     d.dismiss();
                     mSheet.render();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
                 .show();
     }
 
@@ -205,13 +205,13 @@ final class SettingsBackgroundPicker {
             if (values[i].equals(current)) selected = i;
         }
         new AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0167))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0167))
                 .setSingleChoiceItems(labels, selected, (d, which) -> {
                     mHost.onBackgroundAlign(values[which]);
                     d.dismiss();
                     mSheet.render();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
                 .show();
     }
 
@@ -224,13 +224,13 @@ final class SettingsBackgroundPicker {
      */
     private void showScriptHelp() {
         String dir = BackgroundStore.dir(mActivity).getAbsolutePath();
-        String text = AppStrings.s(R.string.i18n_0168) + dir
-                + AppStrings.s(R.string.i18n_0169)
+        String text = io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0168) + dir
+                + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0169)
                 + "adb push miku-dusk.png " + dir + "/\n"
                 + "adb shell am broadcast -a io.github.crashedsystem.fterm.action.APPLY_BACKGROUND"
                 + " -p io.github.crashedsystem.fterm --es path " + dir + "/miku-dusk.png"
                 + " --ei opacity 100 --es fit contain --ei dim 25"
-                + AppStrings.s(R.string.i18n_0170)
+                + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0170)
                 + "adb shell am broadcast -a io.github.crashedsystem.fterm.action.CLEAR_BACKGROUND"
                 + " -p io.github.crashedsystem.fterm";
         TextView body = new TextView(mActivity);
@@ -241,9 +241,9 @@ final class SettingsBackgroundPicker {
         body.setTextIsSelectable(true);
         body.setPadding(mUi.dp(20), mUi.dp(12), mUi.dp(20), mUi.dp(4));
         new AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0171))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0171))
                 .setView(body)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0172), null)
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0172), null)
                 .show();
     }
 }

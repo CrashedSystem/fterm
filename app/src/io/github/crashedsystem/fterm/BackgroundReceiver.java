@@ -57,14 +57,14 @@ public final class BackgroundReceiver extends BroadcastReceiver {
             boolean ok;
             if (path != null) {
                 File file = new File(path);
-                if (!allowed(context, file)) return AppStrings.s(R.string.i18n_0036) + path;
+                if (!allowed(context, file)) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0036) + path;
                 ok = BackgroundStore.installFile(context, file);
             } else if (uri != null) {
                 ok = BackgroundStore.install(context, uri);
             } else {
-                return AppStrings.s(R.string.i18n_0037);
+                return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0037);
             }
-            if (!ok) return AppStrings.s(R.string.i18n_0038);
+            if (!ok) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0038);
         } else {
             BackgroundStore.clear(context);
         }
@@ -84,7 +84,7 @@ public final class BackgroundReceiver extends BroadcastReceiver {
         }
 
         BackgroundStore.notifyChanged(context);
-        if (clear) return AppStrings.s(R.string.i18n_0039);
+        if (clear) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0039);
         return "ok: " + BackgroundStore.describe(context);
     }
 

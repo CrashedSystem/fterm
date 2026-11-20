@@ -236,9 +236,9 @@ final class SettingsUi {
         new android.app.AlertDialog.Builder(mActivity)
                 .setTitle(title)
                 .setView(box)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) -> onOk.accept(field.getText().toString().trim()))
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
-                .setNeutralButton(AppStrings.s(R.string.i18n_0323), (d, w) -> onOk.accept(""))
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0057), (d, w) -> onOk.accept(field.getText().toString().trim()))
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
+                .setNeutralButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0323), (d, w) -> onOk.accept(""))
                 .show();
     }
 

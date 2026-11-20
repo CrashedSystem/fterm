@@ -31,25 +31,25 @@ final class DaemonDialogs {
      */
     static void manualToken(Activity a, final TokenInput onToken) {
         final android.widget.EditText input = new android.widget.EditText(a);
-        input.setHint(AppStrings.s(R.string.i18n_0072));
+        input.setHint(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0072));
         input.setSingleLine(true);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
         input.setTextColor(0xffe6e6e6);
         input.setHintTextColor(0xff888888);
 
         new AlertDialog.Builder(a)
-                .setTitle(AppStrings.s(R.string.i18n_0073))
-                .setMessage(AppStrings.s(R.string.i18n_0074)
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0073))
+                .setMessage(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0074)
                         + "  ~/fterm/ftermd start\n"
                         + "  ftermd token\n\n"
-                        + AppStrings.s(R.string.i18n_0075))
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0075))
                 .setView(input)
                 .setCancelable(false)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) ->
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0057), (d, w) ->
                         onToken.onToken(input.getText().toString().trim()))
-                .setNegativeButton(AppStrings.s(R.string.i18n_0076), (d, w) -> {
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0076), (d, w) -> {
                     copy(a, "ftermd start && ftermd token");
-                    Toast.makeText(a, AppStrings.s(R.string.i18n_0077),
+                    Toast.makeText(a, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0077),
                             Toast.LENGTH_LONG).show();
                     onToken.onToken(null);
                 })
@@ -66,14 +66,14 @@ final class DaemonDialogs {
 
     static void keeperMissing(Activity a, Runnable onDismiss) {
         new AlertDialog.Builder(a)
-                .setTitle(AppStrings.s(R.string.i18n_0078))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0078))
                 .setMessage(DaemonLauncher.keeperInstructions())
-                .setPositiveButton(AppStrings.s(R.string.i18n_0079), (d, w) -> {
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0079), (d, w) -> {
                     copy(a, COMMAND);
-                    Toast.makeText(a, AppStrings.s(R.string.i18n_0077),
+                    Toast.makeText(a, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0077),
                             Toast.LENGTH_LONG).show();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0029), (d, w) -> onDismiss.run())
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0029), (d, w) -> onDismiss.run())
                 .show();
     }
 
@@ -86,27 +86,27 @@ final class DaemonDialogs {
      */
     static void storageBlocked(Activity a, Runnable onDismiss) {
         new AlertDialog.Builder(a)
-                .setTitle(AppStrings.s(R.string.i18n_0080))
-                .setMessage(AppStrings.s(R.string.i18n_0081)
-                        + AppStrings.s(R.string.i18n_0082)
-                        + AppStrings.s(R.string.i18n_0083)
-                        + AppStrings.s(R.string.i18n_0084)
-                        + AppStrings.s(R.string.i18n_0085)
-                        + AppStrings.s(R.string.i18n_0086)
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0080))
+                .setMessage(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0081)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0082)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0083)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0084)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0085)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0086)
                         + "  ~/fterm/ftermd token")
-                .setPositiveButton(AppStrings.s(R.string.i18n_0029), (d, w) -> onDismiss.run())
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0029), (d, w) -> onDismiss.run())
                 .show();
     }
 
     static void daemonSlow(Activity a, Runnable onRetry, Runnable onDismiss) {
         new AlertDialog.Builder(a)
-                .setTitle(AppStrings.s(R.string.i18n_0087))
-                .setMessage(AppStrings.s(R.string.i18n_0088)
-                        + AppStrings.s(R.string.i18n_0089)
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0087))
+                .setMessage(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0088)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0089)
                         + "  ~/fterm/ftermd status\n"
                         + "  tail ~/fterm/daemon.log")
-                .setPositiveButton(AppStrings.s(R.string.i18n_0090), (d, w) -> onRetry.run())
-                .setNegativeButton(AppStrings.s(R.string.i18n_0029), (d, w) -> onDismiss.run())
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0090), (d, w) -> onRetry.run())
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0029), (d, w) -> onDismiss.run())
                 .show();
     }
 }

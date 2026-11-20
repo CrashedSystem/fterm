@@ -18,7 +18,7 @@ import android.widget.TextView;
  */
 final class SettingsAppearancePage extends SettingsPage {
 
-    private static final String[] CURSOR_NAMES = {AppStrings.s(R.string.i18n_0120), AppStrings.s(R.string.i18n_0121), AppStrings.s(R.string.i18n_0122)};
+    private static final String[] CURSOR_NAMES = {io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0120), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0121), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0122)};
 
     SettingsAppearancePage(SettingsSheet sheet) {
         super(sheet);
@@ -38,7 +38,7 @@ final class SettingsAppearancePage extends SettingsPage {
         text.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView t = new TextView(activity);
-        t.setText(AppStrings.s(R.string.i18n_0123));
+        t.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0123));
         t.setTextColor(ui.TEXT);
         t.setTextSize(14);
         UiFont.apply(t, false);
@@ -68,59 +68,59 @@ final class SettingsAppearancePage extends SettingsPage {
         sizeRow.addView(size);
         card.addView(ui.cardRow(sizeRow, false));
 
-        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0124), AppStrings.s(R.string.i18n_0125),
+        card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0124), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0125),
                 Fonts.labelOf(activity, host.fontFamily()),
                 () -> sheet.fonts().chooseFont(), false));
-        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0126), AppStrings.s(R.string.i18n_0127),
+        card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0126), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0127),
                 Fonts.labelOfHangul(activity, host.hangulFamily()),
                 () -> sheet.fonts().chooseHangulFont(), false));
-        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0128), AppStrings.s(R.string.i18n_0129),
+        card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0128), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0129),
                 host.schemeName(), () -> open("schemes"), false));
-        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0130), AppStrings.s(R.string.i18n_0131),
+        card.addView(ui.toggleCardRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0130), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0131),
                 host.keyBarVisible(), host::onKeyBarVisible, false));
-        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0132),
-                AppStrings.s(R.string.i18n_0133),
+        card.addView(ui.toggleCardRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0132),
+                io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0133),
                 host.keyBarAutoHide(), host::onKeyBarAutoHide, false));
 
         // WT's cursor page, folded into this one: three shapes and a blink switch.
-        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0134), AppStrings.s(R.string.i18n_0135),
+        card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0134), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0135),
                 CURSOR_NAMES[Math.max(0, Math.min(CURSOR_NAMES.length - 1, host.cursorStyle()))],
                 this::chooseCursor, false));
-        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0136), AppStrings.s(R.string.i18n_0137),
+        card.addView(ui.toggleCardRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0136), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0137),
                 host.cursorBlink(), host::onCursorBlink, true));
-        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0138), AppStrings.s(R.string.i18n_0139),
-                host.cursorColor() == 0 ? AppStrings.s(R.string.i18n_0140)
+        card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0138), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0139),
+                host.cursorColor() == 0 ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0140)
                         : String.format("#%06X", host.cursorColor() & 0xffffff),
                 this::chooseCursorColor, false));
-        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0141), AppStrings.s(R.string.i18n_0142),
+        card.addView(ui.valueRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0141), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0142),
                 TabIcons.isGlyph(host.tabIcon())
                         ? TabIcons.GLYPH_NAMES[SettingsIconPicker.glyphIndexOf(host.tabIcon())]
                         : host.tabIcon(),
                 this::chooseTabIcon, false));
-        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0143), AppStrings.s(R.string.i18n_0144),
+        card.addView(ui.toggleCardRow(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0143), io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0144),
                 host.retroEffect(), host::onRetroEffect, true));
 
         LinearLayout bg = ui.card(col);
-        bg.addView(ui.cardTitle(AppStrings.s(R.string.i18n_0051)));
+        bg.addView(ui.cardTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0051)));
         sheet.background().rows(bg);
-        ui.hint(col, AppStrings.s(R.string.i18n_0145)
-                + AppStrings.s(R.string.i18n_0146));
+        ui.hint(col, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0145)
+                + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0146));
     }
 
     private void chooseCursor() {
         new android.app.AlertDialog.Builder(activity)
-                .setTitle(AppStrings.s(R.string.i18n_0134))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0134))
                 .setSingleChoiceItems(CURSOR_NAMES, host.cursorStyle(), (d, which) -> {
                     host.onCursorStyle(which);
                     d.dismiss();
                     render();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
                 .show();
     }
 
     /**
-     * The cursor colour: a hex field plus a chip, and AppStrings.s(R.string.i18n_0140) to go back.
+     * The cursor colour: a hex field plus a chip, and io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0140) to go back.
      *
      * <p>Not a colour wheel. The value a user wants is almost always one they read off
      * something else - a scheme file, a screenshot, another terminal - and that arrives as a
@@ -145,7 +145,7 @@ final class SettingsAppearancePage extends SettingsPage {
 
         final android.widget.EditText hex = new android.widget.EditText(activity);
         hex.setText(current == 0 ? "" : String.format("#%06X", current & 0xffffff));
-        hex.setHint(AppStrings.s(R.string.i18n_0147));
+        hex.setHint(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0147));
         hex.setHintTextColor(ui.HINT);
         hex.setSingleLine(true);
         hex.setTextSize(15);
@@ -163,9 +163,9 @@ final class SettingsAppearancePage extends SettingsPage {
         });
 
         new android.app.AlertDialog.Builder(activity)
-                .setTitle(AppStrings.s(R.string.i18n_0138))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0138))
                 .setView(box)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) -> {
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0057), (d, w) -> {
                     String t = hex.getText().toString().trim();
                     Integer c = SettingsUi.parseHex(t);
                     if (t.isEmpty() || t.equals("#")) {
@@ -173,15 +173,15 @@ final class SettingsAppearancePage extends SettingsPage {
                     } else if (c == null) {
                         // A typo must not silently do nothing; keeping the old value while
                         // the sheet reopens is exactly the "the setting is broken" report.
-                        android.widget.Toast.makeText(activity, AppStrings.s(R.string.i18n_0148) + t,
+                        android.widget.Toast.makeText(activity, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0148) + t,
                                 android.widget.Toast.LENGTH_SHORT).show();
                     } else {
                         host.onCursorColor(c);
                     }
                     render();
                 })
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
-                .setNeutralButton(AppStrings.s(R.string.i18n_0140), (d, w) -> {
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
+                .setNeutralButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0140), (d, w) -> {
                     host.onCursorColor(0);
                     render();
                 })
@@ -189,7 +189,7 @@ final class SettingsAppearancePage extends SettingsPage {
     }
 
     private void chooseTabIcon() {
-        SettingsIconPicker.pick(activity, ui, AppStrings.s(R.string.i18n_0141), host.tabIcon(), null, id -> {
+        SettingsIconPicker.pick(activity, ui, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0141), host.tabIcon(), null, id -> {
             host.onTabIcon(id);
             render();
         });

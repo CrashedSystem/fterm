@@ -90,7 +90,7 @@ final class TabStrip {
         label.setMaxWidth(dp(150));
         // A TextView inside a taller row draws its text at the TOP unless told otherwise.
         // The tab title was doing exactly that - the row is 34dp and the text sat on its
-        // upper edge, which reads as AppStrings.s(R.string.i18n_0357).
+        // upper edge, which reads as io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0357).
         label.setGravity(Gravity.CENTER_VERTICAL);
         label.setIncludeFontPadding(false);
         label.setLayoutParams(new LinearLayout.LayoutParams(

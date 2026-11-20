@@ -381,7 +381,7 @@ public final class TerminalView extends View {
              *
              * This is the fix from ConnectBot's termlib (connectbot#2352, connectbot/termlib
              * ImeInputView): Android IMEs send the WHOLE composition on every keystroke
-             * (AppStrings.s(R.string.i18n_0022), then AppStrings.s(R.string.i18n_0023)), not a delta, and a terminal has no composition region on the
+             * (io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0022), then io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0023)), not a delta, and a terminal has no composition region on the
              * shell side. So the composition is projected live and repaired: append what
              * grew, erase what shrank. The image the user sees builds up in place, and the
              * shell receives only the finished letters because the erase happens before the

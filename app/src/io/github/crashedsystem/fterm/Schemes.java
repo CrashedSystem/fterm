@@ -25,7 +25,7 @@ public final class Schemes {
      * <p>Custom schemes share one index range - this one through
      * {@code CUSTOM_INDEX + MAX_CUSTOM_SCHEMES - 1} - so a scheme index is one integer
      * everywhere: the preference, the emulator call, the settings list. Before there could be
-     * more than one, index 6 was the single AppStrings.s(R.string.i18n_0070) slot; keeping it as the start of the
+     * more than one, index 6 was the single io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0070) slot; keeping it as the start of the
      * range is what makes a stored {@code scheme=6} still mean the user's own palette after
      * the upgrade.
      */
@@ -39,7 +39,7 @@ public final class Schemes {
 
     /** The six schemes compiled in, in index order; the user's own follow them. */
     public static final String[] SCHEME_NAMES = {
-            "Campbell", "One Dark", "Solarized Dark", "Dracula", AppStrings.s(R.string.i18n_0112),
+            "Campbell", "One Dark", "Solarized Dark", "Dracula", io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0112),
             "One Half Dark"
     };
 
@@ -55,7 +55,7 @@ public final class Schemes {
      *
      * <p>A custom index can outlive the scheme it named: delete the third palette and every
      * index after it shifts down. Rather than let the terminal draw Campbell while the
-     * settings say AppStrings.s(R.string.i18n_0070), the stored index is pulled back to the first custom scheme, or
+     * settings say io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0070), the stored index is pulled back to the first custom scheme, or
      * to Campbell when none is left.
      */
     public static int clampScheme(int index, int customCount) {

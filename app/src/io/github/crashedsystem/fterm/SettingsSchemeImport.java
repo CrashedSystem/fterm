@@ -62,7 +62,7 @@ final class SettingsSchemeImport {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView fromFile = new TextView(mActivity);
-        fromFile.setText(AppStrings.s(R.string.i18n_0255));
+        fromFile.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0255));
         fromFile.setTextColor(mUi.ACCENT);
         fromFile.setTextSize(12.5f);
         fromFile.setPadding(0, mUi.dp(12), 0, mUi.dp(12));
@@ -72,19 +72,19 @@ final class SettingsSchemeImport {
         box.addView(fromFile);
 
         TextView note = new TextView(mActivity);
-        note.setText(AppStrings.s(R.string.i18n_0256)
-                + AppStrings.s(R.string.i18n_0257)
-                + AppStrings.s(R.string.i18n_0258));
+        note.setText(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0256)
+                + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0257)
+                + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0258));
         note.setTextColor(mUi.HINT);
         note.setTextSize(10.5f);
         note.setPadding(0, mUi.dp(6), 0, 0);
         box.addView(note);
 
         final AlertDialog dialog = new AlertDialog.Builder(mActivity)
-                .setTitle(AppStrings.s(R.string.i18n_0259))
+                .setTitle(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0259))
                 .setView(box)
-                .setPositiveButton(AppStrings.s(R.string.i18n_0260), null)
-                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0260), null)
+                .setNegativeButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0058), null)
                 .create();
         dialog.show();
         // The listener is set after show() so a bad paste keeps the dialog open with the text
@@ -104,7 +104,7 @@ final class SettingsSchemeImport {
         try {
             mActivity.startActivityForResult(i, REQ_OPEN);
         } catch (Throwable t) {
-            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0161) + t.getMessage(),
+            Toast.makeText(mActivity, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0161) + t.getMessage(),
                     Toast.LENGTH_LONG).show();
         }
     }
@@ -115,17 +115,17 @@ final class SettingsSchemeImport {
         Uri uri = data.getData();
         String text;
         try (InputStream in = mActivity.getContentResolver().openInputStream(uri)) {
-            if (in == null) throw new IllegalStateException(AppStrings.s(R.string.i18n_0261));
+            if (in == null) throw new IllegalStateException(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0261));
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             byte[] buf = new byte[8192];
             int n;
             while ((n = in.read(buf)) > 0) {
                 out.write(buf, 0, n);
-                if (out.size() > MAX_BYTES) throw new IllegalStateException(AppStrings.s(R.string.i18n_0055));
+                if (out.size() > MAX_BYTES) throw new IllegalStateException(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0055));
             }
             text = out.toString("UTF-8");
         } catch (Throwable t) {
-            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0262) + t.getMessage(),
+            Toast.makeText(mActivity, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0262) + t.getMessage(),
                     Toast.LENGTH_LONG).show();
             return;
         }
@@ -141,7 +141,7 @@ final class SettingsSchemeImport {
         try {
             schemes = TerminalSchemeJson.parseAll(text);
         } catch (IllegalArgumentException e) {
-            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0263) + e.getMessage(),
+            Toast.makeText(mActivity, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0263) + e.getMessage(),
                     Toast.LENGTH_LONG).show();
             return false;
         }
@@ -158,16 +158,16 @@ final class SettingsSchemeImport {
             }
         }
         if (added == 0) {
-            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0264) + Schemes.MAX_CUSTOM_SCHEMES
-                    + AppStrings.s(R.string.i18n_0265),
+            Toast.makeText(mActivity, io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0264) + Schemes.MAX_CUSTOM_SCHEMES
+                    + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0265),
                     Toast.LENGTH_LONG).show();
             return false;
         }
         if (last >= 0) mHost.onScheme(last);
         String message = added == 1
-                ? "'" + mHost.customSchemeName(last) + AppStrings.s(R.string.i18n_0266)
-                : AppStrings.s(R.string.i18n_0267) + added + AppStrings.s(R.string.i18n_0268);
-        if (skipped > 0) message += " (" + skipped + AppStrings.s(R.string.i18n_0269);
+                ? "'" + mHost.customSchemeName(last) + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0266)
+                : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0267) + added + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0268);
+        if (skipped > 0) message += " (" + skipped + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0269);
         Toast.makeText(mActivity, message, Toast.LENGTH_SHORT).show();
         mSheet.render();
         return true;

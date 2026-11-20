@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 
 /**
- * WT's AppStrings.s(R.string.i18n_0024) dialog: version, the connection actually in use, and the gestures that are
+ * WT's io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0024) dialog: version, the connection actually in use, and the gestures that are
  * otherwise invisible.
  *
  * <p>Kept out of the activity for the same reason the settings page is: the activity lays
@@ -28,12 +28,12 @@ final class About {
         }
         new AlertDialog.Builder(activity)
                 .setTitle("fterm")
-                .setMessage(AppStrings.s(R.string.i18n_0025) + version + "\n"
+                .setMessage(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0025) + version + "\n"
                         + status + "\n\n"
-                        + AppStrings.s(R.string.i18n_0026)
-                        + AppStrings.s(R.string.i18n_0027)
-                        + AppStrings.s(R.string.i18n_0028))
-                .setPositiveButton(AppStrings.s(R.string.i18n_0029), null)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0026)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0027)
+                        + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0028))
+                .setPositiveButton(io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0029), null)
                 .show();
     }
 }

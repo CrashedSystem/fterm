@@ -90,10 +90,10 @@ final class DaemonLauncher {
 
     /** The paths, for the instructions shown when the keeper is not installed. */
     static String keeperInstructions() {
-        return AppStrings.s(R.string.i18n_0091)
+        return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0091)
                 + "  cd ~/projects/fterm\n"
                 + "  bash termux/install.sh\n\n"
-                + AppStrings.s(R.string.i18n_0092)
-                + AppStrings.s(R.string.i18n_0093);
+                + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0092)
+                + io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0093);
     }
 }

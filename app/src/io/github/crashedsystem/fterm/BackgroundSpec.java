@@ -60,7 +60,7 @@ public final class BackgroundSpec {
     }
 
     public static String fitLabel(String value) {
-        return FIT_COVER.equals(fit(value)) ? AppStrings.s(R.string.i18n_0040) : AppStrings.s(R.string.i18n_0041);
+        return FIT_COVER.equals(fit(value)) ? io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0040) : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0041);
     }
 
     /**
@@ -82,15 +82,15 @@ public final class BackgroundSpec {
     /** Korean labels for the nine cells of the alignment picker. */
     public static String alignLabel(String value) {
         String a = align(value);
-        if ("topLeft".equals(a)) return AppStrings.s(R.string.i18n_0042);
-        if ("top".equals(a)) return AppStrings.s(R.string.i18n_0043);
-        if ("topRight".equals(a)) return AppStrings.s(R.string.i18n_0044);
-        if ("left".equals(a)) return AppStrings.s(R.string.i18n_0045);
-        if ("center".equals(a)) return AppStrings.s(R.string.i18n_0046);
-        if ("right".equals(a)) return AppStrings.s(R.string.i18n_0047);
-        if ("bottomLeft".equals(a)) return AppStrings.s(R.string.i18n_0048);
-        if ("bottom".equals(a)) return AppStrings.s(R.string.i18n_0049);
-        return AppStrings.s(R.string.i18n_0050);
+        if ("topLeft".equals(a)) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0042);
+        if ("top".equals(a)) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0043);
+        if ("topRight".equals(a)) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0044);
+        if ("left".equals(a)) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0045);
+        if ("center".equals(a)) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0046);
+        if ("right".equals(a)) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0047);
+        if ("bottomLeft".equals(a)) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0048);
+        if ("bottom".equals(a)) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0049);
+        return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0050);
     }
 
     public static int opacity(int percent) {
