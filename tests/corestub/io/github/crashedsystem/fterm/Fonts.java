@@ -1,4 +1,4 @@
-package io.github.crashedsystem.fterm;
+package io.github.crashedsystem.terminal;
 
 /**
  * Test stub: the routing rules from {@link Fonts}, without the Android types.

@@ -19,7 +19,7 @@ public class TabCloseTest {
     public static void main(String[] args) throws Exception {
         String src = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("main.src",
-                        "app/src/io/github/crashedsystem/fterm/MainActivity.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/terminal/MainActivity.java"))), "UTF-8");
 
         int at = src.indexOf("private void closeTab(Tab tab)");
         check(at > 0, "closeTab() exists");

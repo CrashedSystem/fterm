@@ -47,7 +47,8 @@ def decode_java(s):
     # Common escapes
     s = s.replace('\n', '
 ')
-    s = s.replace('\r', '')
+    s = s.replace('\r', '
+')
     s = s.replace('\t', '	')
     s = s.replace('\"', '"')
     s = s.replace("\'", "'")
@@ -158,7 +159,7 @@ with open(VALUES_EN, 'w', encoding='utf-8') as fh:
 print(f'Wrote {VALUES_EN} with {len(all_keys)} entries')
 
 # Write AppStrings.java with fallback map
-pkg = 'io.github.crashedsystem.fterm'
+pkg = 'io.github.crashedsystem.terminal'
 appstr = os.path.join(ROOT, 'app', 'src', 'io', 'github', 'crashedsystem', 'fterm', 'AppStrings.java')
 with open(appstr, 'w', encoding='utf-8') as fh:
     fh.write(f'package {pkg};\n\n')

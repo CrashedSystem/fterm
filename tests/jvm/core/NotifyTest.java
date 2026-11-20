@@ -128,12 +128,12 @@ public byte[] getClipboardImage(com.termux.terminal.TerminalSession s) { return 
         try {
             String main = new String(java.nio.file.Files.readAllBytes(
                     java.nio.file.Paths.get(System.getProperty("main.src",
-                            "app/src/io/github/crashedsystem/fterm/MainActivity.java"))), "UTF-8");
+                            "app/src/io/github/crashedsystem/terminal/MainActivity.java"))), "UTF-8");
             check(main.contains("public void onNotification"), "MainActivity implements onNotification");
             check(main.contains("mNotifier.post("), "and posts through Notifier");
             String notifier = new String(java.nio.file.Files.readAllBytes(
                     java.nio.file.Paths.get(System.getProperty("notifier.src",
-                            "app/src/io/github/crashedsystem/fterm/Notifier.java"))), "UTF-8");
+                            "app/src/io/github/crashedsystem/terminal/Notifier.java"))), "UTF-8");
             check(notifier.contains("IMPORTANCE_DEFAULT"),
                     "shell notifications are noticeable (unlike the service's LOW)");
             // The hand is not a channel the user can turn off per app, so the app has to behave:

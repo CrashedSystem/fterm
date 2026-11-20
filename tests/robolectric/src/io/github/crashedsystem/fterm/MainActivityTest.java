@@ -1,4 +1,4 @@
-package io.github.crashedsystem.fterm;
+package io.github.crashedsystem.terminal;
 
 import static org.junit.Assert.assertTrue;
 

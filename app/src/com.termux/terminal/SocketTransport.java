@@ -225,7 +225,7 @@ public final class SocketTransport implements SessionTransport {
                 in = new DataInputStream(new BufferedInputStream(socket.getInputStream(), 16384));
             } catch (IOException e) {
                 failures++;
-                mLastError = io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0011) + e.getMessage();
+                mLastError = io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0011) + e.getMessage();
                 announce(mLastError);
                 if (giveUpAfter(failures)) return;
                 if (!sleepBeforeRetry()) return;
@@ -336,20 +336,20 @@ public final class SocketTransport implements SessionTransport {
                 mLastRecv = System.currentTimeMillis();
                 int type = in.readUnsignedByte();
                 int len = Protocol.readInt(in);
-                if (len < 0 || len > MAX_FRAME) return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0012);
+                if (len < 0 || len > MAX_FRAME) return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0012);
                 byte[] payload = new byte[len];
                 in.readFully(payload);
                 if (!handle(type, payload)) return null;
             }
             return null;
         } catch (EOFException e) {
-            return mSessionEnded ? null : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0013);
+            return mSessionEnded ? null : io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0013);
         } catch (SocketTimeoutException e) {
             // The app was frozen or dozed. The daemon has been silent for longer than the
             // timeout, so the link is dead even though the socket does not know it yet.
-            return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0014);
+            return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0014);
         } catch (IOException e) {
-            return mClosed ? null : io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0015) + e.getMessage();
+            return mClosed ? null : io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0015) + e.getMessage();
         }
     }
 
@@ -428,12 +428,12 @@ public final class SocketTransport implements SessionTransport {
 
     private static String errorText(int code, String msg) {
         switch (code) {
-            case 2: return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0016);
-            case 3: return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0002);
-            case 5: return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0017);
-            case 6: return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0018);
-            case 7: return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0019);
-            default: return io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0020) + msg;
+            case 2: return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0016);
+            case 3: return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0002);
+            case 5: return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0017);
+            case 6: return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0018);
+            case 7: return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0019);
+            default: return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0020) + msg;
         }
     }
 
@@ -479,7 +479,7 @@ public final class SocketTransport implements SessionTransport {
             } catch (IOException e) {
                 // Not a reconnect trigger on its own: closing the socket forces the reader to
                 // fail, and supervise is the single place that decides what happens next.
-                if (gen == mGeneration) mLastError = io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0021) + e.getMessage();
+                if (gen == mGeneration) mLastError = io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0021) + e.getMessage();
             } finally {
                 try {
                     out.close();
@@ -583,7 +583,7 @@ public final class SocketTransport implements SessionTransport {
      * the daemon answers by dropping the connection, {@link #MAX_ATTEMPTS} failed reconnects,
      * or a tab closed while the app is offline. The daemon keeps the pty and the shell, and
      * sixteen sessions are its limit, so a handful of leaks makes every new tab fail with
-     * io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0019).
+     * io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0019).
      *
      * <p>When no live link can carry it, this opens a short-lived one of its own and says it
      * plainly. It never throws: this runs on the way out of a session that is already over.

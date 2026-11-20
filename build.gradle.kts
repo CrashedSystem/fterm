@@ -45,7 +45,7 @@ val androidJarFile: File = run {
 
 val minSdk = 26
 val targetSdk = 36
-val appId = "io.github.crashedsystem.fterm"
+val appId = "io.github.crashedsystem.terminal"
 
 // Version comes from the manifest so there is exactly one place to bump it.
 val manifestText = layout.projectDirectory.file("AndroidManifest.xml").asFile.readText()

@@ -23,7 +23,7 @@ public class StructureTest {
     }
 
     public static void main(String[] args) throws Exception {
-        String dir = System.getProperty("app.dir", "app/src/io/github/crashedsystem/fterm/");
+        String dir = System.getProperty("app.dir", "app/src/io/github/crashedsystem/terminal/");
         String main = read(dir + "MainActivity.java");
 
         // 1. MainActivity stays a coordinator. 1200 lines was the old number and it is the

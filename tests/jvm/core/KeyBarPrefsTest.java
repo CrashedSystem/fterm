@@ -19,7 +19,7 @@ public class KeyBarPrefsTest {
   }
   static void check(boolean c, String m) { if (!c) throw new AssertionError(m); pass++; }
   static String src(String name) throws Exception {
-    return new String(Files.readAllBytes(Paths.get(System.getProperty("root") + "/app/src/io/github/crashedsystem/fterm/" + name)));
+    return new String(Files.readAllBytes(Paths.get(System.getProperty("root") + "/app/src/io/github/crashedsystem/terminal/" + name)));
   }
 
   public static void main(String[] args) throws Exception {
@@ -27,7 +27,7 @@ public class KeyBarPrefsTest {
     String prefs = src("Prefs.java");
     String main = src("MainActivity.java");
     String settings = SettingsSources.all(System.getProperty("root")
-            + "/app/src/io/github/crashedsystem/fterm/SettingsSheet.java");
+            + "/app/src/io/github/crashedsystem/terminal/SettingsSheet.java");
 
     // 1. The main layer is the two fixed rows of six, in the screenshot's order.
     for (String label : new String[]{"\"Esc\"", "\"Tab\"", "\"Home\"", "\"End\"", "\"PgUp\"", "\"PgDn\"",

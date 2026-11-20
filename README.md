@@ -22,7 +22,7 @@ Termux의 `terminal-emulator`/`terminal-view`(Apache-2.0)를 벤더링했으므�
 
 | | |
 |---|---|
-| 앱 | `build/fterm.apk` (`io.github.crashedsystem.fterm`, targetSdk 36 / minSdk 26). 그림 에셋 없이 빌드하면 1.8MB입니다 |
+| 앱 | `build/fterm.apk` (`io.github.crashedsystem.terminal`, targetSdk 36 / minSdk 26). 그림 에셋 없이 빌드하면 1.8MB입니다 |
 | 데몬 | `termux/ftermd-rs` (Rust, Termux 안에서 실행. 같은 프로토콜의 첫 구현이던 python 데몬은 Rust 이식이 와이어 레벨에서 동일함이 증명된 뒤 제거됐습니다) |
 | 엔진 | Termux `terminal-emulator` + `terminal-view` (Apache-2.0) 벤더링 |
 | 폰트 | mterm 스택: Iosevka(라틴) + Nerd Symbols(아이콘) + Pretendard(한글) |
@@ -166,17 +166,17 @@ mterm의 배경 그림은 CC BY-NC라 이 앱에 넣지 않았습니다. 대신 
 | 어둡게 | 그림 위에 덮는 검정 비율 (0–90%). 글자가 묻히면 올립니다 |
 
 그림은 `getExternalFilesDir("bg")` — 실제 경로는
-`/sdcard/Android/data/io.github.crashedsystem.fterm/files/bg/` — 에 정규화되어(긴 변 2048px) 저장됩니다.
+`/sdcard/Android/data/io.github.crashedsystem.terminal/files/bg/` — 에 정규화되어(긴 변 2048px) 저장됩니다.
 **그 폴더의 가장 최근 이미지 파일이 그려집니다.** 그래서 스크립트는 빌드 오버레이가 아니라
 파일 복사와 브로드캐스트만 하면 됩니다:
 
 ```bash
-DIR=/sdcard/Android/data/io.github.crashedsystem.fterm/files/bg
+DIR=/sdcard/Android/data/io.github.crashedsystem.terminal/files/bg
 adb push miku-dusk.png "$DIR"/
-adb shell am broadcast -a io.github.crashedsystem.fterm.action.APPLY_BACKGROUND \
-  -p io.github.crashedsystem.fterm --es path "$DIR"/miku-dusk.png \
+adb shell am broadcast -a io.github.crashedsystem.terminal.action.APPLY_BACKGROUND \
+  -p io.github.crashedsystem.terminal --es path "$DIR"/miku-dusk.png \
   --ei opacity 100 --es fit contain --ei dim 25
-adb shell am broadcast -a io.github.crashedsystem.fterm.action.CLEAR_BACKGROUND -p io.github.crashedsystem.fterm
+adb shell am broadcast -a io.github.crashedsystem.terminal.action.CLEAR_BACKGROUND -p io.github.crashedsystem.terminal
 ```
 
 브로드캐스트는 결과 줄(`ok: background.png` / `error: …`)을 돌려주고, 앱이 떠 있으면
@@ -673,7 +673,7 @@ ConnectBot이 같은 문제를 푼 방식([connectbot#2352](https://github.com/c
 ## 구조
 
 ```
-app/src/io/github/crashedsystem/fterm/    MainActivity, Prefs, Schemes
+app/src/io/github/crashedsystem/terminal/    MainActivity, Prefs, Schemes
 app/src/com.termux/terminal/  벤더링 + Protocol / SessionTransport / SocketTransport / DaemonClient
 app/src/com.termux/view/      벤더링 TerminalView / TerminalRenderer
 termux/ftermd-rs              PTY 소유 데몬 (Rust: 토큰, ring replay, 세션 상한 16)

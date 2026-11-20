@@ -38,7 +38,7 @@ Apache-2.0은 다음을 요구한다(4조): 저작권 고지와 라이선스 사
 
 ## Fluent UI System Icons (MIT)
 
-`app/src/io/github/crashedsystem/fterm/GlyphPaths.java` 는 Microsoft의
+`app/src/io/github/crashedsystem/terminal/GlyphPaths.java` 는 Microsoft의
 [fluentui-system-icons] 에서 24px regular 경로를 추출해 생성한 것이다
 (생성 스크립트: `tests/tools/icons.py`).
 
@@ -49,7 +49,7 @@ Apache-2.0은 다음을 요구한다(4조): 저작권 고지와 라이선스 사
 
 ## Windows Terminal Retro 셰이더 (MIT)
 
-`app/src/io/github/crashedsystem/fterm/RetroShader.java` 는 Windows Terminal 저장소의
+`app/src/io/github/crashedsystem/terminal/RetroShader.java` 는 Windows Terminal 저장소의
 `samples/PixelShaders/Retro.hlsl` 을 AGSL 로 옮긴 것이다. 셰이더 상수와 순서는
 원본 그대로이고, 블러 커널만 모바일 GPU에 맞게 줄였다(파일 주석에 근거 기록).
 

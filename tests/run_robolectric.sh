@@ -32,4 +32,4 @@ java -Drobolectric.offline=true -Drobolectric.graphicsMode=LEGACY \
   -Drobolectric.nativeruntime.dir="$RL/nat" \
   -Dandroid-all.jar="$RL/and17.jar" \
   -Djava.library.path="$RL/nat/native/linux/aarch64" \
-  -cp "$RUNCP" org.junit.runner.JUnitCore io.github.crashedsystem.fterm.MainActivityTest 2>&1 | tail -60
+  -cp "$RUNCP" org.junit.runner.JUnitCore io.github.crashedsystem.terminal.MainActivityTest 2>&1 | tail -60

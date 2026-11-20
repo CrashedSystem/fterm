@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate app/src/io/github/crashedsystem/fterm/GlyphPaths.java from Fluent UI System Icons.
+"""Generate app/src/io/github/crashedsystem/terminal/GlyphPaths.java from Fluent UI System Icons.
 
 WT draws its chrome with Segoe Fluent Icons, a real icon font. The hand-drawn stroked
 paths this project used before were the reason the toolbar looked wrong: a constant-width
@@ -11,7 +11,7 @@ hidden API, and approximating curves by hand is how a set ends up almost-right.
 Fluent's regular paths only use M/L/H/V/C/Z, so the conversion is exact.
 
 Usage:  python3 tests/tools/icons.py
-Writes: app/src/io/github/crashedsystem/fterm/GlyphPaths.java
+Writes: app/src/io/github/crashedsystem/terminal/GlyphPaths.java
 """
 import os
 import re
@@ -200,7 +200,7 @@ def emit(d, pad, var="p"):
     return out
 
 
-HEADER = '''package io.github.crashedsystem.fterm;
+HEADER = '''package io.github.crashedsystem.terminal;
 
 import android.graphics.Matrix;
 import android.graphics.Path;
@@ -259,7 +259,7 @@ __ACCENT__
 
 def main():
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    out = root + "/app/src/io/github/crashedsystem/fterm/GlyphPaths.java"
+    out = root + "/app/src/io/github/crashedsystem/terminal/GlyphPaths.java"
     body = []
     for name in sorted(list(ICONS) + list(RAW)):
         box = None

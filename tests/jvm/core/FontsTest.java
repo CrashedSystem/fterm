@@ -33,34 +33,34 @@ public class FontsTest {
         //    measured on the device as 41.3px of spacing drawn into a 37.5px row - and the
         //    text read as cramped. Windows Terminal keeps one em size for every face and only
         //    corrects the advance to the cell, so this is the ceiling.
-        near(io.github.crashedsystem.fterm.Fonts.HANGUL_FIT_MAX, 1.0, 0.001, "HANGUL_FIT_MAX");
+        near(io.github.crashedsystem.terminal.Fonts.HANGUL_FIT_MAX, 1.0, 0.001, "HANGUL_FIT_MAX");
 
         // 2. Hangul routing covers every block a Korean terminal sees.
-        check(io.github.crashedsystem.fterm.Fonts.isHangul(0xAC00), "가 (syllables)");
-        check(io.github.crashedsystem.fterm.Fonts.isHangul(0xD55C), "한");
-        check(io.github.crashedsystem.fterm.Fonts.isHangul(0xD7A3), "the last syllable");
-        check(io.github.crashedsystem.fterm.Fonts.isHangul(0x3131), "ㄱ (compatibility jamo)");
-        check(io.github.crashedsystem.fterm.Fonts.isHangul(0x1100), "U+1100 (conjoining jamo)");
-        check(io.github.crashedsystem.fterm.Fonts.isHangul(0x11A8), "U+11A8 (trailing jamo)");
-        check(io.github.crashedsystem.fterm.Fonts.isHangul(0xA960), "U+A960 (jamo extended-A)");
-        check(io.github.crashedsystem.fterm.Fonts.isHangul(0xD7B0), "U+D7B0 (jamo extended-B)");
+        check(io.github.crashedsystem.terminal.Fonts.isHangul(0xAC00), "가 (syllables)");
+        check(io.github.crashedsystem.terminal.Fonts.isHangul(0xD55C), "한");
+        check(io.github.crashedsystem.terminal.Fonts.isHangul(0xD7A3), "the last syllable");
+        check(io.github.crashedsystem.terminal.Fonts.isHangul(0x3131), "ㄱ (compatibility jamo)");
+        check(io.github.crashedsystem.terminal.Fonts.isHangul(0x1100), "U+1100 (conjoining jamo)");
+        check(io.github.crashedsystem.terminal.Fonts.isHangul(0x11A8), "U+11A8 (trailing jamo)");
+        check(io.github.crashedsystem.terminal.Fonts.isHangul(0xA960), "U+A960 (jamo extended-A)");
+        check(io.github.crashedsystem.terminal.Fonts.isHangul(0xD7B0), "U+D7B0 (jamo extended-B)");
 
         // 3. And it does not claim anything else.
-        check(!io.github.crashedsystem.fterm.Fonts.isHangul('A'), "A");
-        check(!io.github.crashedsystem.fterm.Fonts.isHangul(0x30A2), "ア is Japanese, not Hangul");
-        check(!io.github.crashedsystem.fterm.Fonts.isHangul(0x6F22), "漢 is Hanja");
-        check(!io.github.crashedsystem.fterm.Fonts.isHangul(0x2588), "█ is a block element");
-        check(!io.github.crashedsystem.fterm.Fonts.isHangul(0x2500), "─ is box drawing");
+        check(!io.github.crashedsystem.terminal.Fonts.isHangul('A'), "A");
+        check(!io.github.crashedsystem.terminal.Fonts.isHangul(0x30A2), "ア is Japanese, not Hangul");
+        check(!io.github.crashedsystem.terminal.Fonts.isHangul(0x6F22), "漢 is Hanja");
+        check(!io.github.crashedsystem.terminal.Fonts.isHangul(0x2588), "█ is a block element");
+        check(!io.github.crashedsystem.terminal.Fonts.isHangul(0x2500), "─ is box drawing");
 
         // 4. Icon routing is the private-use range a Nerd Font patches.
-        check(io.github.crashedsystem.fterm.Fonts.isNerdIcon(0xE0A0), "a powerline glyph");
-        check(io.github.crashedsystem.fterm.Fonts.isNerdIcon(0xF0C7), "a Font Awesome codepoint a Nerd Font fills");
-        check(!io.github.crashedsystem.fterm.Fonts.isNerdIcon('a'), "a letter is not an icon");
-        check(!io.github.crashedsystem.fterm.Fonts.isNerdIcon(0x2500), "box drawing is Iosevka's, not the icon face");
+        check(io.github.crashedsystem.terminal.Fonts.isNerdIcon(0xE0A0), "a powerline glyph");
+        check(io.github.crashedsystem.terminal.Fonts.isNerdIcon(0xF0C7), "a Font Awesome codepoint a Nerd Font fills");
+        check(!io.github.crashedsystem.terminal.Fonts.isNerdIcon('a'), "a letter is not an icon");
+        check(!io.github.crashedsystem.terminal.Fonts.isNerdIcon(0x2500), "box drawing is Iosevka's, not the icon face");
 
         // 5. Only Hangul can be resized at all; everything else is drawn at the em size.
-        check(io.github.crashedsystem.fterm.Fonts.isHangul(0xD55C), "한 is the only script up for fitting");
-        check(!io.github.crashedsystem.fterm.Fonts.isHangul('x'), "x is never resized");
+        check(io.github.crashedsystem.terminal.Fonts.isHangul(0xD55C), "한 is the only script up for fitting");
+        check(!io.github.crashedsystem.terminal.Fonts.isHangul('x'), "x is never resized");
 
         // 5b. Font choice is a scanned catalog, not a hard-coded table.
         //
@@ -71,7 +71,7 @@ public class FontsTest {
         //     resolves to the bundled face rather than to a crash.
         String fontsSrc = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("fonts.src",
-                        "app/src/io/github/crashedsystem/fterm/Fonts.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/terminal/Fonts.java"))), "UTF-8");
         check(fontsSrc.contains("\"asset:iosevka\""), "the bundled face has a stable id");
         check(fontsSrc.contains("context.getFilesDir(), \"fonts\""),
                 "imported fonts live in app storage, the one directory it can read");
@@ -104,7 +104,7 @@ public class FontsTest {
 
         // The picker has to read the catalog and pass the id through, not an index.
         String sheet = SettingsSources.all(System.getProperty("sheet.src",
-                "app/src/io/github/crashedsystem/fterm/SettingsSheet.java"));
+                "app/src/io/github/crashedsystem/terminal/SettingsSheet.java"));
         check(sheet.contains("Fonts.catalog("), "the picker lists the scanned catalog");
         check(sheet.contains("mHost.onFontFamily(f.id)"), "and stores the face's id");
         check(sheet.contains("ACTION_OPEN_DOCUMENT"),
@@ -182,7 +182,7 @@ public class FontsTest {
         // 6. The app must install the selector, or the stack never reaches the renderer.
         String main = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("main.src",
-                        "app/src/io/github/crashedsystem/fterm/MainActivity.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/terminal/MainActivity.java"))), "UTF-8");
         check(main.contains("setFaceSelector"), "MainActivity installs the face selector");
         check(main.contains("Fonts.load("), "and builds it from Fonts");
         // The chosen face has to reach Fonts.load(), or the setting is decorative.

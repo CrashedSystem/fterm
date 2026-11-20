@@ -425,7 +425,7 @@ public final class TerminalView extends View {
              *
              * This is the fix from ConnectBot's termlib (connectbot#2352, connectbot/termlib
              * ImeInputView): Android IMEs send the WHOLE composition on every keystroke
-             * (io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0022), then io.github.crashedsystem.fterm.AppStrings.s(io.github.crashedsystem.fterm.R.string.i18n_0023)), not a delta, and a terminal has no composition region on the
+             * (io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0022), then io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0023)), not a delta, and a terminal has no composition region on the
              * shell side. So the composition is projected live and repaired: append what
              * grew, erase what shrank. The image the user sees builds up in place, and the
              * shell receives only the finished letters because the erase happens before the
@@ -1380,7 +1380,7 @@ public final class TerminalView extends View {
     /** Optional picture drawn behind the terminal; see TerminalBackground. */
     private Drawable mBackgroundImage;
     /** Optional retro pass over the finished frame; see RetroOverlay. */
-    private io.github.crashedsystem.fterm.RetroOverlay mRetroOverlay;
+    private io.github.crashedsystem.terminal.RetroOverlay mRetroOverlay;
     /** Set once per size: the shader's resolution uniform is the only thing that changes. */
     private android.graphics.RenderEffect mRetroEffect;
     private int mRetroEffectW, mRetroEffectH;
@@ -1393,7 +1393,7 @@ public final class TerminalView extends View {
      * dark scanline rows after the frame, which is the half of WT's effect that a software
      * Canvas can do.
      */
-    public void setRetroOverlay(io.github.crashedsystem.fterm.RetroOverlay overlay) {
+    public void setRetroOverlay(io.github.crashedsystem.terminal.RetroOverlay overlay) {
         mRetroOverlay = overlay;
         mRetroEffect = null;
         mRetroEffectW = mRetroEffectH = 0;

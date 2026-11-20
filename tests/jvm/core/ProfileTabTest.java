@@ -23,7 +23,7 @@ public class ProfileTabTest {
 
     public static void main(String[] args) throws Exception {
         String main = read(System.getProperty("main.src",
-                "app/src/io/github/crashedsystem/fterm/MainActivity.java"));
+                "app/src/io/github/crashedsystem/terminal/MainActivity.java"));
 
         // 1. The title has to be set before addTabChip(), because the chip is drawn once.
         int newTab = main.indexOf("void newTab(Profiles.Profile profile");
@@ -89,10 +89,10 @@ public class ProfileTabTest {
         // 7. The dropdown and the editor have to show the same mark, or the profile that
         //    opens from the menu is not the one the editor described.
         String chrome = read(System.getProperty("chrome.src",
-                "app/src/io/github/crashedsystem/fterm/Chrome.java"));
+                "app/src/io/github/crashedsystem/terminal/Chrome.java"));
         check(chrome.contains("profile.icon"), "the dropdown uses the profile's icon");
         String sheet = SettingsSources.all(System.getProperty("sheet.src",
-                "app/src/io/github/crashedsystem/fterm/SettingsSheet.java"));
+                "app/src/io/github/crashedsystem/terminal/SettingsSheet.java"));
         // The grid is a file of its own now (SettingsIconPicker), so the check is that the
         // editor goes through it and names the pick - not that the call sits on one line.
         check(sheet.contains("SettingsIconPicker") && sheet.contains("\"프로필 아이콘\""),

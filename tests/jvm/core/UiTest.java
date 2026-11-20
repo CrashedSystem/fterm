@@ -18,7 +18,7 @@ public class UiTest {
     public static void main(String[] args) throws Exception {
         String src = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("main.src",
-                        "app/src/io/github/crashedsystem/fterm/MainActivity.java"))), "UTF-8");
+                        "app/src/io/github/crashedsystem/terminal/MainActivity.java"))), "UTF-8");
 
         // Dropdown: WT's tab row has no hamburger. What it has is a SplitButton - a plus that
         // opens a tab, and a chevron beside it that opens the dropdown.
@@ -30,7 +30,7 @@ public class UiTest {
         // A phone has no Ctrl+Shift+P, so the same commands must be on the menu. The menu
         // itself moved to Chrome.java, so the labels are checked where they live now.
         String chrome = new String(java.nio.file.Files.readAllBytes(
-                java.nio.file.Paths.get("app/src/io/github/crashedsystem/fterm/Chrome.java")), "UTF-8");
+                java.nio.file.Paths.get("app/src/io/github/crashedsystem/terminal/Chrome.java")), "UTF-8");
         for (String cmd : new String[]{"새 탭", "붙여넣기", "복사", "설정"}) {
             check(chrome.contains(cmd), "the menu offers: " + cmd);
         }

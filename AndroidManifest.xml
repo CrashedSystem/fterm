@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="io.github.crashedsystem.fterm"
-    android:versionCode="12"
-    android:versionName="0.3.0">
+    package="io.github.crashedsystem.terminal"
+    android:versionCode="2"
+    android:versionName="0.4.1">
 
     <!-- Android 8.0 (API 26) is the floor: the vendored terminal view needs
          View#getTextSelectionActionMode-era behaviour and adaptive icons. -->
@@ -40,7 +40,7 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name="io.github.crashedsystem.fterm.MainActivity"
+            android:name="io.github.crashedsystem.terminal.MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|density|uiMode"
             android:launchMode="singleTask"
@@ -61,7 +61,7 @@
              specialUse has no such clock, and it is the declared type Android asks for when no
              other type fits. -->
         <service
-            android:name="io.github.crashedsystem.fterm.TerminalService"
+            android:name="io.github.crashedsystem.terminal.TerminalService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -73,11 +73,11 @@
              rebuilding the APK. See BackgroundReceiver for the am command and the path
              checks that keep it from reading anything the app could not already see. -->
         <receiver
-            android:name="io.github.crashedsystem.fterm.BackgroundReceiver"
+            android:name="io.github.crashedsystem.terminal.BackgroundReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="io.github.crashedsystem.fterm.action.APPLY_BACKGROUND" />
-                <action android:name="io.github.crashedsystem.fterm.action.CLEAR_BACKGROUND" />
+                <action android:name="io.github.crashedsystem.terminal.action.APPLY_BACKGROUND" />
+                <action android:name="io.github.crashedsystem.terminal.action.CLEAR_BACKGROUND" />
             </intent-filter>
         </receiver>
     </application>
