@@ -18,13 +18,13 @@ final class SettingsInteractionPage extends SettingsPage {
     @Override
     void build(LinearLayout col) {
         LinearLayout card = ui.card(col);
-        card.addView(ui.toggleCardRow("터미널 벨 · 진동", "BEL 문자를 받으면 짧게 진동합니다",
+        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0203), AppStrings.s(R.string.i18n_0204),
                 host.bellVibrate(), on -> host.onBell(on, host.bellSound()), false));
-        card.addView(ui.toggleCardRow("터미널 벨 · 소리", "무음 모드가 아닐 때만 울립니다",
+        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0205), AppStrings.s(R.string.i18n_0206),
                 host.bellSound(), on -> host.onBell(host.bellVibrate(), on), false));
-        card.addView(ui.toggleCardRow("뒤로 가기 = Esc", "vim·less에서 뒤로 가기가 취소로 동작",
+        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0207), AppStrings.s(R.string.i18n_0208),
                 host.backIsEscape(), host::onBackIsEscape, true));
 
-        ui.hint(col, "길게 누르기: 텍스트 선택 · 탭 길게 누르기: 탭 닫기 · 키 바 가장자리: F1~F12");
+        ui.hint(col, AppStrings.s(R.string.i18n_0209));
     }
 }

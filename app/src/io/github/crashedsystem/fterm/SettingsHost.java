@@ -198,6 +198,6 @@ final class SettingsHost implements SettingsSheet.Host {
     @Override public void onBackIsEscape(boolean on) { a.mPrefs.setBackIsEscape(on); }
 
     @Override public String statusLine() {
-        return a.mTabs.size() + "개 · " + a.mPrefs.host() + ":" + a.mPrefs.port();
+        return a.mTabs.size() + AppStrings.s(R.string.i18n_0197) + a.mPrefs.host() + ":" + a.mPrefs.port();
     }
 }

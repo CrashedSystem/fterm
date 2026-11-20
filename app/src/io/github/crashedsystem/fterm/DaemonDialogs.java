@@ -31,25 +31,25 @@ final class DaemonDialogs {
      */
     static void manualToken(Activity a, final TokenInput onToken) {
         final android.widget.EditText input = new android.widget.EditText(a);
-        input.setHint("Termux에서 `ftermd token` 출력값");
+        input.setHint(AppStrings.s(R.string.i18n_0072));
         input.setSingleLine(true);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
         input.setTextColor(0xffe6e6e6);
         input.setHintTextColor(0xff888888);
 
         new AlertDialog.Builder(a)
-                .setTitle("Termux 연결")
-                .setMessage("Termux에서 다음을 한 번 실행하세요:\n\n"
+                .setTitle(AppStrings.s(R.string.i18n_0073))
+                .setMessage(AppStrings.s(R.string.i18n_0074)
                         + "  ~/fterm/ftermd start\n"
                         + "  ftermd token\n\n"
-                        + "출력된 토큰을 붙여넣으세요.")
+                        + AppStrings.s(R.string.i18n_0075))
                 .setView(input)
                 .setCancelable(false)
-                .setPositiveButton("저장", (d, w) ->
+                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) ->
                         onToken.onToken(input.getText().toString().trim()))
-                .setNegativeButton("Termux 명령 복사", (d, w) -> {
+                .setNegativeButton(AppStrings.s(R.string.i18n_0076), (d, w) -> {
                     copy(a, "ftermd start && ftermd token");
-                    Toast.makeText(a, "복사됨 — Termux에 붙여넣고 실행하세요",
+                    Toast.makeText(a, AppStrings.s(R.string.i18n_0077),
                             Toast.LENGTH_LONG).show();
                     onToken.onToken(null);
                 })
@@ -66,14 +66,14 @@ final class DaemonDialogs {
 
     static void keeperMissing(Activity a, Runnable onDismiss) {
         new AlertDialog.Builder(a)
-                .setTitle("Termux 준비가 필요합니다")
+                .setTitle(AppStrings.s(R.string.i18n_0078))
                 .setMessage(DaemonLauncher.keeperInstructions())
-                .setPositiveButton("명령 복사", (d, w) -> {
+                .setPositiveButton(AppStrings.s(R.string.i18n_0079), (d, w) -> {
                     copy(a, COMMAND);
-                    Toast.makeText(a, "복사됨 — Termux에 붙여넣고 실행하세요",
+                    Toast.makeText(a, AppStrings.s(R.string.i18n_0077),
                             Toast.LENGTH_LONG).show();
                 })
-                .setNegativeButton("닫기", (d, w) -> onDismiss.run())
+                .setNegativeButton(AppStrings.s(R.string.i18n_0029), (d, w) -> onDismiss.run())
                 .show();
     }
 
@@ -86,27 +86,27 @@ final class DaemonDialogs {
      */
     static void storageBlocked(Activity a, Runnable onDismiss) {
         new AlertDialog.Builder(a)
-                .setTitle("저장소에 요청 파일을 쓸 수 없습니다")
-                .setMessage("fterm은 /sdcard/Download/fterm-up 파일로 Termux의 keeper에게 데몬을\n"
-                        + "요청합니다. 그 파일을 쓰지 못하면 앱이 스스로 데몬을 띄울 수 없습니다.\n\n"
-                        + "확인할 것:\n"
-                        + "  · 저장소 권한이 허용되어 있는지\n"
-                        + "  · /sdcard/Download 가 쓰기 가능한지\n\n"
-                        + "Termux에서 한 번 실행하면 토큰을 직접 받을 수도 있습니다:\n"
+                .setTitle(AppStrings.s(R.string.i18n_0080))
+                .setMessage(AppStrings.s(R.string.i18n_0081)
+                        + AppStrings.s(R.string.i18n_0082)
+                        + AppStrings.s(R.string.i18n_0083)
+                        + AppStrings.s(R.string.i18n_0084)
+                        + AppStrings.s(R.string.i18n_0085)
+                        + AppStrings.s(R.string.i18n_0086)
                         + "  ~/fterm/ftermd token")
-                .setPositiveButton("닫기", (d, w) -> onDismiss.run())
+                .setPositiveButton(AppStrings.s(R.string.i18n_0029), (d, w) -> onDismiss.run())
                 .show();
     }
 
     static void daemonSlow(Activity a, Runnable onRetry, Runnable onDismiss) {
         new AlertDialog.Builder(a)
-                .setTitle("데몬이 응답하지 않습니다")
-                .setMessage("keeper는 살아있지만 데몬이 뜨지 않았습니다.\n\n"
-                        + "Termux에서 확인:\n"
+                .setTitle(AppStrings.s(R.string.i18n_0087))
+                .setMessage(AppStrings.s(R.string.i18n_0088)
+                        + AppStrings.s(R.string.i18n_0089)
                         + "  ~/fterm/ftermd status\n"
                         + "  tail ~/fterm/daemon.log")
-                .setPositiveButton("다시 시도", (d, w) -> onRetry.run())
-                .setNegativeButton("닫기", (d, w) -> onDismiss.run())
+                .setPositiveButton(AppStrings.s(R.string.i18n_0090), (d, w) -> onRetry.run())
+                .setNegativeButton(AppStrings.s(R.string.i18n_0029), (d, w) -> onDismiss.run())
                 .show();
     }
 }

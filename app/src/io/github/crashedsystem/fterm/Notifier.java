@@ -34,7 +34,7 @@ import android.os.VibratorManager;
 final class Notifier {
 
     private static final String CHANNEL_ID = "fterm.notify";
-    private static final String CHANNEL_NAME = "셸 알림";
+    private static final String CHANNEL_NAME = AppStrings.s(R.string.i18n_0035);
 
     /** The service's notification owns low ids; these start where it cannot collide. */
     private static final int BASE_ID = 2000;

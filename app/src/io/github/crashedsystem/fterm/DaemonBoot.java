@@ -64,7 +64,7 @@ final class DaemonBoot {
      * would blame the keeper for not answering.
      */
     void start(final Host host) {
-        splash("Termux 데몬 준비 중…");
+        splash(AppStrings.s(R.string.i18n_0071));
         if (!DaemonLauncher.requestStart()) {
             restore();
             host.storageBlocked();

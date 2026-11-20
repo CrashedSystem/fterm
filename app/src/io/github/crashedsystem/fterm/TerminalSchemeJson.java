@@ -67,13 +67,13 @@ public final class TerminalSchemeJson {
      */
     public static List<Scheme> parseAll(String text) {
         if (text == null || text.trim().isEmpty()) {
-            throw new IllegalArgumentException("JSON이 비어 있습니다");
+            throw new IllegalArgumentException(AppStrings.s(R.string.i18n_0360));
         }
         Object root;
         try {
             root = new Parser(text).document();
         } catch (RuntimeException e) {
-            throw new IllegalArgumentException("JSON을 읽지 못했습니다: " + e.getMessage());
+            throw new IllegalArgumentException(AppStrings.s(R.string.i18n_0361) + e.getMessage());
         }
         List<Object> blocks = new ArrayList<>();
         if (root instanceof Map) {
@@ -94,12 +94,12 @@ public final class TerminalSchemeJson {
                 blocks.add(object);
             } else {
                 throw new IllegalArgumentException(
-                        "구성표를 찾지 못했습니다 — \"schemes\" 목록이나 색 항목이 있는 개체가 필요합니다");
+                        AppStrings.s(R.string.i18n_0362));
             }
         } else if (root instanceof List) {
             blocks.addAll((List<?>) root);
         } else {
-            throw new IllegalArgumentException("구성표는 { … } 하나이거나 그 배열이어야 합니다");
+            throw new IllegalArgumentException(AppStrings.s(R.string.i18n_0363));
         }
 
         List<Scheme> out = new ArrayList<>();
@@ -116,7 +116,7 @@ public final class TerminalSchemeJson {
         }
         if (out.isEmpty()) {
             throw new IllegalArgumentException(firstError != null
-                    ? firstError : "가져올 구성표가 없습니다");
+                    ? firstError : AppStrings.s(R.string.i18n_0364));
         }
         return out;
     }
@@ -141,16 +141,16 @@ public final class TerminalSchemeJson {
      */
     public static Scheme parse(String text) {
         if (text == null || text.trim().isEmpty()) {
-            throw new IllegalArgumentException("JSON이 비어 있습니다");
+            throw new IllegalArgumentException(AppStrings.s(R.string.i18n_0360));
         }
         Object root;
         try {
             root = new Parser(text).document();
         } catch (RuntimeException e) {
-            throw new IllegalArgumentException("JSON을 읽지 못했습니다: " + e.getMessage());
+            throw new IllegalArgumentException(AppStrings.s(R.string.i18n_0361) + e.getMessage());
         }
         if (!(root instanceof Map)) {
-            throw new IllegalArgumentException("구성표는 { … } 하나여야 합니다");
+            throw new IllegalArgumentException(AppStrings.s(R.string.i18n_0365));
         }
         return fromObject((Map<?, ?>) root);
     }
@@ -183,21 +183,21 @@ public final class TerminalSchemeJson {
         if (cursor != null) { slots[18] = colour("cursorColor", cursor); found++; }
 
         if (found == 0) {
-            throw new IllegalArgumentException("색 항목이 없습니다 (black, foreground …)");
+            throw new IllegalArgumentException(AppStrings.s(R.string.i18n_0366));
         }
         Object name = lower.get("name");
         String label = name instanceof String && !((String) name).trim().isEmpty()
-                ? ((String) name).trim() : "가져온 구성표";
+                ? ((String) name).trim() : AppStrings.s(R.string.i18n_0367);
         return new Scheme(label, slots);
     }
 
     private static int colour(String key, Object value) {
         if (!(value instanceof String)) {
-            throw new IllegalArgumentException(key + " 값이 문자열이 아닙니다");
+            throw new IllegalArgumentException(key + AppStrings.s(R.string.i18n_0368));
         }
         Integer c = parseColour((String) value);
         if (c == null) {
-            throw new IllegalArgumentException(key + " 색 형식이 아닙니다: " + value);
+            throw new IllegalArgumentException(key + AppStrings.s(R.string.i18n_0369) + value);
         }
         return c;
     }
@@ -237,13 +237,13 @@ public final class TerminalSchemeJson {
         Object document() {
             Object v = value();
             skip();
-            if (i < s.length()) throw error("값 뒤에 남은 글자");
+            if (i < s.length()) throw error(AppStrings.s(R.string.i18n_0370));
             return v;
         }
 
         private Object value() {
             skip();
-            if (i >= s.length()) throw error("값이 필요합니다");
+            if (i >= s.length()) throw error(AppStrings.s(R.string.i18n_0371));
             char c = s.charAt(i);
             if (c == '{') return object();
             if (c == '[') return array();
@@ -262,16 +262,16 @@ public final class TerminalSchemeJson {
                 skip();
                 if (i >= s.length()) throw error("} 가 없습니다");
                 if (s.charAt(i) == '}') { i++; return out; }
-                if (s.charAt(i) != '"') throw error("키는 문자열이어야 합니다");
+                if (s.charAt(i) != '"') throw error(AppStrings.s(R.string.i18n_0372));
                 String key = string();
                 skip();
-                if (i >= s.length() || s.charAt(i) != ':') throw error(": 가 없습니다");
+                if (i >= s.length() || s.charAt(i) != ':') throw error(AppStrings.s(R.string.i18n_0373));
                 i++;
                 out.put(key, value());
                 skip();
                 if (i < s.length() && s.charAt(i) == ',') { i++; continue; }
                 if (i < s.length() && s.charAt(i) == '}') { i++; return out; }
-                throw error(", 또는 } 가 필요합니다");
+                throw error(AppStrings.s(R.string.i18n_0374));
             }
         }
 
@@ -280,13 +280,13 @@ public final class TerminalSchemeJson {
             i++;                      // [
             while (true) {
                 skip();
-                if (i >= s.length()) throw error("] 가 없습니다");
+                if (i >= s.length()) throw error(AppStrings.s(R.string.i18n_0375));
                 if (s.charAt(i) == ']') { i++; return out; }
                 out.add(value());
                 skip();
                 if (i < s.length() && s.charAt(i) == ',') { i++; continue; }
                 if (i < s.length() && s.charAt(i) == ']') { i++; return out; }
-                throw error(", 또는 ] 가 필요합니다");
+                throw error(AppStrings.s(R.string.i18n_0376));
             }
         }
 

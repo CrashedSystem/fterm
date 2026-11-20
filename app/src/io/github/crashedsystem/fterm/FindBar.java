@@ -59,7 +59,7 @@ final class FindBar {
         mField.setTextSize(13);
         mField.setTextColor(0xffe6e6e6);
         mField.setHintTextColor(0xff8a8a8a);
-        mField.setHint("찾기");
+        mField.setHint(AppStrings.s(R.string.i18n_0063));
         mField.setBackground(null);
         mField.setPadding(0, 0, 0, 0);
         mField.setImeOptions(EditorInfo.IME_ACTION_SEARCH | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
@@ -172,7 +172,7 @@ final class FindBar {
         if (lines == null) return;
         mHits = Search.find(lines, mFirstRow, query, mCaseSensitive);
         if (mHits.isEmpty()) {
-            mCount.setText("없음");
+            mCount.setText(AppStrings.s(R.string.i18n_0094));
             mView.clearFindHighlights();
             return;
         }

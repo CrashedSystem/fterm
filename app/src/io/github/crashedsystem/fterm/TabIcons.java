@@ -46,13 +46,13 @@ final class TabIcons {
 
     /** What the settings list prints for each of {@link #GLYPHS}, same order. */
     static final String[] GLYPH_NAMES = {
-            "터미널 창", "프롬프트", "코드", "화살표", "분할",
-            "서버", "데이터베이스", "클라우드", "지구", "폴더",
-            "문서", "키보드", "버그", "비커", "렌치",
-            "번개", "로켓", "방패", "눈", "스캔",
-            "별", "하트", "큐브", "퍼즐", "불꽃",
-            "카메라", "선물", "붓", "손전등", "집",
-            "말풍선", "메일", "전화", "프린터", "자",
+            AppStrings.s(R.string.i18n_0324), AppStrings.s(R.string.i18n_0325), AppStrings.s(R.string.i18n_0326), AppStrings.s(R.string.i18n_0327), AppStrings.s(R.string.i18n_0328),
+            AppStrings.s(R.string.i18n_0227), AppStrings.s(R.string.i18n_0198), AppStrings.s(R.string.i18n_0329), AppStrings.s(R.string.i18n_0330), AppStrings.s(R.string.i18n_0331),
+            AppStrings.s(R.string.i18n_0332), AppStrings.s(R.string.i18n_0333), AppStrings.s(R.string.i18n_0334), AppStrings.s(R.string.i18n_0335), AppStrings.s(R.string.i18n_0336),
+            AppStrings.s(R.string.i18n_0337), AppStrings.s(R.string.i18n_0338), AppStrings.s(R.string.i18n_0339), AppStrings.s(R.string.i18n_0340), AppStrings.s(R.string.i18n_0341),
+            AppStrings.s(R.string.i18n_0342), AppStrings.s(R.string.i18n_0343), AppStrings.s(R.string.i18n_0344), AppStrings.s(R.string.i18n_0345), AppStrings.s(R.string.i18n_0346),
+            AppStrings.s(R.string.i18n_0347), AppStrings.s(R.string.i18n_0348), AppStrings.s(R.string.i18n_0349), AppStrings.s(R.string.i18n_0350), AppStrings.s(R.string.i18n_0351),
+            AppStrings.s(R.string.i18n_0352), AppStrings.s(R.string.i18n_0353), AppStrings.s(R.string.i18n_0354), AppStrings.s(R.string.i18n_0355), AppStrings.s(R.string.i18n_0356),
             "opencode",
     };
 

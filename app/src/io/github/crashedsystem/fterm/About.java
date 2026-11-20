@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 
 /**
- * WT's "정보" dialog: version, the connection actually in use, and the gestures that are
+ * WT's AppStrings.s(R.string.i18n_0024) dialog: version, the connection actually in use, and the gestures that are
  * otherwise invisible.
  *
  * <p>Kept out of the activity for the same reason the settings page is: the activity lays
@@ -28,12 +28,12 @@ final class About {
         }
         new AlertDialog.Builder(activity)
                 .setTitle("fterm")
-                .setMessage("버전 " + version + "\n"
+                .setMessage(AppStrings.s(R.string.i18n_0025) + version + "\n"
                         + status + "\n\n"
-                        + "길게 누르기: 텍스트 선택\n"
-                        + "탭 길게 누르기: 탭 닫기\n"
-                        + "키 바 좌우 가장자리: F1~F12")
-                .setPositiveButton("닫기", null)
+                        + AppStrings.s(R.string.i18n_0026)
+                        + AppStrings.s(R.string.i18n_0027)
+                        + AppStrings.s(R.string.i18n_0028))
+                .setPositiveButton(AppStrings.s(R.string.i18n_0029), null)
                 .show();
     }
 }

@@ -81,7 +81,7 @@ public final class TerminalService extends Service {
     public void onCreate() {
         super.onCreate();
         createChannel(this);
-        Notification n = build(this, getString(R.string.app_name), "터미널 준비 중");
+        Notification n = build(this, getString(R.string.app_name), AppStrings.s(R.string.i18n_0377));
         if (Build.VERSION.SDK_INT >= 34) {
             // The type is declared in the manifest too; passing it here is what Android 14+
             // asks for explicitly, and it is what makes the specialUse exemption checkable.

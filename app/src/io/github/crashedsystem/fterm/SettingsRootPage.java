@@ -9,7 +9,7 @@ import android.widget.TextView;
 /**
  * The navigation column: WT's list of pages, as glyph + label + hint.
  *
- * <p>WT draws each entry as glyph + label, and so does this; "프로필" is not a real page on the
+ * <p>WT draws each entry as glyph + label, and so does this; AppStrings.s(R.string.i18n_0240) is not a real page on the
  * desktop build, so unlike WT it is listed here as one. Every row leads somewhere, which is why
  * every row carries the right-pointing chevron WT puts on the same rows.
  */
@@ -21,12 +21,12 @@ final class SettingsRootPage extends SettingsPage {
 
     @Override
     void build(LinearLayout col) {
-        col.addView(navRow("terminal", "시작", "기본 프로필, 셸, 시작 동작", "start"));
-        col.addView(navRow("ssh", "프로필", "ssh처럼 명령으로 시작하는 탭", "profiles"));
-        col.addView(navRow("pencil", "모양", "글자 크기, 키 바", "appearance"));
-        col.addView(navRow("swatch", "색 구성표", "16색 팔레트와 미리보기", "schemes"));
-        col.addView(navRow("keyboard", "상호 작용", "벨, 뒤로 가기 키", "interaction"));
-        col.addView(navRow("info", "정보", "버전과 연결 상태", "about"));
+        col.addView(navRow("terminal", AppStrings.s(R.string.i18n_0241), AppStrings.s(R.string.i18n_0242), "start"));
+        col.addView(navRow("ssh", AppStrings.s(R.string.i18n_0240), AppStrings.s(R.string.i18n_0243), "profiles"));
+        col.addView(navRow("pencil", AppStrings.s(R.string.i18n_0244), AppStrings.s(R.string.i18n_0245), "appearance"));
+        col.addView(navRow("swatch", AppStrings.s(R.string.i18n_0128), AppStrings.s(R.string.i18n_0246), "schemes"));
+        col.addView(navRow("keyboard", AppStrings.s(R.string.i18n_0247), AppStrings.s(R.string.i18n_0248), "interaction"));
+        col.addView(navRow("info", AppStrings.s(R.string.i18n_0024), AppStrings.s(R.string.i18n_0249), "about"));
     }
 
     private View navRow(String glyph, String label, String hint, final String page) {

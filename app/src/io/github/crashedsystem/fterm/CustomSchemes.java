@@ -24,7 +24,7 @@ import java.util.List;
 public final class CustomSchemes {
 
     /** What a palette is called when it has no name: the single slot's old label. */
-    public static final String DEFAULT_NAME = "사용자 지정";
+    public static final String DEFAULT_NAME = AppStrings.s(R.string.i18n_0070);
 
     private static final char UNIT = '\u001f';
     private static final char RECORD = '\u001e';

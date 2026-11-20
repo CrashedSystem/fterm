@@ -17,11 +17,11 @@ final class SettingsAboutPage extends SettingsPage {
     @Override
     void build(LinearLayout col) {
         LinearLayout card = ui.card(col);
-        card.addView(ui.valueRow("세션", host.statusLine(), null, null, false));
-        card.addView(ui.valueRow("데몬", "127.0.0.1 의 PTY 서버, 토큰 인증", null, null, false));
-        card.addView(ui.valueRow("렌더링", "xterm-256color · 한글 2칸 폭", null, null, true));
+        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0113), host.statusLine(), null, null, false));
+        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0114), AppStrings.s(R.string.i18n_0115), null, null, false));
+        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0116), AppStrings.s(R.string.i18n_0117), null, null, true));
 
-        ui.hint(col, "fterm — Android 위의 Windows Terminal 모양을 목표로 하는 터미널. "
-                + "셸은 Termux의 데몬이 소유하고, 앱은 화면과 입력만 맡습니다.");
+        ui.hint(col, AppStrings.s(R.string.i18n_0118)
+                + AppStrings.s(R.string.i18n_0119));
     }
 }

@@ -89,11 +89,11 @@ final class Chrome {
         input.setSingleLine(true);
         input.setSelectAllOnFocus(true);
         new android.app.AlertDialog.Builder(activity)
-                .setTitle("탭 이름")
+                .setTitle(AppStrings.s(R.string.i18n_0056))
                 .setView(input)
-                .setPositiveButton("저장", (d, w) ->
+                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) ->
                         apply.onName(input.getText().toString().trim()))
-                .setNegativeButton("취소", null)
+                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
                 .show();
     }
 
@@ -113,18 +113,18 @@ final class Chrome {
      */
     void palette() {
         final Entry[] entries = {
-                new Entry("새 탭 열기", mCommands::newTab),
-                new Entry("탭 닫기", mCommands::closeTab),
-                new Entry("탭 이름 바꾸기", mCommands::renameTab),
-                new Entry("다음 탭", mCommands::nextTab),
-                new Entry("붙여넣기", mCommands::paste),
-                new Entry("복사", mCommands::copy),
-                new Entry("찾기", mCommands::find),
-                new Entry("글자 크기 키우기", mCommands::biggerFont),
-                new Entry("글자 크기 줄이기", mCommands::smallerFont),
-                new Entry("설정 열기", mCommands::settings),
-                new Entry("키보드 보이기/숨기기", mCommands::toggleKeyboard),
-                new Entry("정보", mCommands::about),
+                new Entry(AppStrings.s(R.string.i18n_0059), mCommands::newTab),
+                new Entry(AppStrings.s(R.string.i18n_0060), mCommands::closeTab),
+                new Entry(AppStrings.s(R.string.i18n_0061), mCommands::renameTab),
+                new Entry(AppStrings.s(R.string.i18n_0062), mCommands::nextTab),
+                new Entry(AppStrings.s(R.string.i18n_0032), mCommands::paste),
+                new Entry(AppStrings.s(R.string.i18n_0031), mCommands::copy),
+                new Entry(AppStrings.s(R.string.i18n_0063), mCommands::find),
+                new Entry(AppStrings.s(R.string.i18n_0064), mCommands::biggerFont),
+                new Entry(AppStrings.s(R.string.i18n_0065), mCommands::smallerFont),
+                new Entry(AppStrings.s(R.string.i18n_0066), mCommands::settings),
+                new Entry(AppStrings.s(R.string.i18n_0067), mCommands::toggleKeyboard),
+                new Entry(AppStrings.s(R.string.i18n_0024), mCommands::about),
         };
 
         final android.widget.ArrayAdapter<Entry> adapter =
@@ -136,7 +136,7 @@ final class Chrome {
         list.setPadding(0, dp(mActivity, 2), 0, dp(mActivity, 2));
 
         final EditText filter = new EditText(mActivity);
-        filter.setHint("명령 검색");
+        filter.setHint(AppStrings.s(R.string.i18n_0068));
         filter.setSingleLine(true);
         filter.setTextSize(13.5f);
         filter.setTextColor(TEXT);

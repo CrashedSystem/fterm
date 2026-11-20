@@ -165,7 +165,7 @@ public final class Prefs {
     /** Some IMEs (Samsung in particular) mangle a TYPE_NULL input connection. */
     /**
      * Some IMEs mangle a TYPE_NULL connection: the Samsung keyboard commits each jamo of a
-     * composition separately, so "한" arrives as U+1112 U+1161 U+1102 and every intermediate
+     * composition separately, so AppStrings.s(R.string.i18n_0023) arrives as U+1112 U+1161 U+1102 and every intermediate
      * state is echoed. TYPE_TEXT_VARIATION_VISIBLE_PASSWORD makes the IME treat the field as
      * normal text with suggestions off, which gives a proper composing region.
      */

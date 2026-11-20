@@ -6,7 +6,7 @@ import android.view.KeyEvent;
  * The hardware-keyboard bindings, handled before the focused view sees the key.
  *
  * <p>Two of these were advertised in the dropdown and never implemented: Ctrl+Shift+F and
- * Ctrl+, were printed next to "찾기" and "설정" and, when pressed, typed ^F and a comma into the
+ * Ctrl+, were printed next to AppStrings.s(R.string.i18n_0063) and AppStrings.s(R.string.i18n_0306) and, when pressed, typed ^F and a comma into the
  * shell - the terminal's own Ctrl mapping did the ^F, and the comma simply had no mapping.
  * The rest are the keys a keyboard-only DeX session is missing: there was no way to move
  * between tabs or change the font size without a mouse or a pinch.

@@ -57,14 +57,14 @@ public final class BackgroundReceiver extends BroadcastReceiver {
             boolean ok;
             if (path != null) {
                 File file = new File(path);
-                if (!allowed(context, file)) return "error: 그 경로는 읽을 수 없습니다: " + path;
+                if (!allowed(context, file)) return AppStrings.s(R.string.i18n_0036) + path;
                 ok = BackgroundStore.installFile(context, file);
             } else if (uri != null) {
                 ok = BackgroundStore.install(context, uri);
             } else {
-                return "error: --es path <파일> 또는 content:// URI 가 필요합니다";
+                return AppStrings.s(R.string.i18n_0037);
             }
-            if (!ok) return "error: 이미지를 읽거나 저장하지 못했습니다";
+            if (!ok) return AppStrings.s(R.string.i18n_0038);
         } else {
             BackgroundStore.clear(context);
         }
@@ -84,7 +84,7 @@ public final class BackgroundReceiver extends BroadcastReceiver {
         }
 
         BackgroundStore.notifyChanged(context);
-        if (clear) return "ok: 배경 이미지를 지웠습니다";
+        if (clear) return AppStrings.s(R.string.i18n_0039);
         return "ok: " + BackgroundStore.describe(context);
     }
 

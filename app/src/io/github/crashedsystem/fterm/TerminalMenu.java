@@ -62,12 +62,12 @@ final class TerminalMenu {
         list.setPadding(0, dp(4), 0, dp(4));
         list.setBackground(Chrome.plate(BG, 10));
 
-        addRow(list, dialog, "복사", mActivity::copySelection);
-        addRow(list, dialog, "붙여넣기", mActivity::pasteClipboard);
-        addRow(list, dialog, "전체 선택", () -> mView.selectAll());
+        addRow(list, dialog, AppStrings.s(R.string.i18n_0031), mActivity::copySelection);
+        addRow(list, dialog, AppStrings.s(R.string.i18n_0032), mActivity::pasteClipboard);
+        addRow(list, dialog, AppStrings.s(R.string.i18n_0359), () -> mView.selectAll());
         addRule(list);
-        addRow(list, dialog, "찾기", mActivity::find);
-        addRow(list, dialog, "설정", mActivity::showSettings);
+        addRow(list, dialog, AppStrings.s(R.string.i18n_0063), mActivity::find);
+        addRow(list, dialog, AppStrings.s(R.string.i18n_0306), mActivity::showSettings);
 
         dialog.setContentView(list);
         dialog.setCanceledOnTouchOutside(true);

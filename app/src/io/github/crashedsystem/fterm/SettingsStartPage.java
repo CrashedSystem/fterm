@@ -19,25 +19,25 @@ final class SettingsStartPage extends SettingsPage {
     void build(LinearLayout col) {
         LinearLayout card = ui.card(col);
 
-        card.addView(ui.valueRow("기본 프로필", "새 탭을 열 때 쓰는 프로필",
+        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0308), AppStrings.s(R.string.i18n_0309),
                 Profiles.DEFAULT_NAME, null, false));
-        card.addView(ui.valueRow("시작 디렉터리", "새 세션이 시작하는 위치",
-                host.startDir().isEmpty() ? "홈" : host.startDir(),
+        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0310), AppStrings.s(R.string.i18n_0311),
+                host.startDir().isEmpty() ? AppStrings.s(R.string.i18n_0312) : host.startDir(),
                 this::editStartDir, false));
-        card.addView(ui.valueRow("시작 셸", "새 세션이 실행하는 프로그램",
-                host.startShell().isEmpty() ? "기본 셸" : host.startShell(),
+        card.addView(ui.valueRow(AppStrings.s(R.string.i18n_0313), AppStrings.s(R.string.i18n_0314),
+                host.startShell().isEmpty() ? AppStrings.s(R.string.i18n_0315) : host.startShell(),
                 this::editStartShell, false));
-        card.addView(ui.toggleCardRow("앱을 열 때 키보드", "시작하자마자 입력할 수 있습니다",
+        card.addView(ui.toggleCardRow(AppStrings.s(R.string.i18n_0316), AppStrings.s(R.string.i18n_0317),
                 host.keyboardOnStart(), host::onKeyboardOnStart, true));
 
-        ui.hint(col, "디렉터리와 셸은 다음에 여는 탭부터 적용됩니다. "
-                + "이미 열린 탭은 그대로입니다. 셸은 데몬이 허용한 경로만 실행됩니다.");
+        ui.hint(col, AppStrings.s(R.string.i18n_0318)
+                + AppStrings.s(R.string.i18n_0319));
     }
 
     private void editStartDir() {
-        ui.prompt("시작 디렉터리", host.startDir(), "/data/data/com.termux/files/home",
-                "비우면 데몬의 홈 디렉터리에서 시작합니다. 존재하지 않는 경로를 적으면 "
-                        + "홈으로 대체됩니다.",
+        ui.prompt(AppStrings.s(R.string.i18n_0310), host.startDir(), "/data/data/com.termux/files/home",
+                AppStrings.s(R.string.i18n_0320)
+                        + AppStrings.s(R.string.i18n_0321),
                 v -> {
                     host.onStartDir(v);
                     render();
@@ -45,8 +45,8 @@ final class SettingsStartPage extends SettingsPage {
     }
 
     private void editStartShell() {
-        ui.prompt("시작 셸", host.startShell(), "/data/data/com.termux/files/usr/bin/bash",
-                "데몬이 허용한 경로만 실행됩니다. 비우면 데몬 기본 셸을 씁니다.",
+        ui.prompt(AppStrings.s(R.string.i18n_0313), host.startShell(), "/data/data/com.termux/files/usr/bin/bash",
+                AppStrings.s(R.string.i18n_0322),
                 v -> {
                     host.onStartShell(v);
                     render();

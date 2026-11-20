@@ -55,11 +55,26 @@ for jf in java_files:
     for m in lit_pattern.finditer(txt):
         raw = m.group(0)  # includes quotes
         inner = m.group(1)
-        dec = decode_java(inner)
-        if hangul_re.search(dec):
+        # fast path: if the raw inner contains Hangul characters, take it; otherwise decode and check
+        if hangul_re.search(inner):
+            try:
+                dec = decode_java(inner)
+            except Exception:
+                dec = inner
             occurrences.append((jf, raw, dec))
             if dec not in unique_literals:
                 unique_literals[dec] = raw
+        else:
+            # maybe escaped unicode like 가; decode and test
+            try:
+                dec2 = decode_java(inner)
+            except Exception:
+                dec2 = inner
+            if hangul_re.search(dec2):
+                dec = dec2
+                occurrences.append((jf, raw, dec))
+                if dec not in unique_literals:
+                    unique_literals[dec] = raw
 
 print(f'Found {len(occurrences)} occurrences, {len(unique_literals)} unique strings')
 

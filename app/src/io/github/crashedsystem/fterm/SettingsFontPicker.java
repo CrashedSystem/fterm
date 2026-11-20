@@ -67,7 +67,7 @@ final class SettingsFontPicker {
         install.setClickable(true);
         install.addView(Chrome.icon(mActivity, "folder", 18, false, null));
         TextView installLabel = new TextView(mActivity);
-        installLabel.setText("글꼴 설치 — Termux에서 받기, 기기에서 고르기");
+        installLabel.setText(AppStrings.s(R.string.i18n_0173));
         installLabel.setTextColor(mUi.ACCENT);
         installLabel.setTextSize(12.5f);
         installLabel.setPadding(mUi.dp(10), 0, 0, 0);
@@ -89,7 +89,7 @@ final class SettingsFontPicker {
             row.setClickable(true);
 
             TextView sample = new TextView(mActivity);
-            sample.setText("Mmm 0123 한");
+            sample.setText(AppStrings.s(R.string.i18n_0174));
             sample.setTextSize(15);
             sample.setTextColor(mUi.TEXT);
             sample.setTypeface(faceFor(f));
@@ -126,14 +126,14 @@ final class SettingsFontPicker {
                 ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(340)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle("글꼴")
+                .setTitle(AppStrings.s(R.string.i18n_0124))
                 .setView(scroll)
-                .setPositiveButton("다시 찾기", (d, w) -> {
+                .setPositiveButton(AppStrings.s(R.string.i18n_0175), (d, w) -> {
                     Fonts.rescan();
                     mSheet.render();
                     chooseFont();
                 })
-                .setNegativeButton("닫기", null)
+                .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
                 .create();
         holder[0].show();
     }
@@ -168,7 +168,7 @@ final class SettingsFontPicker {
             row.setClickable(true);
 
             TextView sample = new TextView(mActivity);
-            sample.setText(i == 0 ? "한글 가나다 12" : "한글 가나다 ▲");
+            sample.setText(i == 0 ? AppStrings.s(R.string.i18n_0176) : AppStrings.s(R.string.i18n_0177));
             sample.setTextSize(15);
             sample.setTextColor(mUi.TEXT);
             sample.setTypeface(faceForHangul(f));
@@ -178,10 +178,10 @@ final class SettingsFontPicker {
             row.addView(sample);
 
             TextView name = new TextView(mActivity);
-            // "자모" marks a face whose own cmap has conjoining jamo. The bundled Pretendard
+            // AppStrings.s(R.string.i18n_0178) marks a face whose own cmap has conjoining jamo. The bundled Pretendard
             // does not - syllables only - and the platform fills the gap with a fallback face,
             // so the mark is about which font draws the text, not about whether it appears.
-            name.setText(Fonts.faceHasJamo(mActivity, f) ? f.label + " · 자모" : f.label);
+            name.setText(Fonts.faceHasJamo(mActivity, f) ? f.label + AppStrings.s(R.string.i18n_0179) : f.label);
             name.setTextSize(11);
             name.setTextColor(f.id.equals(current) ? mUi.ACCENT : mUi.HINT);
             name.setPadding(0, 0, mUi.dp(10), 0);
@@ -205,15 +205,15 @@ final class SettingsFontPicker {
                 ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(340)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle("한글 글꼴")
+                .setTitle(AppStrings.s(R.string.i18n_0126))
                 .setView(scroll)
-                .setPositiveButton("다시 찾기", (d, w) -> {
+                .setPositiveButton(AppStrings.s(R.string.i18n_0175), (d, w) -> {
                     Fonts.rescan();
                     mSheet.render();
                     chooseHangulFont();
                 })
-                .setNeutralButton("설치", (d, w) -> installFont())
-                .setNegativeButton("닫기", null)
+                .setNeutralButton(AppStrings.s(R.string.i18n_0180), (d, w) -> installFont())
+                .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
                 .create();
         holder[0].show();
     }
@@ -242,7 +242,7 @@ final class SettingsFontPicker {
         box.addView(status);
 
         TextView loading = new TextView(mActivity);
-        loading.setText("Termux에서 글꼴을 찾는 중…");
+        loading.setText(AppStrings.s(R.string.i18n_0181));
         loading.setTextColor(mUi.HINT);
         loading.setTextSize(12);
         status.addView(loading);
@@ -257,7 +257,7 @@ final class SettingsFontPicker {
         device.setClickable(true);
         device.addView(Chrome.icon(mActivity, "folder", 16, false, null));
         TextView deviceLabel = new TextView(mActivity);
-        deviceLabel.setText("이 기기의 파일에서 고르기");
+        deviceLabel.setText(AppStrings.s(R.string.i18n_0182));
         deviceLabel.setTextColor(mUi.TEXT);
         deviceLabel.setTextSize(13);
         deviceLabel.setPadding(mUi.dp(10), 0, 0, 0);
@@ -277,7 +277,7 @@ final class SettingsFontPicker {
         url.setClickable(true);
         url.addView(Chrome.icon(mActivity, "cloud", 16, false, null));
         TextView urlLabel = new TextView(mActivity);
-        urlLabel.setText("URL로 받기 (Termux가 대신 내려받음)");
+        urlLabel.setText(AppStrings.s(R.string.i18n_0183));
         urlLabel.setTextColor(mUi.TEXT);
         urlLabel.setTextSize(13);
         urlLabel.setPadding(mUi.dp(10), 0, 0, 0);
@@ -295,9 +295,9 @@ final class SettingsFontPicker {
                 ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(360)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
-                .setTitle("글꼴 설치")
+                .setTitle(AppStrings.s(R.string.i18n_0184))
                 .setView(scroll)
-                .setNegativeButton("닫기", null)
+                .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
                 .create();
         holder[0].show();
 
@@ -328,7 +328,7 @@ final class SettingsFontPicker {
         status.removeAllViews();
         if (error != null) {
             TextView t = new TextView(mActivity);
-            t.setText("Termux 글꼴 목록을 가져오지 못했습니다.\n" + error);
+            t.setText(AppStrings.s(R.string.i18n_0185) + error);
             t.setTextColor(mUi.HINT);
             t.setTextSize(11);
             status.addView(t);
@@ -336,15 +336,15 @@ final class SettingsFontPicker {
         }
         if (fonts == null || fonts.isEmpty()) {
             TextView t = new TextView(mActivity);
-            t.setText("Termux 쪽에 글꼴이 없습니다. 아래 URL로 받거나, Termux에서 "
-                    + "~/.fonts 에 .ttf를 넣으세요.");
+            t.setText(AppStrings.s(R.string.i18n_0186)
+                    + AppStrings.s(R.string.i18n_0187));
             t.setTextColor(mUi.HINT);
             t.setTextSize(11);
             status.addView(t);
             return;
         }
         TextView head = new TextView(mActivity);
-        head.setText("Termux에서 찾은 글꼴 " + fonts.size() + "개");
+        head.setText(AppStrings.s(R.string.i18n_0188) + fonts.size() + AppStrings.s(R.string.i18n_0189));
         head.setTextColor(mUi.HINT);
         head.setTextSize(11);
         status.addView(head);
@@ -378,7 +378,7 @@ final class SettingsFontPicker {
 
     /** Fetch one Termux-side font and install it as if it had been picked locally. */
     private void pullFromTermux(com.termux.terminal.DaemonClient.RemoteFont f) {
-        android.widget.Toast.makeText(mActivity, f.name() + " 받는 중…",
+        android.widget.Toast.makeText(mActivity, f.name() + AppStrings.s(R.string.i18n_0190),
                 android.widget.Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             final Fonts.Import result;
@@ -397,16 +397,16 @@ final class SettingsFontPicker {
 
     /** A URL for the daemon to download, because this app has no way to fetch one itself. */
     private void fontFromUrl() {
-        mUi.prompt("글꼴 URL", "", "https://example.com/MyFont.ttf",
-                "Termux가 대신 내려받아 ~/.fonts 에 저장한 뒤 앱으로 넘깁니다. "
-                        + ".ttf/.otf로 끝나는 http(s) 주소여야 합니다.",
+        mUi.prompt(AppStrings.s(R.string.i18n_0191), "", "https://example.com/MyFont.ttf",
+                AppStrings.s(R.string.i18n_0192)
+                        + AppStrings.s(R.string.i18n_0193),
                 v -> {
                     if (v.isEmpty()) return;
                     if (!v.startsWith("http://") && !v.startsWith("https://")) {
-                        showFontError("http:// 또는 https:// 주소가 아닙니다.");
+                        showFontError(AppStrings.s(R.string.i18n_0194));
                         return;
                     }
-                    android.widget.Toast.makeText(mActivity, "내려받는 중…",
+                    android.widget.Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0195),
                             android.widget.Toast.LENGTH_SHORT).show();
                     new Thread(() -> {
                         final Fonts.Import result;
@@ -430,9 +430,9 @@ final class SettingsFontPicker {
 
     private void showFontError(String message) {
         new android.app.AlertDialog.Builder(mActivity)
-                .setTitle("글꼴")
+                .setTitle(AppStrings.s(R.string.i18n_0124))
                 .setMessage(message)
-                .setPositiveButton("확인", null)
+                .setPositiveButton(AppStrings.s(R.string.i18n_0172), null)
                 .show();
     }
 
@@ -486,9 +486,9 @@ final class SettingsFontPicker {
             mActivity.startActivityForResult(i, REQ_IMPORT_FONT);
         } catch (Throwable t) {
             new android.app.AlertDialog.Builder(mActivity)
-                    .setTitle("글꼴")
-                    .setMessage("파일 선택기를 열 수 없습니다.\n\n" + t)
-                    .setPositiveButton("확인", null)
+                    .setTitle(AppStrings.s(R.string.i18n_0124))
+                    .setMessage(AppStrings.s(R.string.i18n_0196) + t)
+                    .setPositiveButton(AppStrings.s(R.string.i18n_0172), null)
                     .show();
         }
     }

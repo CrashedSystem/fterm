@@ -46,19 +46,19 @@ final class SettingsBackgroundPicker {
     /** Appends the four rows to the appearance card. */
     void rows(LinearLayout card) {
         String name = mHost.backgroundName();
-        card.addView(mUi.valueRow("배경 이미지", "터미널 글자 뒤에 그릴 개인 이미지",
-                name == null ? "없음" : name, this::choose, false));
+        card.addView(mUi.valueRow(AppStrings.s(R.string.i18n_0051), AppStrings.s(R.string.i18n_0149),
+                name == null ? AppStrings.s(R.string.i18n_0094) : name, this::choose, false));
 
-        card.addView(sliderRow("투명도", "그림을 얼마나 진하게 그릴지",
+        card.addView(sliderRow(AppStrings.s(R.string.i18n_0150), AppStrings.s(R.string.i18n_0151),
                 mHost.backgroundOpacity(), 100, false, mHost::onBackgroundOpacity));
 
-        card.addView(mUi.valueRow("맞춤", "화면에 맞추는 방식",
+        card.addView(mUi.valueRow(AppStrings.s(R.string.i18n_0152), AppStrings.s(R.string.i18n_0153),
                 BackgroundSpec.fitLabel(mHost.backgroundFit()), this::chooseFit, false));
 
-        card.addView(mUi.valueRow("위치", "여백이 생길 때 그림을 붙일 곳",
+        card.addView(mUi.valueRow(AppStrings.s(R.string.i18n_0154), AppStrings.s(R.string.i18n_0155),
                 BackgroundSpec.alignLabel(mHost.backgroundAlign()), this::chooseAlign, false));
 
-        card.addView(sliderRow("어둡게", "글자가 묻히면 올리세요",
+        card.addView(sliderRow(AppStrings.s(R.string.i18n_0156), AppStrings.s(R.string.i18n_0157),
                 mHost.backgroundDim(), BackgroundSpec.MAX_DIM, true, mHost::onBackgroundDim));
     }
 
@@ -117,16 +117,16 @@ final class SettingsBackgroundPicker {
     private void choose() {
         final boolean has = mHost.backgroundSet();
         String[] items = has
-                ? new String[]{"기기에서 고르기", "Termux · adb 경로 안내", "배경 없애기"}
-                : new String[]{"기기에서 고르기", "Termux · adb 경로 안내"};
+                ? new String[]{AppStrings.s(R.string.i18n_0158), AppStrings.s(R.string.i18n_0159), AppStrings.s(R.string.i18n_0160)}
+                : new String[]{AppStrings.s(R.string.i18n_0158), AppStrings.s(R.string.i18n_0159)};
         new AlertDialog.Builder(mActivity)
-                .setTitle("배경 이미지")
+                .setTitle(AppStrings.s(R.string.i18n_0051))
                 .setItems(items, (d, which) -> {
                     if (which == 0) pick();
                     else if (which == 1) showScriptHelp();
                     else clear();
                 })
-                .setNegativeButton("닫기", null)
+                .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
                 .show();
     }
 
@@ -142,7 +142,7 @@ final class SettingsBackgroundPicker {
         try {
             mActivity.startActivityForResult(i, REQ_PICK);
         } catch (Throwable t) {
-            Toast.makeText(mActivity, "파일 선택기를 열 수 없습니다: " + t.getMessage(),
+            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0161) + t.getMessage(),
                     Toast.LENGTH_LONG).show();
         }
     }
@@ -154,8 +154,8 @@ final class SettingsBackgroundPicker {
         Uri uri = data.getData();
         if (uri == null) return;
         boolean ok = BackgroundStore.install(mActivity, uri);
-        Toast.makeText(mActivity, ok ? "배경 이미지를 적용했습니다"
-                : "이미지를 읽지 못했습니다 (지원하지 않는 형식이거나 너무 큽니다)",
+        Toast.makeText(mActivity, ok ? AppStrings.s(R.string.i18n_0162)
+                : AppStrings.s(R.string.i18n_0163),
                 Toast.LENGTH_SHORT).show();
         if (ok) {
             mHost.onBackgroundChanged();
@@ -166,23 +166,23 @@ final class SettingsBackgroundPicker {
     private void clear() {
         BackgroundStore.clear(mActivity);
         mHost.onBackgroundChanged();
-        Toast.makeText(mActivity, "배경 이미지를 지웠습니다", Toast.LENGTH_SHORT).show();
+        Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0164), Toast.LENGTH_SHORT).show();
         mSheet.render();
     }
 
     private void chooseFit() {
         final String[] values = BackgroundSpec.FIT_NAMES;
-        String[] labels = {"맞춤 (contain) — 전체가 보이고 여백", "채우기 (cover) — 꽉 채우고 잘림"};
+        String[] labels = {AppStrings.s(R.string.i18n_0165), AppStrings.s(R.string.i18n_0166)};
         int current = BackgroundSpec.FIT_COVER.equals(BackgroundSpec.fit(mHost.backgroundFit()))
                 ? 1 : 0;
         new AlertDialog.Builder(mActivity)
-                .setTitle("맞춤")
+                .setTitle(AppStrings.s(R.string.i18n_0152))
                 .setSingleChoiceItems(labels, current, (d, which) -> {
                     mHost.onBackgroundFit(values[which]);
                     d.dismiss();
                     mSheet.render();
                 })
-                .setNegativeButton("취소", null)
+                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
                 .show();
     }
 
@@ -205,13 +205,13 @@ final class SettingsBackgroundPicker {
             if (values[i].equals(current)) selected = i;
         }
         new AlertDialog.Builder(mActivity)
-                .setTitle("배경 위치")
+                .setTitle(AppStrings.s(R.string.i18n_0167))
                 .setSingleChoiceItems(labels, selected, (d, which) -> {
                     mHost.onBackgroundAlign(values[which]);
                     d.dismiss();
                     mSheet.render();
                 })
-                .setNegativeButton("취소", null)
+                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
                 .show();
     }
 
@@ -224,13 +224,13 @@ final class SettingsBackgroundPicker {
      */
     private void showScriptHelp() {
         String dir = BackgroundStore.dir(mActivity).getAbsolutePath();
-        String text = "폴더 (최신 이미지가 배경이 됩니다)\n" + dir
-                + "\n\nadb로 넣기\n"
+        String text = AppStrings.s(R.string.i18n_0168) + dir
+                + AppStrings.s(R.string.i18n_0169)
                 + "adb push miku-dusk.png " + dir + "/\n"
                 + "adb shell am broadcast -a io.github.crashedsystem.fterm.action.APPLY_BACKGROUND"
                 + " -p io.github.crashedsystem.fterm --es path " + dir + "/miku-dusk.png"
                 + " --ei opacity 100 --es fit contain --ei dim 25"
-                + "\n\n지우기\n"
+                + AppStrings.s(R.string.i18n_0170)
                 + "adb shell am broadcast -a io.github.crashedsystem.fterm.action.CLEAR_BACKGROUND"
                 + " -p io.github.crashedsystem.fterm";
         TextView body = new TextView(mActivity);
@@ -241,9 +241,9 @@ final class SettingsBackgroundPicker {
         body.setTextIsSelectable(true);
         body.setPadding(mUi.dp(20), mUi.dp(12), mUi.dp(20), mUi.dp(4));
         new AlertDialog.Builder(mActivity)
-                .setTitle("경로로 적용")
+                .setTitle(AppStrings.s(R.string.i18n_0171))
                 .setView(body)
-                .setPositiveButton("확인", null)
+                .setPositiveButton(AppStrings.s(R.string.i18n_0172), null)
                 .show();
     }
 }

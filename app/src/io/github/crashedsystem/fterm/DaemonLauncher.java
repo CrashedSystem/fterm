@@ -90,10 +90,10 @@ final class DaemonLauncher {
 
     /** The paths, for the instructions shown when the keeper is not installed. */
     static String keeperInstructions() {
-        return "Termux에서 한 번만 실행하세요:\n\n"
+        return AppStrings.s(R.string.i18n_0091)
                 + "  cd ~/projects/fterm\n"
                 + "  bash termux/install.sh\n\n"
-                + "install.sh 가 데몬과 keeper를 설치하고 keeper를 띄웁니다.\n"
-                + "그 다음 이 앱으로 돌아오면 자동으로 연결됩니다.";
+                + AppStrings.s(R.string.i18n_0092)
+                + AppStrings.s(R.string.i18n_0093);
     }
 }

@@ -236,9 +236,9 @@ final class SettingsUi {
         new android.app.AlertDialog.Builder(mActivity)
                 .setTitle(title)
                 .setView(box)
-                .setPositiveButton("저장", (d, w) -> onOk.accept(field.getText().toString().trim()))
-                .setNegativeButton("취소", null)
-                .setNeutralButton("기본값", (d, w) -> onOk.accept(""))
+                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) -> onOk.accept(field.getText().toString().trim()))
+                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNeutralButton(AppStrings.s(R.string.i18n_0323), (d, w) -> onOk.accept(""))
                 .show();
     }
 

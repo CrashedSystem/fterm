@@ -19,7 +19,7 @@ import android.graphics.drawable.Drawable;
  * a hardware layer the terminal view does not always have, and when it silently falls back the
  * picture draws at full strength - a bright photograph behind {@code #dcdfe4} text, which is
  * unreadable. A black scrim is one extra drawRect that behaves identically on every path, and
- * it is the control the user actually wants ("글자가 묻히면 어둡게"). Picture contrast is then
+ * it is the control the user actually wants (AppStrings.s(R.string.i18n_0358)). Picture contrast is then
  * the scheme's business again, exactly as the previous baked-in asset did by being pre-multiplied.
  */
 final class TerminalBackground extends Drawable {

@@ -37,7 +37,7 @@ final class SettingsIconPicker {
     static void pick(Activity activity, SettingsUi ui, String title, String current,
                      String clearLabel, java.util.function.Consumer<String> onPick) {
         final int columns = 5;
-        // 5 columns at 62dp: wide enough for "데이터베이스" on two lines, narrow enough that
+        // 5 columns at 62dp: wide enough for AppStrings.s(R.string.i18n_0198) on two lines, narrow enough that
         // the grid still fits a phone dialog without overflowing it.
         final int CELL_DP = 62;
         final java.util.List<String> ids = new java.util.ArrayList<>();
@@ -50,7 +50,7 @@ final class SettingsIconPicker {
         // the cell already draws ">_" above the label, and printing it twice reads as a
         // duplicated row rather than as a name.
         ids.add(TabIcons.DEFAULT_ID);
-        names.add("기본");
+        names.add(AppStrings.s(R.string.i18n_0199));
         if (clearLabel != null) {
             // An empty id. TabIcons.build would draw the default for it, so the cell would
             // lie about what the choice means; the label carries the meaning instead.
@@ -113,8 +113,8 @@ final class SettingsIconPicker {
             label.setText(names.get(i));
             label.setTextColor(chosen ? ui.ACCENT : ui.HINT);
             label.setTextSize(9.5f);
-            // Two lines: a name like "데이터베이스" is one word and cannot wrap, so a
-            // single-line label truncates it to "데이터베…" and the name stops being a name.
+            // Two lines: a name like AppStrings.s(R.string.i18n_0198) is one word and cannot wrap, so a
+            // single-line label truncates it to AppStrings.s(R.string.i18n_0200) and the name stops being a name.
             label.setSingleLine(false);
             label.setMaxLines(2);
             label.setGravity(Gravity.CENTER);
@@ -131,8 +131,8 @@ final class SettingsIconPicker {
         holder[0] = new android.app.AlertDialog.Builder(activity)
                 .setTitle(title)
                 .setView(scroll)
-                .setPositiveButton("직접 입력", (d, w) -> promptIconText(ui, title, current, onPick))
-                .setNegativeButton("취소", null)
+                .setPositiveButton(AppStrings.s(R.string.i18n_0201), (d, w) -> promptIconText(ui, title, current, onPick))
+                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
                 .create();
         holder[0].show();
     }
@@ -158,7 +158,7 @@ final class SettingsIconPicker {
     private static void promptIconText(SettingsUi ui, String title, String current,
                                        java.util.function.Consumer<String> onPick) {
         ui.prompt(title, TabIcons.isGlyph(current) ? "" : current, ">_",
-                "한두 글자가 가장 잘 맞습니다. 길면 작게 그려집니다.",
+                AppStrings.s(R.string.i18n_0202),
                 v -> onPick.accept(v.trim()));
     }
 

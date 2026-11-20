@@ -98,7 +98,7 @@ final class Fonts {
      * on every font change for the rest of the install's life.
      */
     static Import importFont(Context context, android.net.Uri uri) {
-        if (uri == null) return new Import(null, "파일을 받지 못했습니다.");
+        if (uri == null) return new Import(null, AppStrings.s(R.string.i18n_0095));
         String name = null;
         try (android.database.Cursor c = context.getContentResolver().query(uri,
                 new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
@@ -108,7 +108,7 @@ final class Fonts {
         if (name == null || name.isEmpty()) name = "font" + System.currentTimeMillis() + ".ttf";
         String lower = name.toLowerCase(java.util.Locale.ROOT);
         if (!lower.endsWith(".ttf") && !lower.endsWith(".otf")) {
-            return new Import(null, "TTF 또는 OTF 파일이 아닙니다: " + name);
+            return new Import(null, AppStrings.s(R.string.i18n_0096) + name);
         }
         // The picker shows a display name and nothing stops one containing a path separator.
         name = name.replaceAll("[^A-Za-z0-9._-]", "_");
@@ -116,7 +116,7 @@ final class Fonts {
         long bytes = 0;
         try (java.io.InputStream in = context.getContentResolver().openInputStream(uri);
              java.io.OutputStream os = new java.io.FileOutputStream(out)) {
-            if (in == null) return new Import(null, "파일을 열 수 없습니다: " + uri);
+            if (in == null) return new Import(null, AppStrings.s(R.string.i18n_0097) + uri);
             byte[] buf = new byte[8192];
             int n;
             while ((n = in.read(buf)) > 0) {
@@ -126,11 +126,11 @@ final class Fonts {
         } catch (Throwable t) {
             // A half-written file would show up in the catalog as a face that cannot load.
             out.delete();
-            return new Import(null, "파일을 복사하지 못했습니다: " + t);
+            return new Import(null, AppStrings.s(R.string.i18n_0098) + t);
         }
         if (bytes == 0) {
             out.delete();
-            return new Import(null, "빈 파일입니다: " + name);
+            return new Import(null, AppStrings.s(R.string.i18n_0099) + name);
         }
         return adopt(out);
     }
@@ -144,11 +144,11 @@ final class Fonts {
      * through a second copy of the validation rules.
      */
     static Import install(Context context, String name, byte[] bytes) {
-        if (bytes == null || bytes.length == 0) return new Import(null, "빈 파일입니다.");
+        if (bytes == null || bytes.length == 0) return new Import(null, AppStrings.s(R.string.i18n_0100));
         if (name == null || name.isEmpty()) name = "font.ttf";
         String lower = name.toLowerCase(java.util.Locale.ROOT);
         if (!lower.endsWith(".ttf") && !lower.endsWith(".otf")) {
-            return new Import(null, "TTF 또는 OTF 파일이 아닙니다: " + name);
+            return new Import(null, AppStrings.s(R.string.i18n_0096) + name);
         }
         name = name.replaceAll("[^A-Za-z0-9._-]", "_");
         java.io.File out = new java.io.File(userDir(context), name);
@@ -156,7 +156,7 @@ final class Fonts {
             os.write(bytes);
         } catch (Throwable t) {
             out.delete();
-            return new Import(null, "파일을 저장하지 못했습니다: " + t);
+            return new Import(null, AppStrings.s(R.string.i18n_0101) + t);
         }
         return adopt(out);
     }
@@ -176,15 +176,15 @@ final class Fonts {
         Typeface face = loadFile(out.getAbsolutePath());
         if (face == null) {
             out.delete();
-            return new Import(null, "글꼴 파일을 열 수 없습니다: " + name);
+            return new Import(null, AppStrings.s(R.string.i18n_0102) + name);
         }
         boolean mono = isFixedAdvance(face);
         boolean korean = hasHangul(out);
         if (!mono && !korean) {
             out.delete();
-            return new Import(null, "글자 폭이 일정하지 않은 글꼴입니다: " + name
-                    + "\n\n터미널은 한 칸이 한 글자인 격자라, 비례 글꼴을 쓰면 열이 어긋납니다."
-                    + "\n한글 글꼴이면 글꼴 목록의 「한글 글꼴」에서 고를 수 있습니다.");
+            return new Import(null, AppStrings.s(R.string.i18n_0103) + name
+                    + AppStrings.s(R.string.i18n_0104)
+                    + AppStrings.s(R.string.i18n_0105));
         }
         rescan();
         return new Import(FILE_PREFIX + out.getAbsolutePath(), null);
@@ -288,11 +288,11 @@ final class Fonts {
     static java.util.List<Face> catalog(Context context) {
         if (sCatalog != null) return sCatalog;
         java.util.List<Face> out = new java.util.ArrayList<>();
-        out.add(new Face(ASSET_ID, "Iosevka (기본)", null, true));
+        out.add(new Face(ASSET_ID, AppStrings.s(R.string.i18n_0106), null, true));
 
         java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
         addDir(out, seen, new java.io.File(SYSTEM_DIR), "");
-        addDir(out, seen, userDir(context), " (내 글꼴)");
+        addDir(out, seen, userDir(context), AppStrings.s(R.string.i18n_0107));
         sCatalog = out;
         return out;
     }
@@ -335,11 +335,11 @@ final class Fonts {
     static java.util.List<Face> hangulCatalog(Context context) {
         if (sHangulCatalog != null) return sHangulCatalog;
         java.util.List<Face> out = new java.util.ArrayList<>();
-        out.add(new Face(HANGUL_ASSET_ID, "Pretendard (기본)", null, true));
+        out.add(new Face(HANGUL_ASSET_ID, AppStrings.s(R.string.i18n_0108), null, true));
 
         java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
         addHangulDir(out, seen, new java.io.File(SYSTEM_DIR), "", bundledSize(context));
-        addHangulDir(out, seen, userDir(context), " (내 글꼴)", bundledSize(context));
+        addHangulDir(out, seen, userDir(context), AppStrings.s(R.string.i18n_0107), bundledSize(context));
         sHangulCatalog = out;
         return out;
     }
@@ -436,7 +436,7 @@ final class Fonts {
                 // The one property this picker requires, which is not the Latin one: the file
                 // has to carry Hangul glyphs. Proportional is fine here.
                 if (hasHangul(f)) {
-                    return new Face(id, stripExtension(f.getName()) + " (직접 지정)", path, false);
+                    return new Face(id, stripExtension(f.getName()) + AppStrings.s(R.string.i18n_0109), path, false);
                 }
             }
         }
@@ -457,7 +457,7 @@ final class Fonts {
         if (!f.isFile() || f.length() == 0) return null;
         Typeface face = loadFile(path);
         if (face == null || !isFixedAdvance(face)) return null;
-        return new Face(id, stripExtension(f.getName()) + " (직접 지정)", path, false);
+        return new Face(id, stripExtension(f.getName()) + AppStrings.s(R.string.i18n_0109), path, false);
     }
 
     /** The picker's caption for an id. */
@@ -605,7 +605,7 @@ final class Fonts {
             Paint hp = new Paint();
             hp.setTypeface(hangul);
             hp.setTextSize(textSizePx);
-            float syllable = hp.measureText("\uD55C");
+            float syllable = hp.measureText(AppStrings.s(R.string.i18n_0023));
             Paint.FontMetrics fm = hp.getFontMetrics();
             float inkHeight = fm.descent - fm.ascent;
 

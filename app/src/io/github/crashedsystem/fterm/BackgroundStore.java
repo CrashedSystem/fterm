@@ -71,7 +71,7 @@ final class BackgroundStore {
         return best;
     }
 
-    /** What the appearance page shows on the "배경 이미지" row. */
+    /** What the appearance page shows on the AppStrings.s(R.string.i18n_0051) row. */
     static String describe(Context context) {
         File f = current(context);
         if (f == null) return null;
@@ -101,7 +101,7 @@ final class BackgroundStore {
             return decode(read(f));
         } catch (Throwable t) {
             // A corrupt or oversized file must not take the terminal down on resume.
-            android.util.Log.w("fterm", "background: 읽지 못함 " + f, t);
+            android.util.Log.w("fterm", AppStrings.s(R.string.i18n_0052) + f, t);
             return null;
         }
     }
@@ -114,7 +114,7 @@ final class BackgroundStore {
             byte[] bytes = read(in);
             return install(context, bytes);
         } catch (Throwable t) {
-            android.util.Log.w("fterm", "background: 읽지 못함 " + uri, t);
+            android.util.Log.w("fterm", AppStrings.s(R.string.i18n_0052) + uri, t);
             return false;
         }
     }
@@ -128,7 +128,7 @@ final class BackgroundStore {
         try {
             return install(context, read(file));
         } catch (Throwable t) {
-            android.util.Log.w("fterm", "background: 읽지 못함 " + file, t);
+            android.util.Log.w("fterm", AppStrings.s(R.string.i18n_0052) + file, t);
             return false;
         }
     }
@@ -138,7 +138,7 @@ final class BackgroundStore {
         if (bytes == null || bytes.length == 0) return false;
         Bitmap bitmap = decode(bytes);
         if (bitmap == null) {
-            android.util.Log.w("fterm", "background: 이미지로 디코드할 수 없음");
+            android.util.Log.w("fterm", AppStrings.s(R.string.i18n_0053));
             return false;
         }
         try {
@@ -173,7 +173,7 @@ final class BackgroundStore {
             if (!tmp.renameTo(target)) return false;
             return true;
         } catch (Throwable t) {
-            android.util.Log.w("fterm", "background: 저장하지 못함", t);
+            android.util.Log.w("fterm", AppStrings.s(R.string.i18n_0054), t);
             return false;
         } finally {
             bitmap.recycle();
@@ -208,7 +208,7 @@ final class BackgroundStore {
     }
 
     private static byte[] read(File file) {
-        if (file.length() > MAX_BYTES) throw new IllegalArgumentException("파일이 너무 큽니다");
+        if (file.length() > MAX_BYTES) throw new IllegalArgumentException(AppStrings.s(R.string.i18n_0055));
         try (InputStream in = new FileInputStream(file)) {
             return read(in);
         } catch (java.io.IOException e) {
@@ -223,7 +223,7 @@ final class BackgroundStore {
         long total = 0;
         while ((n = in.read(buf)) > 0) {
             total += n;
-            if (total > MAX_BYTES) throw new java.io.IOException("파일이 너무 큽니다");
+            if (total > MAX_BYTES) throw new java.io.IOException(AppStrings.s(R.string.i18n_0055));
             out.write(buf, 0, n);
         }
         return out.toByteArray();

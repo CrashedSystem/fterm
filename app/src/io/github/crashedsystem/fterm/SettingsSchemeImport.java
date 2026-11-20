@@ -62,7 +62,7 @@ final class SettingsSchemeImport {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView fromFile = new TextView(mActivity);
-        fromFile.setText("파일에서 열기 (.json)");
+        fromFile.setText(AppStrings.s(R.string.i18n_0255));
         fromFile.setTextColor(mUi.ACCENT);
         fromFile.setTextSize(12.5f);
         fromFile.setPadding(0, mUi.dp(12), 0, mUi.dp(12));
@@ -72,19 +72,19 @@ final class SettingsSchemeImport {
         box.addView(fromFile);
 
         TextView note = new TextView(mActivity);
-        note.setText("Windows Terminal의 색 구성표 JSON입니다. 16색과 전경·배경·커서를 읽고 "
-                + "새 사용자 지정 구성표로 추가해 바로 적용합니다. selectionBackground는 이 앱에 "
-                + "그 자리가 없어 무시합니다.");
+        note.setText(AppStrings.s(R.string.i18n_0256)
+                + AppStrings.s(R.string.i18n_0257)
+                + AppStrings.s(R.string.i18n_0258));
         note.setTextColor(mUi.HINT);
         note.setTextSize(10.5f);
         note.setPadding(0, mUi.dp(6), 0, 0);
         box.addView(note);
 
         final AlertDialog dialog = new AlertDialog.Builder(mActivity)
-                .setTitle("색 구성표 가져오기")
+                .setTitle(AppStrings.s(R.string.i18n_0259))
                 .setView(box)
-                .setPositiveButton("가져오기", null)
-                .setNegativeButton("취소", null)
+                .setPositiveButton(AppStrings.s(R.string.i18n_0260), null)
+                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
                 .create();
         dialog.show();
         // The listener is set after show() so a bad paste keeps the dialog open with the text
@@ -104,7 +104,7 @@ final class SettingsSchemeImport {
         try {
             mActivity.startActivityForResult(i, REQ_OPEN);
         } catch (Throwable t) {
-            Toast.makeText(mActivity, "파일 선택기를 열 수 없습니다: " + t.getMessage(),
+            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0161) + t.getMessage(),
                     Toast.LENGTH_LONG).show();
         }
     }
@@ -115,17 +115,17 @@ final class SettingsSchemeImport {
         Uri uri = data.getData();
         String text;
         try (InputStream in = mActivity.getContentResolver().openInputStream(uri)) {
-            if (in == null) throw new IllegalStateException("파일을 열 수 없습니다");
+            if (in == null) throw new IllegalStateException(AppStrings.s(R.string.i18n_0261));
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             byte[] buf = new byte[8192];
             int n;
             while ((n = in.read(buf)) > 0) {
                 out.write(buf, 0, n);
-                if (out.size() > MAX_BYTES) throw new IllegalStateException("파일이 너무 큽니다");
+                if (out.size() > MAX_BYTES) throw new IllegalStateException(AppStrings.s(R.string.i18n_0055));
             }
             text = out.toString("UTF-8");
         } catch (Throwable t) {
-            Toast.makeText(mActivity, "파일을 읽지 못했습니다: " + t.getMessage(),
+            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0262) + t.getMessage(),
                     Toast.LENGTH_LONG).show();
             return;
         }
@@ -141,7 +141,7 @@ final class SettingsSchemeImport {
         try {
             schemes = TerminalSchemeJson.parseAll(text);
         } catch (IllegalArgumentException e) {
-            Toast.makeText(mActivity, "가져오지 못했습니다: " + e.getMessage(),
+            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0263) + e.getMessage(),
                     Toast.LENGTH_LONG).show();
             return false;
         }
@@ -158,16 +158,16 @@ final class SettingsSchemeImport {
             }
         }
         if (added == 0) {
-            Toast.makeText(mActivity, "사용자 지정 구성표가 " + Schemes.MAX_CUSTOM_SCHEMES
-                    + "개입니다. 하나를 삭제한 뒤 다시 가져오세요.",
+            Toast.makeText(mActivity, AppStrings.s(R.string.i18n_0264) + Schemes.MAX_CUSTOM_SCHEMES
+                    + AppStrings.s(R.string.i18n_0265),
                     Toast.LENGTH_LONG).show();
             return false;
         }
         if (last >= 0) mHost.onScheme(last);
         String message = added == 1
-                ? "'" + mHost.customSchemeName(last) + "' 구성표를 추가했습니다"
-                : "구성표 " + added + "개를 추가했습니다";
-        if (skipped > 0) message += " (" + skipped + "개는 자리가 없어 건너뜀)";
+                ? "'" + mHost.customSchemeName(last) + AppStrings.s(R.string.i18n_0266)
+                : AppStrings.s(R.string.i18n_0267) + added + AppStrings.s(R.string.i18n_0268);
+        if (skipped > 0) message += " (" + skipped + AppStrings.s(R.string.i18n_0269);
         Toast.makeText(mActivity, message, Toast.LENGTH_SHORT).show();
         mSheet.render();
         return true;

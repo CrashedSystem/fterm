@@ -176,7 +176,7 @@ final class SettingsSheet {
 
         void onBackIsEscape(boolean on);
 
-        /** e.g. "세션: 3 · 서버 127.0.0.1:8791" */
+        /** e.g. AppStrings.s(R.string.i18n_0303) */
         String statusLine();
     }
 
@@ -251,7 +251,7 @@ final class SettingsSheet {
         render();
     }
 
-    /** Open directly on a page, which is what the menu's "프로필 관리" does. */
+    /** Open directly on a page, which is what the menu's AppStrings.s(R.string.i18n_0304) does. */
     void show(String page) {
         mPage = page;
         render();
@@ -337,9 +337,9 @@ final class SettingsSheet {
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView crumb = new TextView(mActivity);
-        // WT renders the trail as "색 구성표 › Campbell": the ancestors dimmed, the leaf bright.
+        // WT renders the trail as AppStrings.s(R.string.i18n_0305): the ancestors dimmed, the leaf bright.
         // There is one level here, so the trail is the page name alone unless we are at root.
-        crumb.setText(mPage == null ? "설정" : "설정  ›  " + titleOf(mPage));
+        crumb.setText(mPage == null ? AppStrings.s(R.string.i18n_0306) : AppStrings.s(R.string.i18n_0307) + titleOf(mPage));
         crumb.setTextColor(mUi.TEXT);
         crumb.setTextSize(mPage == null ? 18 : 13);
         crumb.setSingleLine(true);
@@ -356,12 +356,12 @@ final class SettingsSheet {
 
     private static String titleOf(String page) {
         switch (page) {
-            case "start": return "시작";
-            case "profiles": return "프로필";
-            case "appearance": return "모양";
-            case "schemes": return "색 구성표";
-            case "interaction": return "상호 작용";
-            default: return "정보";
+            case "start": return AppStrings.s(R.string.i18n_0241);
+            case "profiles": return AppStrings.s(R.string.i18n_0240);
+            case "appearance": return AppStrings.s(R.string.i18n_0244);
+            case "schemes": return AppStrings.s(R.string.i18n_0128);
+            case "interaction": return AppStrings.s(R.string.i18n_0247);
+            default: return AppStrings.s(R.string.i18n_0024);
         }
     }
 

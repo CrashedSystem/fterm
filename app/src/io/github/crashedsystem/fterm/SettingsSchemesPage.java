@@ -42,16 +42,16 @@ final class SettingsSchemesPage extends SettingsPage {
         col.addView(preview(scheme, slots));
 
         LinearLayout colours = ui.card(col);
-        colours.addView(ui.cardTitle("색"));
+        colours.addView(ui.cardTitle(AppStrings.s(R.string.i18n_0270)));
         int[] table = Schemes.colors(scheme, slots);
-        String[] names = {"검정", "빨강", "녹색", "노랑", "파랑", "보라색", "녹청색", "흰색"};
+        String[] names = {AppStrings.s(R.string.i18n_0271), AppStrings.s(R.string.i18n_0272), AppStrings.s(R.string.i18n_0273), AppStrings.s(R.string.i18n_0274), AppStrings.s(R.string.i18n_0275), AppStrings.s(R.string.i18n_0276), AppStrings.s(R.string.i18n_0277), AppStrings.s(R.string.i18n_0278)};
         for (int i = 0; i < names.length; i++) {
             colours.addView(swatchRow(names[i], table[i], table[i + 8], i == names.length - 1,
                     editable, i, slots));
         }
 
         LinearLayout list = ui.card(col);
-        list.addView(ui.cardTitle("구성표"));
+        list.addView(ui.cardTitle(AppStrings.s(R.string.i18n_0279)));
         final int rows = Schemes.SCHEME_NAMES.length + customCount;
         int shown = 0;
         for (int i = 0; i < Schemes.SCHEME_NAMES.length; i++) {
@@ -75,25 +75,25 @@ final class SettingsSchemesPage extends SettingsPage {
         }
 
         ui.hint(col, editable
-                ? "색을 누르면 그 자리의 값을 바꿀 수 있습니다. 왼쪽이 보통색, "
-                        + "오른쪽이 밝은색입니다. 구성표 옆 연필로 이름을 바꾸거나 삭제합니다."
-                : "내장 구성표의 색은 앱에 들어 있습니다. 아래에서 사용자 지정 구성표를 "
-                        + "고르거나 새로 만들면 16색을 직접 정할 수 있습니다.");
+                ? AppStrings.s(R.string.i18n_0280)
+                        + AppStrings.s(R.string.i18n_0281)
+                : AppStrings.s(R.string.i18n_0282)
+                        + AppStrings.s(R.string.i18n_0283));
 
         LinearLayout add = ui.card(col);
-        add.addView(ui.cardTitle("사용자 지정  " + customCount + "/"
+        add.addView(ui.cardTitle(AppStrings.s(R.string.i18n_0284) + customCount + "/"
                 + Schemes.MAX_CUSTOM_SCHEMES));
-        add.addView(ui.valueRow("현재 구성표 복제", "지금 보이는 색으로 새 구성표를 만듭니다",
-                "복제", () -> addCustom(host.schemeName() + " 복제",
+        add.addView(ui.valueRow(AppStrings.s(R.string.i18n_0285), AppStrings.s(R.string.i18n_0286),
+                AppStrings.s(R.string.i18n_0287), () -> addCustom(host.schemeName() + AppStrings.s(R.string.i18n_0288),
                         Schemes.slotsOf(scheme, slots)), false));
-        add.addView(ui.valueRow("새 구성표", "Campbell 색에서 시작합니다",
-                "만들기", () -> addCustom("새 구성표", Schemes.campbellSlots()), true));
+        add.addView(ui.valueRow(AppStrings.s(R.string.i18n_0289), AppStrings.s(R.string.i18n_0290),
+                AppStrings.s(R.string.i18n_0291), () -> addCustom(AppStrings.s(R.string.i18n_0289), Schemes.campbellSlots()), true));
 
         LinearLayout importCard = ui.card(col);
-        importCard.addView(ui.cardTitle("가져오기"));
+        importCard.addView(ui.cardTitle(AppStrings.s(R.string.i18n_0260)));
         importCard.addView(ui.valueRow("Windows Terminal JSON",
-                "16색과 전경·배경·커서를 읽어 새 구성표로 추가하고 바로 적용",
-                "가져오기", () -> sheet.schemes().open(), true));
+                AppStrings.s(R.string.i18n_0292),
+                AppStrings.s(R.string.i18n_0260), () -> sheet.schemes().open(), true));
     }
 
     /**
@@ -105,8 +105,8 @@ final class SettingsSchemesPage extends SettingsPage {
      */
     private void addCustom(String name, int[] slots) {
         if (host.addCustomScheme(name, slots) < 0) {
-            Toast.makeText(activity, "사용자 지정 구성표가 " + Schemes.MAX_CUSTOM_SCHEMES
-                    + "개입니다. 구성표 옆 연필에서 하나를 삭제한 뒤 다시 추가하세요.",
+            Toast.makeText(activity, AppStrings.s(R.string.i18n_0264) + Schemes.MAX_CUSTOM_SCHEMES
+                    + AppStrings.s(R.string.i18n_0293),
                     Toast.LENGTH_LONG).show();
             return;
         }
@@ -143,8 +143,8 @@ final class SettingsSchemesPage extends SettingsPage {
         box.addView(hex);
 
         TextView label = new TextView(activity);
-        label.setText(slot < 16 ? (slot < 8 ? "보통색 " : "밝은색 ") + (slot % 8 + 1) + "번"
-                : slot == 16 ? "전경" : slot == 17 ? "배경" : "커서");
+        label.setText(slot < 16 ? (slot < 8 ? AppStrings.s(R.string.i18n_0294) : AppStrings.s(R.string.i18n_0295)) + (slot % 8 + 1) + AppStrings.s(R.string.i18n_0296)
+                : slot == 16 ? AppStrings.s(R.string.i18n_0297) : slot == 17 ? AppStrings.s(R.string.i18n_0298) : AppStrings.s(R.string.i18n_0299));
         label.setTextColor(ui.HINT);
         label.setTextSize(11);
         label.setPadding(0, ui.dp(6), 0, 0);
@@ -160,9 +160,9 @@ final class SettingsSchemesPage extends SettingsPage {
         });
 
         new android.app.AlertDialog.Builder(activity)
-                .setTitle("색 지정")
+                .setTitle(AppStrings.s(R.string.i18n_0300))
                 .setView(box)
-                .setPositiveButton("저장", (d, w) -> {
+                .setPositiveButton(AppStrings.s(R.string.i18n_0057), (d, w) -> {
                     Integer c = SettingsUi.parseHex(hex.getText().toString());
                     if (c != null) {
                         host.onCustomSlot(slot, c);
@@ -170,8 +170,8 @@ final class SettingsSchemesPage extends SettingsPage {
                         render();
                     }
                 })
-                .setNegativeButton("취소", null)
-                .setNeutralButton("전경으로", (d, w) -> {
+                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
+                .setNeutralButton(AppStrings.s(R.string.i18n_0301), (d, w) -> {
                     host.onCustomSlot(slot, slots[16]);
                     slots[slot] = slots[16];
                     render();
@@ -194,7 +194,7 @@ final class SettingsSchemesPage extends SettingsPage {
         lp.bottomMargin = ui.dp(10);
         box.setLayoutParams(lp);
 
-        String[] names = {"전경", "빨강", "녹색", "노랑", "파랑", "보라색", "녹청색", "흰색"};
+        String[] names = {AppStrings.s(R.string.i18n_0297), AppStrings.s(R.string.i18n_0272), AppStrings.s(R.string.i18n_0273), AppStrings.s(R.string.i18n_0274), AppStrings.s(R.string.i18n_0275), AppStrings.s(R.string.i18n_0276), AppStrings.s(R.string.i18n_0277), AppStrings.s(R.string.i18n_0278)};
         int[] normal = {table[TextStyle.COLOR_INDEX_FOREGROUND],
                 table[1], table[2], table[3], table[4], table[5], table[6], table[7]};
         int[] bright = {table[15], table[9], table[10], table[11], table[12], table[13],
@@ -208,7 +208,7 @@ final class SettingsSchemesPage extends SettingsPage {
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             sb.append("  ");
             s = sb.length();
-            sb.append("밝은 ").append(names[i]);
+            sb.append(AppStrings.s(R.string.i18n_0302)).append(names[i]);
             sb.setSpan(new ForegroundColorSpan(bright[i]), s, sb.length(),
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 

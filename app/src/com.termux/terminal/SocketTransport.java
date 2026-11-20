@@ -225,7 +225,7 @@ public final class SocketTransport implements SessionTransport {
                 in = new DataInputStream(new BufferedInputStream(socket.getInputStream(), 16384));
             } catch (IOException e) {
                 failures++;
-                mLastError = "연결 실패: " + e.getMessage();
+                mLastError = AppStrings.s(R.string.i18n_0011) + e.getMessage();
                 announce(mLastError);
                 if (giveUpAfter(failures)) return;
                 if (!sleepBeforeRetry()) return;
@@ -336,20 +336,20 @@ public final class SocketTransport implements SessionTransport {
                 mLastRecv = System.currentTimeMillis();
                 int type = in.readUnsignedByte();
                 int len = Protocol.readInt(in);
-                if (len < 0 || len > MAX_FRAME) return "프레임 길이 오류";
+                if (len < 0 || len > MAX_FRAME) return AppStrings.s(R.string.i18n_0012);
                 byte[] payload = new byte[len];
                 in.readFully(payload);
                 if (!handle(type, payload)) return null;
             }
             return null;
         } catch (EOFException e) {
-            return mSessionEnded ? null : "데몬이 연결을 닫았습니다";
+            return mSessionEnded ? null : AppStrings.s(R.string.i18n_0013);
         } catch (SocketTimeoutException e) {
             // The app was frozen or dozed. The daemon has been silent for longer than the
             // timeout, so the link is dead even though the socket does not know it yet.
-            return "연결이 끊겼습니다 (응답 없음)";
+            return AppStrings.s(R.string.i18n_0014);
         } catch (IOException e) {
-            return mClosed ? null : "수신 오류: " + e.getMessage();
+            return mClosed ? null : AppStrings.s(R.string.i18n_0015) + e.getMessage();
         }
     }
 
@@ -428,12 +428,12 @@ public final class SocketTransport implements SessionTransport {
 
     private static String errorText(int code, String msg) {
         switch (code) {
-            case 2: return "데몬 프로토콜 버전이 다릅니다";
-            case 3: return "토큰이 틀렸습니다 — Termux에서 ftermd token 을 확인하세요";
-            case 5: return "세션이 없습니다";
-            case 6: return "데몬이 셸을 띄우지 못했습니다";
-            case 7: return "동시 세션 한도를 넘었습니다";
-            default: return "데몬 오류: " + msg;
+            case 2: return AppStrings.s(R.string.i18n_0016);
+            case 3: return AppStrings.s(R.string.i18n_0002);
+            case 5: return AppStrings.s(R.string.i18n_0017);
+            case 6: return AppStrings.s(R.string.i18n_0018);
+            case 7: return AppStrings.s(R.string.i18n_0019);
+            default: return AppStrings.s(R.string.i18n_0020) + msg;
         }
     }
 
@@ -479,7 +479,7 @@ public final class SocketTransport implements SessionTransport {
             } catch (IOException e) {
                 // Not a reconnect trigger on its own: closing the socket forces the reader to
                 // fail, and supervise is the single place that decides what happens next.
-                if (gen == mGeneration) mLastError = "송신 오류: " + e.getMessage();
+                if (gen == mGeneration) mLastError = AppStrings.s(R.string.i18n_0021) + e.getMessage();
             } finally {
                 try {
                     out.close();
@@ -583,7 +583,7 @@ public final class SocketTransport implements SessionTransport {
      * the daemon answers by dropping the connection, {@link #MAX_ATTEMPTS} failed reconnects,
      * or a tab closed while the app is offline. The daemon keeps the pty and the shell, and
      * sixteen sessions are its limit, so a handful of leaks makes every new tab fail with
-     * "동시 세션 한도를 넘었습니다".
+     * AppStrings.s(R.string.i18n_0019).
      *
      * <p>When no live link can carry it, this opens a short-lived one of its own and says it
      * plainly. It never throws: this runs on the way out of a session that is already over.

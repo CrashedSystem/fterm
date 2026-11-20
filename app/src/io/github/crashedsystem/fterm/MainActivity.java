@@ -128,7 +128,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // Nothing is attached yet, so the frame would sit as a blank black area until the
         // live query returns (up to the 2.5s timeout). Say so instead of showing a void -
         // "the first shell is blank" was this empty frame, not a dead shell.
-        mBoot.splash("셸에 연결하는 중…");
+        mBoot.splash(AppStrings.s(R.string.i18n_0110));
         startSessions();
     }
 
@@ -959,31 +959,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     /**
      * Whether the key bar belongs on screen right now.
      *
-     * <p>"키 바 표시" is the user's switch, and off means off. On top of it, a keyboard that
-     * can type hides a bar holding the keys that keyboard already has; the 모양 page's
-     * auto-hide row is what lets a tablet that is sometimes a tablet keep the bar.
-     */
-    void applyKeyBarVisibility() {
-        if (mKeyBar == null) return;
-        mKeyBar.setVisible(mPrefs.keyBarVisible()
-                && !(mPrefs.keyBarAutoHide() && HardwareKeyboard.present(this)));
-        // The inset that the bar is not using moves to the terminal; ask for them again so
-        // the move happens now rather than at the next rotation.
-        if (mRoot != null) mRoot.requestApplyInsets();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (mBackdrop != null) mBackdrop.resume();
-        if (mShowKeyboardOnce && mPrefs.showKeyboardOnStart() && !HardwareKeyboard.present(this)) {
-            mShowKeyboardOnce = false;
-            showKeyboardSoon();
-        }
-    }
-
-    /**
-     * With {@code enableOnBackInvokedCallback="true"} in the manifest, API 33+ calls the
+     * <p>"키 바 표시AppStrings.s(R.string.i18n_0111)true"} in the manifest, API 33+ calls the
      * OnBackInvokedCallback instead of {@link #onBackPressed()}. Without this, the
      * "Back acts as ESC" setting silently stops working on recent Android.
      */
