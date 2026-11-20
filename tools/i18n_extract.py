@@ -38,14 +38,24 @@ unique_literals = OrderedDict()  # decoded -> raw_literal_form
 import codecs
 
 def decode_java(s):
-    # s is the inside of quotes, with Java escapes
-    # Replace Java-specific unicode escapes first (\uXXXX)
+    # s is the inside of quotes, with Java escapes.
+    # If there are explicit unicode escapes (\uXXXX), replace them; otherwise
+    # perform a minimal unescape for common escapes and leave existing Unicode untouched.
     def replace_uni(m):
         return chr(int(m.group(1),16))
-    s2 = re.sub(r'\\u([0-9a-fA-F]{4})', replace_uni, s)
-    # Now handle common escapes: \\ \", \n, \t, etc.
-    s2 = s2.encode('utf-8').decode('unicode_escape')
-    return s2
+    if "\u" in s:
+        s = re.sub(r'\\u([0-9a-fA-F]{4})', replace_uni, s)
+        s = re.sub(r'\u([0-9a-fA-F]{4})', replace_uni, s)
+    # Common escapes
+    s = s.replace('\\', '\')
+    s = s.replace('\n', '
+')
+    s = s.replace('\r', '')
+    s = s.replace('\t', '	')
+    s = s.replace('\"', '"')
+    s = s.replace("\'", "'")
+    return s
+
 
 # Collect occurrences with raw literal (including surrounding quotes) for precise replacement
 occurrences = []  # (file, raw_literal, decoded)
