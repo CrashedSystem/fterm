@@ -19,6 +19,7 @@ import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.ActionMode;
 import android.view.HapticFeedbackConstants;
 import android.view.InputDevice;
@@ -1669,6 +1670,10 @@ public final class TerminalView extends View {
             mClient.logVerbose(LOG_TAG, "Cursor blinker disabled");
             stopTerminalCursorBlinker();
         }
+        // Debug log
+        Log.d(LOG_TAG, "setTerminalCursorBlinkerRate blinkRate=" + blinkRate
+                + " result=" + result + " active=" + mTerminalCursorBlinkerActive
+                + " mTerminalCursorBlinkerRate=" + mTerminalCursorBlinkerRate);
         // If the blinker is currently active, restart it so the new rate takes effect immediately.
         if (result && mTerminalCursorBlinkerActive && mTerminalCursorBlinkerRate > 0) {
             // Respect current emulator cursor enabled state when restarting.
@@ -1735,6 +1740,10 @@ public final class TerminalView extends View {
 
         mEmulator.setCursorBlinkingEnabled(false);
 
+        Log.d(LOG_TAG, "setTerminalCursorBlinkerState start=" + start
+                + " startOnlyIfCursorEnabled=" + startOnlyIfCursorEnabled
+                + " currentRate=" + mTerminalCursorBlinkerRate);
+
         if (start) {
             // If cursor blinker is not enabled or is not valid
             if (mTerminalCursorBlinkerRate < TERMINAL_CURSOR_BLINK_RATE_MIN || mTerminalCursorBlinkerRate > TERMINAL_CURSOR_BLINK_RATE_MAX)
@@ -1753,6 +1762,7 @@ public final class TerminalView extends View {
                 mTerminalCursorBlinkerHandler = new Handler(Looper.getMainLooper());
             mTerminalCursorBlinkerRunnable = new TerminalCursorBlinkerRunnable(mEmulator);
             mEmulator.setCursorBlinkingEnabled(true);
+            Log.d(LOG_TAG, "Starting cursor blinker runnable, posting first run()");
             mTerminalCursorBlinkerRunnable.run();
             mTerminalCursorBlinkerActive = true;
         }
@@ -1765,6 +1775,7 @@ public final class TerminalView extends View {
         if (mTerminalCursorBlinkerHandler != null && mTerminalCursorBlinkerRunnable != null) {
             if (TERMINAL_VIEW_KEY_LOGGING_ENABLED)
                 mClient.logVerbose(LOG_TAG, "Stopping cursor blinker");
+            Log.d(LOG_TAG, "stopTerminalCursorBlinker: removing callbacks runnable=" + mTerminalCursorBlinkerRunnable);
             mTerminalCursorBlinkerHandler.removeCallbacks(mTerminalCursorBlinkerRunnable);
         }
         mTerminalCursorBlinkerActive = false;
@@ -1789,7 +1800,9 @@ public final class TerminalView extends View {
         public void run() {
             try {
                 if (mEmulator != null) {
-                    mCursorVisible = !mCursorVisible;
+                    boolean next = !mCursorVisible;
+                    Log.d(LOG_TAG, "TerminalCursorBlinkerRunnable.run: toggling cursorVisible " + mCursorVisible + " -> " + next);
+                    mCursorVisible = next;
                     mEmulator.setCursorBlinkState(mCursorVisible);
                     invalidate();
                 }
@@ -1797,7 +1810,10 @@ public final class TerminalView extends View {
                 // Use the current rate from the outer TerminalView so runtime changes take effect.
                 int rate = TerminalView.this.mTerminalCursorBlinkerRate;
                 if (mTerminalCursorBlinkerHandler != null && rate > 0) {
+                    Log.d(LOG_TAG, "TerminalCursorBlinkerRunnable.run: posting next in " + rate + "ms");
                     mTerminalCursorBlinkerHandler.postDelayed(this, rate);
+                } else {
+                    Log.d(LOG_TAG, "TerminalCursorBlinkerRunnable.run: not posting next (handler=" + mTerminalCursorBlinkerHandler + " rate=" + rate + ")");
                 }
             }
         }
