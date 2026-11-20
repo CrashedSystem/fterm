@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">터미널</string>
+    <string name="copy_text">복사</string>
+    <string name="paste_text">붙여넣기</string>
+    <string name="text_selection_more">더 보기</string>
+    <string name="notify_channel_session">터미널 세션</string>
+    <string name="notify_channel_shell">셸 알림</string>
+</resources>
