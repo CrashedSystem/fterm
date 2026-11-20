@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">터미널</string>
     <string name="copy_text">복사</string>
@@ -31,10 +31,8 @@
     <string name="i18n_0023">í</string>
     <string name="i18n_0024">ì ë³´</string>
     <string name="i18n_0025">ë²ì  </string>
-    <string name="i18n_0026">ê¸¸ê² ëë¥´ê¸°: íì¤í¸ ì í
-</string>
-    <string name="i18n_0027">í­ ê¸¸ê² ëë¥´ê¸°: í­ ë«ê¸°
-</string>
+    <string name="i18n_0026">ê¸¸ê² ëë¥´ê¸°: íì¤í¸ ì í\n</string>
+    <string name="i18n_0027">í­ ê¸¸ê² ëë¥´ê¸°: í­ ë«ê¸°\n</string>
     <string name="i18n_0028">í¤ ë° ì¢ì° ê°ì¥ìë¦¬: F1~F12</string>
     <string name="i18n_0029">ë«ê¸°</string>
     <string name="i18n_0030">í°ë¯¸ë</string>
@@ -81,41 +79,25 @@
     <string name="i18n_0071">Termux ë°ëª¬ ì¤ë¹ ì¤â¦</string>
     <string name="i18n_0072">Termuxìì `ftermd token` ì¶ë ¥ê°</string>
     <string name="i18n_0073">Termux ì°ê²°</string>
-    <string name="i18n_0074">Termuxìì ë¤ìì í ë² ì¤ííì¸ì:
-
-</string>
+    <string name="i18n_0074">Termuxìì ë¤ìì í ë² ì¤ííì¸ì:\n\n</string>
     <string name="i18n_0075">ì¶ë ¥ë í í°ì ë¶ì¬ë£ì¼ì¸ì.</string>
     <string name="i18n_0076">Termux ëªë ¹ ë³µì¬</string>
     <string name="i18n_0077">ë³µì¬ë¨ â Termuxì ë¶ì¬ë£ê³  ì¤ííì¸ì</string>
     <string name="i18n_0078">Termux ì¤ë¹ê° íìí©ëë¤</string>
     <string name="i18n_0079">ëªë ¹ ë³µì¬</string>
     <string name="i18n_0080">ì ì¥ìì ìì²­ íì¼ì ì¸ ì ììµëë¤</string>
-    <string name="i18n_0081">ftermì /sdcard/Download/fterm-up íì¼ë¡ Termuxì keeperìê² ë°ëª¬ì
-</string>
-    <string name="i18n_0082">ìì²­í©ëë¤. ê·¸ íì¼ì ì°ì§ ëª»íë©´ ì±ì´ ì¤ì¤ë¡ ë°ëª¬ì ëì¸ ì ììµëë¤.
-
-</string>
-    <string name="i18n_0083">íì¸í  ê²:
-</string>
-    <string name="i18n_0084">  Â· ì ì¥ì ê¶íì´ íì©ëì´ ìëì§
-</string>
-    <string name="i18n_0085">  Â· /sdcard/Download ê° ì°ê¸° ê°ë¥íì§
-
-</string>
-    <string name="i18n_0086">Termuxìì í ë² ì¤ííë©´ í í°ì ì§ì  ë°ì ìë ììµëë¤:
-</string>
+    <string name="i18n_0081">ftermì /sdcard/Download/fterm-up íì¼ë¡ Termuxì keeperìê² ë°ëª¬ì\n</string>
+    <string name="i18n_0082">ìì²­í©ëë¤. ê·¸ íì¼ì ì°ì§ ëª»íë©´ ì±ì´ ì¤ì¤ë¡ ë°ëª¬ì ëì¸ ì ììµëë¤.\n\n</string>
+    <string name="i18n_0083">íì¸í  ê²:\n</string>
+    <string name="i18n_0084">  Â· ì ì¥ì ê¶íì´ íì©ëì´ ìëì§\n</string>
+    <string name="i18n_0085">  Â· /sdcard/Download ê° ì°ê¸° ê°ë¥íì§\n\n</string>
+    <string name="i18n_0086">Termuxìì í ë² ì¤ííë©´ í í°ì ì§ì  ë°ì ìë ììµëë¤:\n</string>
     <string name="i18n_0087">ë°ëª¬ì´ ìëµíì§ ììµëë¤</string>
-    <string name="i18n_0088">keeperë ì´ììì§ë§ ë°ëª¬ì´ ë¨ì§ ìììµëë¤.
-
-</string>
-    <string name="i18n_0089">Termuxìì íì¸:
-</string>
+    <string name="i18n_0088">keeperë ì´ììì§ë§ ë°ëª¬ì´ ë¨ì§ ìììµëë¤.\n\n</string>
+    <string name="i18n_0089">Termuxìì íì¸:\n</string>
     <string name="i18n_0090">ë¤ì ìë</string>
-    <string name="i18n_0091">Termuxìì í ë²ë§ ì¤ííì¸ì:
-
-</string>
-    <string name="i18n_0092">install.sh ê° ë°ëª¬ê³¼ keeperë¥¼ ì¤ì¹íê³  keeperë¥¼ ëìëë¤.
-</string>
+    <string name="i18n_0091">Termuxìì í ë²ë§ ì¤ííì¸ì:\n\n</string>
+    <string name="i18n_0092">install.sh ê° ë°ëª¬ê³¼ keeperë¥¼ ì¤ì¹íê³  keeperë¥¼ ëìëë¤.\n</string>
     <string name="i18n_0093">ê·¸ ë¤ì ì´ ì±ì¼ë¡ ëìì¤ë©´ ìëì¼ë¡ ì°ê²°ë©ëë¤.</string>
     <string name="i18n_0094">ìì</string>
     <string name="i18n_0095">íì¼ì ë°ì§ ëª»íìµëë¤.</string>
@@ -127,41 +109,14 @@
     <string name="i18n_0101">íì¼ì ì ì¥íì§ ëª»íìµëë¤: </string>
     <string name="i18n_0102">ê¸ê¼´ íì¼ì ì´ ì ììµëë¤: </string>
     <string name="i18n_0103">ê¸ì í­ì´ ì¼ì íì§ ìì ê¸ê¼´ìëë¤: </string>
-    <string name="i18n_0104">
-
-í°ë¯¸ëì í ì¹¸ì´ í ê¸ìì¸ ê²©ìë¼, ë¹ë¡ ê¸ê¼´ì ì°ë©´ ì´ì´ ì´ê¸ë©ëë¤.</string>
-    <string name="i18n_0105">
-íê¸ ê¸ê¼´ì´ë©´ ê¸ê¼´ ëª©ë¡ì ãíê¸ ê¸ê¼´ãìì ê³ ë¥¼ ì ììµëë¤.</string>
+    <string name="i18n_0104">\n\ní°ë¯¸ëì í ì¹¸ì´ í ê¸ìì¸ ê²©ìë¼, ë¹ë¡ ê¸ê¼´ì ì°ë©´ ì´ì´ ì´ê¸ë©ëë¤.</string>
+    <string name="i18n_0105">\níê¸ ê¸ê¼´ì´ë©´ ê¸ê¼´ ëª©ë¡ì ãíê¸ ê¸ê¼´ãìì ê³ ë¥¼ ì ììµëë¤.</string>
     <string name="i18n_0106">Iosevka (ê¸°ë³¸)</string>
     <string name="i18n_0107"> (ë´ ê¸ê¼´)</string>
     <string name="i18n_0108">Pretendard (ê¸°ë³¸)</string>
     <string name="i18n_0109"> (ì§ì  ì§ì )</string>
     <string name="i18n_0110">ì¸ì ì°ê²°íë ì¤â¦</string>
-    <string name="i18n_0111"> is the user's switch, and off means off. On top of it, a keyboard that
-     * can type hides a bar holding the keys that keyboard already has; the ëª¨ì page's
-     * auto-hide row is what lets a tablet that is sometimes a tablet keep the bar.
-     */
-    void applyKeyBarVisibility() {
-        if (mKeyBar == null) return;
-        mKeyBar.setVisible(mPrefs.keyBarVisible()
-                &amp;&amp; !(mPrefs.keyBarAutoHide() &amp;&amp; HardwareKeyboard.present(this)));
-        // The inset that the bar is not using moves to the terminal; ask for them again so
-        // the move happens now rather than at the next rotation.
-        if (mRoot != null) mRoot.requestApplyInsets();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (mBackdrop != null) mBackdrop.resume();
-        if (mShowKeyboardOnce &amp;&amp; mPrefs.showKeyboardOnStart() &amp;&amp; !HardwareKeyboard.present(this)) {
-            mShowKeyboardOnce = false;
-            showKeyboardSoon();
-        }
-    }
-
-    /**
-     * With {@code enableOnBackInvokedCallback=</string>
+    <string name="i18n_0111">[removed code snippet]</string>
     <string name="i18n_0112">OLED (ìì ê²ì )</string>
     <string name="i18n_0113">ì¸ì</string>
     <string name="i18n_0114">ë°ëª¬</string>
@@ -218,16 +173,9 @@
     <string name="i18n_0165">ë§ì¶¤ (contain) â ì ì²´ê° ë³´ì´ê³  ì¬ë°±</string>
     <string name="i18n_0166">ì±ì°ê¸° (cover) â ê½ ì±ì°ê³  ìë¦¼</string>
     <string name="i18n_0167">ë°°ê²½ ìì¹</string>
-    <string name="i18n_0168">í´ë (ìµì  ì´ë¯¸ì§ê° ë°°ê²½ì´ ë©ëë¤)
-</string>
-    <string name="i18n_0169">
-
-adbë¡ ë£ê¸°
-</string>
-    <string name="i18n_0170">
-
-ì§ì°ê¸°
-</string>
+    <string name="i18n_0168">í´ë (ìµì  ì´ë¯¸ì§ê° ë°°ê²½ì´ ë©ëë¤)\n</string>
+    <string name="i18n_0169">\n\nadbë¡ ë£ê¸°\n</string>
+    <string name="i18n_0170">\n\nì§ì°ê¸°\n</string>
     <string name="i18n_0171">ê²½ë¡ë¡ ì ì©</string>
     <string name="i18n_0172">íì¸</string>
     <string name="i18n_0173">ê¸ê¼´ ì¤ì¹ â Termuxìì ë°ê¸°, ê¸°ê¸°ìì ê³ ë¥´ê¸°</string>
@@ -242,8 +190,7 @@ adbë¡ ë£ê¸°
     <string name="i18n_0182">ì´ ê¸°ê¸°ì íì¼ìì ê³ ë¥´ê¸°</string>
     <string name="i18n_0183">URLë¡ ë°ê¸° (Termuxê° ëì  ë´ë ¤ë°ì)</string>
     <string name="i18n_0184">ê¸ê¼´ ì¤ì¹</string>
-    <string name="i18n_0185">Termux ê¸ê¼´ ëª©ë¡ì ê°ì ¸ì¤ì§ ëª»íìµëë¤.
-</string>
+    <string name="i18n_0185">Termux ê¸ê¼´ ëª©ë¡ì ê°ì ¸ì¤ì§ ëª»íìµëë¤.\n</string>
     <string name="i18n_0186">Termux ìª½ì ê¸ê¼´ì´ ììµëë¤. ìë URLë¡ ë°ê±°ë, Termuxìì </string>
     <string name="i18n_0187">~/.fonts ì .ttfë¥¼ ë£ì¼ì¸ì.</string>
     <string name="i18n_0188">Termuxìì ì°¾ì ê¸ê¼´ </string>
@@ -254,9 +201,7 @@ adbë¡ ë£ê¸°
     <string name="i18n_0193">.ttf/.otfë¡ ëëë http(s) ì£¼ìì¬ì¼ í©ëë¤.</string>
     <string name="i18n_0194">http:// ëë https:// ì£¼ìê° ìëëë¤.</string>
     <string name="i18n_0195">ë´ë ¤ë°ë ì¤â¦</string>
-    <string name="i18n_0196">íì¼ ì íê¸°ë¥¼ ì´ ì ììµëë¤.
-
-</string>
+    <string name="i18n_0196">íì¼ ì íê¸°ë¥¼ ì´ ì ììµëë¤.\n\n</string>
     <string name="i18n_0197">ê° Â· </string>
     <string name="i18n_0198">ë°ì´í°ë² ì´ì¤</string>
     <string name="i18n_0199">ê¸°ë³¸</string>
@@ -283,9 +228,7 @@ adbë¡ ë£ê¸°
     <string name="i18n_0220">opencode íë¡íì´ ì´ë¯¸ ììµëë¤. íë¡í ëª©ë¡ìì ëë¬ í¸ì§íì¸ì.</string>
     <string name="i18n_0221">ì´ë¦ ã</string>
     <string name="i18n_0222">ã, ìì ëªë ¹ ã</string>
-    <string name="i18n_0223">ã, ìì´ì½ OpenCodeë¡ íë¡íì ì¶ê°í©ëë¤.
-
-</string>
+    <string name="i18n_0223">ã, ìì´ì½ OpenCodeë¡ íë¡íì ì¶ê°í©ëë¤.\n\n</string>
     <string name="i18n_0224">í­ì ì´ë©´ ì¸ ììì opencodeê° ì¤íë©ëë¤. </string>
     <string name="i18n_0225">ì¤ì¹ ê²½ë¡ê° PATHì ìì´ì¼ í©ëë¤.</string>
     <string name="i18n_0226">ì¶ê°</string>
@@ -316,7 +259,7 @@ adbë¡ ë£ê¸°
     <string name="i18n_0251">êµ¬ì±í ì´ë¦</string>
     <string name="i18n_0252">ê°ì ì´ë¦ì´ ì´ë¯¸ ìì¼ë©´ ë¤ì ë²í¸ê° ë¶ìµëë¤.</string>
     <string name="i18n_0253">êµ¬ì±í ì­ì </string>
-    <string name="i18n_0254">' êµ¬ì±íë¥¼ ì­ì í ê¹ì? ìì ëëë¦´ ì ììµëë¤.</string>
+    <string name="i18n_0254">\' êµ¬ì±íë¥¼ ì­ì í ê¹ì? ìì ëëë¦´ ì ììµëë¤.</string>
     <string name="i18n_0255">íì¼ìì ì´ê¸° (.json)</string>
     <string name="i18n_0256">Windows Terminalì ì êµ¬ì±í JSONìëë¤. 16ìê³¼ ì ê²½Â·ë°°ê²½Â·ì»¤ìë¥¼ ì½ê³  </string>
     <string name="i18n_0257">ì ì¬ì©ì ì§ì  êµ¬ì±íë¡ ì¶ê°í´ ë°ë¡ ì ì©í©ëë¤. selectionBackgroundë ì´ ì±ì </string>
@@ -328,7 +271,7 @@ adbë¡ ë£ê¸°
     <string name="i18n_0263">ê°ì ¸ì¤ì§ ëª»íìµëë¤: </string>
     <string name="i18n_0264">ì¬ì©ì ì§ì  êµ¬ì±íê° </string>
     <string name="i18n_0265">ê°ìëë¤. íëë¥¼ ì­ì í ë¤ ë¤ì ê°ì ¸ì¤ì¸ì.</string>
-    <string name="i18n_0266">' êµ¬ì±íë¥¼ ì¶ê°íìµëë¤</string>
+    <string name="i18n_0266">\' êµ¬ì±íë¥¼ ì¶ê°íìµëë¤</string>
     <string name="i18n_0267">êµ¬ì±í </string>
     <string name="i18n_0268">ê°ë¥¼ ì¶ê°íìµëë¤</string>
     <string name="i18n_0269">ê°ë ìë¦¬ê° ìì´ ê±´ëë)</string>
