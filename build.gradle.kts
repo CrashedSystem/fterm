@@ -226,10 +226,15 @@ val buildApk = tasks.register<Exec>("buildApk") {
 
     dependsOn(packageApk)
 
-    // A debug key generated on first use. F-Droid signs with its own key, so this is only for
-    // local installs - which is also why the password is not a secret worth guarding here.
-    val keystore = File(System.getenv("HOME") ?: ".", "build/android/ks.jks")
-    val storePass = (findProperty("keystorePassword") as String?) ?: "openclaw"
+    // The signing key. `KS` overrides the path because CI decodes the release key into a temp
+    // file: without it the build looked only at $HOME/build/android/ks.jks, found nothing on a
+    // runner, and generated a *new* key on every release - so every release was signed by a
+    // different certificate and Android refused to update an installed copy. F-Droid signs with
+    // its own key, so the local default is only for local installs.
+    val keystore = System.getenv("KS")?.let { File(it) }
+            ?: File(System.getenv("HOME") ?: ".", "build/android/ks.jks")
+    val storePass = System.getenv("KS_PASS")
+            ?: (findProperty("keystorePassword") as String?) ?: "openclaw"
     val out = layout.buildDirectory.file("fterm.apk")
 
     inputs.file(layout.buildDirectory.file("app-aligned.apk"))
@@ -237,6 +242,12 @@ val buildApk = tasks.register<Exec>("buildApk") {
 
     doFirst {
         if (!keystore.isFile) {
+            // Generating one is right for a developer's first local build and wrong for a
+            // release: a runner must not invent an identity. CI sets KS, so reaching here with
+            // KS set means the secret was decoded to nothing.
+            if (System.getenv("KS") != null) {
+                throw GradleException("KS is set to ${keystore.absolutePath} but no keystore is there")
+            }
             keystore.parentFile.mkdirs()
             providers.exec {
                 commandLine(
