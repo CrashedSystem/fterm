@@ -136,6 +136,26 @@ public class StructureTest {
         check(!code.toString().contains("RUN_COMMAND"),
                 "RUN_COMMAND is not called (it is ignored on this device)");
 
+        // 5a. The setup command the app hands the user must work on a phone that has only the
+        //     APK. It used to be "cd ~/projects/fterm && bash termux/install.sh", which is the
+        //     path this repository happened to sit at during development: a first-run user was
+        //     told to enter a directory that does not exist and had no way past the dialog.
+        //     The one place the command may be written is a raw.githubusercontent URL.
+        String dialogs = read(dir + "DaemonDialogs.java");
+        for (String src : new String[]{launcher, dialogs}) {
+            for (String line : src.split("\n")) {
+                String t = line.trim();
+                if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) continue;
+                check(!t.contains("projects/fterm"),
+                        "setup instructions do not name a developer checkout: " + t);
+                check(!t.contains("bash termux/install.sh"),
+                        "setup instructions do not assume the repository is local: " + t);
+            }
+        }
+        check(dialogs.contains("raw.githubusercontent.com/CrashedSystem/fterm/master/termux/install.sh")
+                        && launcher.contains("raw.githubusercontent.com/CrashedSystem/fterm/master/termux/install.sh"),
+                "both dialogs fetch the installer the README documents");
+
         // 5b. Vendored upstream code keeps a pinned baseline. Without one, taking an upstream
         //     fix means rediscovering what we changed, which is how a 3-way merge quietly
         //     deletes the reasons this app exists.

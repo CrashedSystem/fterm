@@ -88,11 +88,17 @@ final class DaemonLauncher {
         }
     }
 
-    /** The paths, for the instructions shown when the keeper is not installed. */
+    /**
+     * The command, for the instructions shown when the keeper is not installed.
+     *
+     * <p>The same one-liner the README gives, so a reader who finds either copy runs the same
+     * thing. It used to be two lines starting with {@code cd ~/projects/fterm}, which only
+     * worked on the machine the app was written on - a user who installed the APK has never
+     * had that directory, and the dialog sent them to a path that cannot exist.
+     */
     static String keeperInstructions() {
         return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0091)
-                + "  cd ~/projects/fterm\n"
-                + "  bash termux/install.sh\n\n"
+                + "  curl -fsSL https://raw.githubusercontent.com/CrashedSystem/fterm/master/termux/install.sh | bash\n\n"
                 + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0092)
                 + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0093);
     }

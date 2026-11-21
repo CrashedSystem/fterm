@@ -89,7 +89,13 @@ jobs:
           mkdir -p dist
           cp build/fterm.apk dist/fterm.apk
           cp termux/ftermd-rs/target/aarch64-linux-android/release/ftermd dist/ftermd-aarch64-linux-android
-          (cd dist && sha256sum fterm.apk ftermd-aarch64-linux-android > SHA256SUMS.txt)
+          # The installer and the keeper ship as assets because the install command is
+          # `curl ... | bash` with no checkout on the phone: install.sh fetches the daemon, the
+          # checksum file and the keeper from the same release it is itself part of.
+          cp termux/install.sh dist/install.sh
+          cp termux/fterm-keeper dist/fterm-keeper
+          chmod 755 dist/install.sh dist/fterm-keeper
+          (cd dist && sha256sum fterm.apk ftermd-aarch64-linux-android install.sh fterm-keeper > SHA256SUMS.txt)
           cat dist/SHA256SUMS.txt
           apksigner verify --print-certs dist/fterm.apk | tee dist/apk-cert-fingerprint.txt || true
 
@@ -99,6 +105,8 @@ jobs:
           subject-path: |
             dist/fterm.apk
             dist/ftermd-aarch64-linux-android
+            dist/install.sh
+            dist/fterm-keeper
             dist/SHA256SUMS.txt
 
       - name: Upload workflow artifacts
@@ -120,6 +128,8 @@ jobs:
           gh release create "$TAG" \
             dist/fterm.apk \
             dist/ftermd-aarch64-linux-android \
+            dist/install.sh \
+            dist/fterm-keeper \
             dist/SHA256SUMS.txt \
             --title "fterm $TAG" \
             --notes "$(printf '%b' "$NOTES")" \
@@ -127,5 +137,7 @@ jobs:
           gh release upload "$TAG" \
             dist/fterm.apk \
             dist/ftermd-aarch64-linux-android \
+            dist/install.sh \
+            dist/fterm-keeper \
             dist/SHA256SUMS.txt \
             --clobber

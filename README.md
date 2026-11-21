@@ -71,19 +71,22 @@ curses 프로그램으로 같은 것을 확인합니다.
 
 ## 설치 (기기에서 직접)
 
-1. Termux에서 데몬을 설치합니다.
+1. Termux에서 데몬을 설치합니다. Rust 툴체인은 필요 없습니다 — 바이너리는 Releases에서
+   받습니다(arm64 전용).
 
 ```bash
-cd ~/projects/fterm
-bash termux/install.sh
+curl -fsSL https://raw.githubusercontent.com/CrashedSystem/fterm/master/termux/install.sh | bash
 ```
 
-출력 마지막 줄의 토큰을 기억해 두십시오.
+`install.sh`가 Releases의 `ftermd-aarch64-linux-android`를 받아 `SHA256SUMS.txt`로 검증하고
+`~/fterm/ftermd`에 놓은 뒤 시작합니다. 손으로 빌드한 바이너리가 있으면
+`FTERM_RUST_BIN=/path/to/ftermd`로 넘기십시오. 저장소를 clone해서 쓰는 경우에는
+`bash termux/install.sh`가 로컬 빌드 결과를 쓰고, 없으면 `cargo build --release`를 부릅니다.
 
-2. APK를 설치합니다. `build/fterm.apk` 를 탭하면 됩니다(이미 `/sdcard/Download/fterm.apk`
-   에 복사해 두었습니다).
+2. APK를 설치합니다. Releases의 `fterm.apk`를 받아 탭하면 됩니다.
 
-3. 앱 첫 실행 시 뜨는 창에 토큰을 붙여넣습니다. 한 번만 하면 됩니다.
+3. 앱 첫 실행 시 뜨는 창에 토큰을 붙여넣습니다. 한 번만 하면 됩니다. (keeper가 살아 있으면
+   앱이 스스로 데몬을 띄우므로 토큰을 볼 일이 없습니다.)
 
 ## 조작
 
@@ -560,11 +563,17 @@ select 오류가 루프를 죽이지 않게 했습니다.
 
 ### 기기에서 빌드하고 켜기
 
-Termux 안에서 직접 빌드합니다(크로스 컴파일이 아니라 그 기기에서).
+설치만 할 때는 Rust가 필요 없습니다. 설치 스크립트가 Releases의 바이너리를 받습니다.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CrashedSystem/fterm/master/termux/install.sh | bash
+```
+
+데몬을 직접 고쳐서 빌드할 때만 저장소 안에서 실행합니다(크로스 컴파일이 아니라 그 기기에서).
 
 ```bash
 pkg install rust
-bash ~/projects/fterm/termux/install.sh    # 없으면 cargo build --release 를 먼저 돕니다
+bash termux/install.sh    # 로컬 target/release/ftermd 가 없으면 cargo build --release 를 부릅니다
 ```
 
 `install.sh` 는 `~/fterm/ftermd` 자리에 Rust 바이너리를 놓습니다. 그 뒤로는 앱도 keeper 도

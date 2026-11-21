@@ -14,7 +14,15 @@ import android.widget.Toast;
  */
 final class DaemonDialogs {
 
-    private static final String COMMAND = "cd ~/projects/fterm && bash termux/install.sh";
+    /**
+     * What the user runs once in Termux when the keeper is missing.
+     *
+     * <p>It fetches the installer rather than assuming a checkout: the app is downloaded as an
+     * APK, so there is no {@code ~/projects/fterm} on a user's phone. The pipe into bash is
+     * what the README documents too, so the two never disagree.
+     */
+    private static final String COMMAND =
+            "curl -fsSL https://raw.githubusercontent.com/CrashedSystem/fterm/master/termux/install.sh | bash";
 
     private DaemonDialogs() {}
 
