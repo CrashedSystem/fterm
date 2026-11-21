@@ -131,7 +131,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // Nothing is attached yet, so the frame would sit as a blank black area until the
         // live query returns (up to the 2.5s timeout). Say so instead of showing a void -
         // "the first shell is blank" was this empty frame, not a dead shell.
-        mBoot.splash("셸에 연결하는 중…");
+        mBoot.splash(AppStrings.s(R.string.splash_connecting));
         startSessions();
     }
 
@@ -586,9 +586,9 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     private void confirmClose(Tab tab) {
         new AlertDialog.Builder(this)
-                .setMessage("이 탭을 닫을까요? 셸이 종료됩니다.")
-                .setPositiveButton("닫기", (d, w) -> closeTab(tab))
-                .setNegativeButton("취소", null)
+                .setMessage(AppStrings.s(R.string.close_tab_message))
+                .setPositiveButton(AppStrings.s(R.string.close_tab_confirm), (d, w) -> closeTab(tab))
+                .setNegativeButton(AppStrings.s(R.string.i18n_0058), null)
                 .show();
     }
 
@@ -828,7 +828,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     }
 
     private void showAbout() {
-        About.show(this, mTabs.size() + "개 세션 · " + mPrefs.host() + ":" + mPrefs.port());
+        About.show(this, mTabs.size() + AppStrings.s(R.string.about_status) + mPrefs.host() + ":" + mPrefs.port());
     }
 
     // ---------------------------------------------------------------- keys
@@ -1198,11 +1198,11 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
     void copySelection() {
         String sel = getSelectedText();
         if (sel == null || sel.isEmpty()) {
-            Toast.makeText(this, "선택된 텍스트가 없습니다", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, AppStrings.s(R.string.copy_nothing_selected), Toast.LENGTH_SHORT).show();
             return;
         }
         copyToClipboard(sel);
-        Toast.makeText(this, "복사됨", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, AppStrings.s(R.string.copy_done), Toast.LENGTH_SHORT).show();
     }
 
     private String getSelectedText() {
@@ -1228,7 +1228,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             @Override public boolean ready() { return mActive != null && mActive.session != null; }
             @Override public void insert(String path) {
                 pasteText(path);
-                Toast.makeText(MainActivity.this, "이미지 경로 붙여넣음: " + path,
+                Toast.makeText(MainActivity.this, AppStrings.s(R.string.paste_image_path) + path,
                         Toast.LENGTH_LONG).show();
             }
         })) {
@@ -1239,7 +1239,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         if (text == null || text.length() == 0) {
             // A clip that is neither text nor a detected image: tell the user instead of
             // doing nothing, which read as "image paste is broken".
-            Toast.makeText(this, "붙여넣을 텍스트나 이미지가 없습니다", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, AppStrings.s(R.string.paste_nothing), Toast.LENGTH_SHORT).show();
             return;
         }
         pasteText(text.toString());
@@ -1303,7 +1303,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                     t.running = false;
                 }
             }
-            Toast.makeText(this, "셸이 종료되었습니다 — Enter로 탭을 닫습니다", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, AppStrings.s(R.string.session_finished), Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -1318,7 +1318,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
             }
             @Override public void insert(String path) {
                 pasteText(path);
-                Toast.makeText(MainActivity.this, "이미지 첨부: " + path, Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, AppStrings.s(R.string.paste_image_attached) + path, Toast.LENGTH_SHORT).show();
             }
         }, afterRead);
     }

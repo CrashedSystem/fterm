@@ -54,7 +54,7 @@ public class BellTest {
         // so a wrong key or a missing translation still fails.
         check(settings.contains("i18n_0203") && settings.contains("i18n_0205"),
                 "both toggles are in settings");
-        String strings = read(root + "/res/values/strings.xml");
+        String strings = read(root + "/res/values-ko/strings.xml");
         check(strings.contains(">터미널 벨 · 진동<") && strings.contains(">터미널 벨 · 소리<"),
                 "and they say 진동 and 소리");
         check(settings.contains("bellVibrate()") && settings.contains("bellSound()"),

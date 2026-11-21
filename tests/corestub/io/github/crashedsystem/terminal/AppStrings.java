@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
  * Test stub: {@link AppStrings} with no Android on the classpath.
  *
  * <p>The real class calls {@code Context.getString()}, which a JVM test cannot do. This stub
- * reads res/values/strings.xml once and answers with the Korean text, so a test that asserts
+ * reads res/values-ko/strings.xml once and answers with the Korean text, so a test that asserts
  * on a label a user would read actually checks the shipped word instead of an opaque id.
  *
  * <p>The XML is found through the {@code main.src} system property the test script sets, the
@@ -97,7 +97,7 @@ public final class AppStrings {
         File dir = new File(src).getParentFile();
         for (int i = 0; i < 5 && dir != null; i++) dir = dir.getParentFile();
         File root = dir == null ? null : dir.getParentFile();
-        File xml = root == null ? null : new File(root, "res/values/strings.xml");
+        File xml = root == null ? null : new File(root, "res/values-ko/strings.xml");
         return xml != null && xml.isFile() ? xml : null;
     }
 }

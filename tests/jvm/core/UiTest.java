@@ -37,8 +37,19 @@ public class UiTest {
         // itself moved to Chrome.java, so the labels are checked where they live now.
         String chrome = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get("app/src/io/github/crashedsystem/terminal/Chrome.java")), "UTF-8");
-        for (String cmd : new String[]{"새 탭", "붙여넣기", "복사", "설정"}) {
-            check(chrome.contains(cmd), "the menu offers: " + cmd);
+        // Every dropdown label is a resource now; the source names the key and the XML holds
+        // the word. Asserting both is what catches a key that was renamed in one place.
+        String menuStrings = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get("res/values-ko/strings.xml")), "UTF-8");
+        String[][] menu = {
+                {"menu_new_tab", "새 탭"},
+                {"menu_paste", "붙여넣기"},
+                {"menu_copy", "복사"},
+                {"menu_settings", "설정"},
+        };
+        for (String[] cmd : menu) {
+            check(chrome.contains("R.string." + cmd[0]), "the menu offers: " + cmd[1]);
+            check(menuStrings.contains(">" + cmd[1] + "<"), "and says it: " + cmd[1]);
         }
 
         // Palette: WT's Ctrl+Shift+P. The list itself moved to Chrome.java when the activity
@@ -49,7 +60,7 @@ public class UiTest {
         // word the user reads, separately - a test that only looked at the source would pass
         // on an id, and one that only looked at the XML would not prove the palette uses it.
         String strings = new String(java.nio.file.Files.readAllBytes(
-                java.nio.file.Paths.get("res/values/strings.xml")), "UTF-8");
+                java.nio.file.Paths.get("res/values-ko/strings.xml")), "UTF-8");
         String[][] palette = {
                 {"i18n_0059", "새 탭 열기"},
                 {"i18n_0060", "탭 닫기"},

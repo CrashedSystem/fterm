@@ -156,7 +156,7 @@ public class BackgroundTest {
         // The heading was extracted into resources for translation, so the page now references
         // it by key. The text itself is still asserted - in the XML, where it lives.
         check(appearance.contains("i18n_0051"), "the appearance page offers the setting");
-        check(read("res/values/strings.xml").contains(">배경 이미지<"),
+        check(read("res/values-ko/strings.xml").contains(">배경 이미지<"),
                 "and the heading text is the one a user reads");
         check(appearance.contains("sheet.background().rows("),
                 "and its rows are a picker class, not inlined");

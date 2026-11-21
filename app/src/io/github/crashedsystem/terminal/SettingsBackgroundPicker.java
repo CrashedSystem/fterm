@@ -117,13 +117,12 @@ final class SettingsBackgroundPicker {
     private void choose() {
         final boolean has = mHost.backgroundSet();
         String[] items = has
-                ? new String[]{io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0158), io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0159), io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0160)}
-                : new String[]{io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0158), io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0159)};
+                ? new String[]{AppStrings.s(R.string.i18n_0158), AppStrings.s(R.string.i18n_0160)}
+                : new String[]{AppStrings.s(R.string.i18n_0158)};
         new AlertDialog.Builder(mActivity)
-                .setTitle(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0051))
+                .setTitle(AppStrings.s(R.string.i18n_0051))
                 .setItems(items, (d, which) -> {
                     if (which == 0) pick();
-                    else if (which == 1) showScriptHelp();
                     else clear();
                 })
                 .setNegativeButton(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0029), null)
@@ -215,35 +214,5 @@ final class SettingsBackgroundPicker {
                 .show();
     }
 
-    /**
-     * How a script installs a picture.
-     *
-     * <p>Shown in the app because it is the one path that cannot be discovered from the UI:
-     * the folder is under {@code Android/data}, which some file managers hide, and the
-     * broadcast action is only documented in the repository.
-     */
-    private void showScriptHelp() {
-        String dir = BackgroundStore.dir(mActivity).getAbsolutePath();
-        String text = io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0168) + dir
-                + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0169)
-                + "adb push miku-dusk.png " + dir + "/\n"
-                + "adb shell am broadcast -a io.github.crashedsystem.terminal.action.APPLY_BACKGROUND"
-                + " -p io.github.crashedsystem.terminal --es path " + dir + "/miku-dusk.png"
-                + " --ei opacity 100 --es fit contain --ei dim 25"
-                + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0170)
-                + "adb shell am broadcast -a io.github.crashedsystem.terminal.action.CLEAR_BACKGROUND"
-                + " -p io.github.crashedsystem.terminal";
-        TextView body = new TextView(mActivity);
-        body.setText(text);
-        body.setTextColor(mUi.TEXT);
-        body.setTextSize(11.5f);
-        body.setTypeface(Typeface.MONOSPACE);
-        body.setTextIsSelectable(true);
-        body.setPadding(mUi.dp(20), mUi.dp(12), mUi.dp(20), mUi.dp(4));
-        new AlertDialog.Builder(mActivity)
-                .setTitle(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0171))
-                .setView(body)
-                .setPositiveButton(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0172), null)
-                .show();
-    }
+
 }

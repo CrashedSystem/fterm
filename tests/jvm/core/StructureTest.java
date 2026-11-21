@@ -219,6 +219,24 @@ public class StructureTest {
         int iDrop = tabBar.indexOf("top.addView(drop)");
         check(iPlus >= 0 && iDrop > iPlus, "and the chevron sits after the plus");
 
+        // 7. The R stub the JVM tests compile against must hold every key the XML defines.
+        //    Adding a string and forgetting tools/gen_r_stub.py used to surface as a javac
+        //    error 40 lines deep; this says which key and how to fix it.
+        String xml = read("res/values-ko/strings.xml");
+        String stub = read("tests/corestub/io/github/crashedsystem/terminal/R.java");
+        java.util.regex.Matcher keys =
+                java.util.regex.Pattern.compile("<string name=\"([^\"]+)\"").matcher(xml);
+        int checkedKeys = 0;
+        java.util.List<String> absent = new java.util.ArrayList<>();
+        while (keys.find()) {
+            checkedKeys++;
+            String key = keys.group(1);
+            if (!stub.contains("int " + key + " =")) absent.add(key);
+        }
+        check(checkedKeys > 0, "the string table has keys to check");
+        check(absent.isEmpty(),
+                "every string key is in the test R stub, else run tools/gen_r_stub.py: " + absent);
+
         System.out.println("ok  " + pass + " structure assertions");
         System.out.println("ALL OK");
     }

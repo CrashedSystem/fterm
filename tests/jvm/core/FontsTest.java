@@ -134,7 +134,7 @@ public class FontsTest {
         check(sheet.contains("i18n_0184"),
                 "offered from the font list itself, where the new font will appear");
         String strings = new String(java.nio.file.Files.readAllBytes(
-                java.nio.file.Paths.get("res/values/strings.xml")), "UTF-8");
+                java.nio.file.Paths.get("res/values-ko/strings.xml")), "UTF-8");
         check(strings.contains(">글꼴 설치<"), "and the button says 설치, not an id");
 
         String daemon = new String(java.nio.file.Files.readAllBytes(

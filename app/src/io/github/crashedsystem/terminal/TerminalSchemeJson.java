@@ -252,7 +252,7 @@ public final class TerminalSchemeJson {
             if (s.startsWith("false", i)) { i += 5; return Boolean.FALSE; }
             if (s.startsWith("null", i)) { i += 4; return null; }
             if (c == '-' || (c >= '0' && c <= '9')) return number();
-            throw error("알 수 없는 글자 '" + c + "'");
+            throw error(AppStrings.s(R.string.json_unknown_char) + c + "'");
         }
 
         private Map<String, Object> object() {
@@ -260,7 +260,7 @@ public final class TerminalSchemeJson {
             i++;                      // {
             while (true) {
                 skip();
-                if (i >= s.length()) throw error("} 가 없습니다");
+                if (i >= s.length()) throw error(AppStrings.s(R.string.json_missing_close_brace));
                 if (s.charAt(i) == '}') { i++; return out; }
                 if (s.charAt(i) != '"') throw error(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0372));
                 String key = string();
@@ -309,14 +309,14 @@ public final class TerminalSchemeJson {
                     case 'r': b.append('\r'); break;
                     case 't': b.append('\t'); break;
                     case 'u':
-                        if (i + 4 > s.length()) throw error("\\u 가 짧습니다");
+                        if (i + 4 > s.length()) throw error(AppStrings.s(R.string.json_short_unicode));
                         b.append((char) Integer.parseInt(s.substring(i, i + 4), 16));
                         i += 4;
                         break;
-                    default: throw error("알 수 없는 이스케이프 \\" + e);
+                    default: throw error(AppStrings.s(R.string.json_unknown_escape) + e);
                 }
             }
-            throw error("문자열이 닫히지 않았습니다");
+            throw error(AppStrings.s(R.string.json_unterminated));
         }
 
         private Double number() {
@@ -326,7 +326,7 @@ public final class TerminalSchemeJson {
             try {
                 return Double.valueOf(s.substring(start, i));
             } catch (NumberFormatException e) {
-                throw error("숫자가 아닙니다");
+                throw error(AppStrings.s(R.string.json_not_a_number));
             }
         }
 
@@ -349,7 +349,7 @@ public final class TerminalSchemeJson {
         }
 
         private IllegalArgumentException error(String what) {
-            return new IllegalArgumentException(what + " (위치 " + i + ")");
+            return new IllegalArgumentException(what + AppStrings.s(R.string.json_at_position) + i + ")");
         }
     }
 }

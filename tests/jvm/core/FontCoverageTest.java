@@ -117,7 +117,7 @@ public class FontCoverageTest {
         check(sheet.contains("R.string.i18n_0126"),
                 "the setting is reachable by name in 모양");
         String strings = new String(java.nio.file.Files.readAllBytes(
-                java.nio.file.Paths.get("res/values/strings.xml")), "UTF-8");
+                java.nio.file.Paths.get("res/values-ko/strings.xml")), "UTF-8");
         check(strings.contains(">한글 글꼴<"), "and it is labelled 한글 글꼴");
         check(sheet.contains("Fonts.hangulCatalog("),
                 "from the Hangul list, not the Latin one");

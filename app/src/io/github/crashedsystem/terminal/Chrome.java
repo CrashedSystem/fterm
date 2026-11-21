@@ -308,17 +308,17 @@ final class Chrome {
 
     void menu(View anchor) {
         final Row[] rows = {
-                Row.of("terminal", "새 탭", "Ctrl+Shift+T", mCommands::newTab),
-                Row.of("pencil", "탭 이름 바꾸기", null, mCommands::renameTab),
-                Row.of("close", "탭 닫기", "Ctrl+Shift+W", mCommands::closeTab),
+                Row.of("terminal", AppStrings.s(R.string.menu_new_tab), "Ctrl+Shift+T", mCommands::newTab),
+                Row.of("pencil", AppStrings.s(R.string.menu_rename_tab), null, mCommands::renameTab),
+                Row.of("close", AppStrings.s(R.string.menu_close_tab), "Ctrl+Shift+W", mCommands::closeTab),
                 Row.rule(),
-                Row.of("clipboard", "붙여넣기", "Ctrl+Shift+V", mCommands::paste),
-                Row.of("copy", "복사", "Ctrl+Shift+C", mCommands::copy),
-                Row.of("search", "찾기", "Ctrl+Shift+F", mCommands::find),
+                Row.of("clipboard", AppStrings.s(R.string.menu_paste), "Ctrl+Shift+V", mCommands::paste),
+                Row.of("copy", AppStrings.s(R.string.menu_copy), "Ctrl+Shift+C", mCommands::copy),
+                Row.of("search", AppStrings.s(R.string.menu_find), "Ctrl+Shift+F", mCommands::find),
                 Row.rule(),
-                Row.of("gear", "설정", "Ctrl+,", mCommands::settings),
-                Row.of("terminal", "명령 팔레트", "Ctrl+Shift+P", mCommands::palette),
-                Row.of("info", "정보", null, mCommands::about),
+                Row.of("gear", AppStrings.s(R.string.menu_settings), "Ctrl+,", mCommands::settings),
+                Row.of("terminal", AppStrings.s(R.string.menu_palette), "Ctrl+Shift+P", mCommands::palette),
+                Row.of("info", AppStrings.s(R.string.menu_about), null, mCommands::about),
         };
 
         LinearLayout list = new LinearLayout(mActivity);
@@ -393,7 +393,7 @@ final class Chrome {
      */
     /** A sentinel profile that opens the editor instead of a tab. */
     private static final Profiles.Profile MANAGE =
-            new Profiles.Profile("프로필 관리", "", "", "");
+            new Profiles.Profile(AppStrings.s(R.string.profiles_manage), "", "", "");
 
     private View profileRow(final android.app.Dialog dialog, final Profiles.Profile profile) {
         LinearLayout row = new LinearLayout(mActivity);
@@ -433,15 +433,15 @@ final class Chrome {
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView name = new TextView(mActivity);
         name.setText(profile == null ? Profiles.DEFAULT_NAME
-                : profile.name.isEmpty() ? "(이름 없음)" : profile.name);
+                : profile.name.isEmpty() ? AppStrings.s(R.string.profile_unnamed) : profile.name);
         name.setTextColor(TEXT);
         name.setTextSize(13.5f);
         UiFont.apply(name, true);
         text.addView(name);
         TextView sub = new TextView(mActivity);
         sub.setText(profile == null ? "Termux · bash -l"
-                : profile == MANAGE ? "탭을 열 때 쓰는 프로필 편집"
-                : profile.subtitle().isEmpty() ? "기본 셸" : profile.subtitle());
+                : profile == MANAGE ? AppStrings.s(R.string.profile_edit_used_by_tabs)
+                : profile.subtitle().isEmpty() ? AppStrings.s(R.string.profile_default_shell) : profile.subtitle());
         sub.setTextColor(HINT);
         sub.setTextSize(10.5f);
         text.addView(sub);
