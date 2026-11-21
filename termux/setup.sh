@@ -17,7 +17,6 @@ set -u
 
 DEST=${FTERM_HOME:-$HOME/fterm}
 SHARED=${FTERM_SHARED:-/sdcard/Download}
-RAW=${FTERM_RAW:-https://raw.githubusercontent.com/CrashedSystem/fterm/master}
 REL=${FTERM_RELEASE:-https://github.com/CrashedSystem/fterm/releases/latest/download}
 MACHINE=${FTERM_MACHINE:-$(uname -m)}
 ASSET=ftermd-aarch64-linux-android
@@ -106,27 +105,32 @@ fetch() {
 
 say "데몬을 내려받습니다: $REL/$ASSET"
 fetch "$REL/$ASSET" "$DEST/ftermd.new"
-say "keeper를 내려받습니다: $RAW/termux/fterm-keeper"
-fetch "$RAW/termux/fterm-keeper" "$DEST/fterm-keeper.new"
+say "keeper를 내려받습니다: $REL/fterm-keeper"
+fetch "$REL/fterm-keeper" "$DEST/fterm-keeper.new"
 
 # The daemon is fetched over the network and then run with the user's Termux uid, which is
 # every app's private data. A truncated or substituted file has to stop here rather than at
 # first launch, so the release's SHA256SUMS.txt judges both downloads.
 #
-# The keeper comes from raw.githubusercontent rather than the release, so it has no line in
-# that file; it is a script whose content is visible, and the daemon is the binary that matters.
+# Both come from the same release, so both have a line in SHA256SUMS.txt. The keeper used to be
+# fetched from raw.githubusercontent/master, which meant a re-run could pair a new keeper with an
+# old daemon - and what runs next to the shells has to be the set that shipped together.
 SUMS=$(mktemp "${TMPDIR:-/tmp}/fterm-sums.XXXXXX")
 if curl -fsSL "$REL/SHA256SUMS.txt" -o "$SUMS" 2>/dev/null && [ -s "$SUMS" ]; then
-  WANT=$(awk -v a="$ASSET" '$2 == a { print $1 }' "$SUMS")
-  GOT=$(sha256sum "$DEST/ftermd.new" | awk '{ print $1 }')
-  if [ -z "$WANT" ]; then
-    warn "SHA256SUMS.txt 에 $ASSET 항목이 없어 검증을 건너뜁니다"
-  elif [ "$WANT" != "$GOT" ]; then
-    rm -f "$DEST/ftermd.new" "$SUMS"
-    die "체크섬이 맞지 않습니다 (기대 $WANT, 실제 $GOT). 받은 파일을 쓰지 않습니다."
-  else
-    say "체크섬 확인: ${GOT%????????????????????????????????????????????????}"
-  fi
+  for pair in "$ASSET:ftermd.new" "fterm-keeper:fterm-keeper.new"; do
+    name=${pair%%:*}
+    file=${pair##*:}
+    WANT=$(awk -v a="$name" '$2 == a { print $1 }' "$SUMS")
+    GOT=$(sha256sum "$DEST/$file" | awk '{ print $1 }')
+    if [ -z "$WANT" ]; then
+      warn "SHA256SUMS.txt 에 $name 항목이 없어 검증을 건너뜁니다"
+    elif [ "$WANT" != "$GOT" ]; then
+      rm -f "$DEST/ftermd.new" "$DEST/fterm-keeper.new" "$SUMS"
+      die "$name 체크섬이 맞지 않습니다 (기대 $WANT, 실제 $GOT). 받은 파일을 쓰지 않습니다."
+    else
+      say "체크섬 확인: $name ${GOT%????????????????????????????????????????????????}"
+    fi
+  done
 else
   warn "SHA256SUMS.txt 를 받지 못해 검증을 건너뜁니다"
 fi
