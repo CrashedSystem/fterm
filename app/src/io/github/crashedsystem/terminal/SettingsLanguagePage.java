@@ -20,8 +20,15 @@ import android.widget.Toast;
  */
 final class SettingsLanguagePage extends SettingsPage {
 
-    /** The languages that ship with the app; every one has a values-XX directory. */
-    private static final String[] TAGS = {"ko", "en"};
+    /**
+     * The languages that ship with the app; every one has a values-XX directory.
+     *
+     * <p>Chinese is listed by region because that is what a values directory can express
+     * (values-zh-rCN, values-zh-rTW) and what LocaleManager round-trips: asking for "zh"
+     * alone would leave the system picking a script, and the tick would land on neither row.
+     */
+    private static final String[] TAGS = {
+            "en", "ko", "de", "es", "fr", "it", "ja", "pt", "ru", "sr", "uk", "zh-CN", "zh-TW"};
 
     SettingsLanguagePage(SettingsSheet sheet) {
         super(sheet);
@@ -63,11 +70,31 @@ final class SettingsLanguagePage extends SettingsPage {
             LocaleManager lm = activity.getSystemService(LocaleManager.class);
             if (lm != null) {
                 LocaleList list = lm.getApplicationLocales();
-                if (!list.isEmpty()) return list.get(0).getLanguage();
+                if (!list.isEmpty()) return matchTag(list.get(0));
             }
         }
-        return activity.getResources().getConfiguration()
-                .getLocales().get(0).getLanguage();
+        return matchTag(activity.getResources().getConfiguration()
+                .getLocales().get(0));
+    }
+
+    /**
+     * The row that represents this locale.
+     *
+     * <p>Compared by language and region rather than by {@code getLanguage()} alone: Chinese
+     * is two rows (zh-CN and zh-TW) with the same language code, so the region is what tells
+     * them apart. A system locale the app does not ship falls back to the row it resolves to,
+     * which is English, so the tick never disappears from the list.
+     */
+    private static String matchTag(java.util.Locale locale) {
+        String language = locale.getLanguage();
+        String region = locale.getCountry();
+        for (String tag : TAGS) {
+            java.util.Locale candidate = java.util.Locale.forLanguageTag(tag);
+            if (!candidate.getLanguage().equals(language)) continue;
+            if (!candidate.getCountry().isEmpty() && !candidate.getCountry().equals(region)) continue;
+            return tag;
+        }
+        return "en";
     }
 
     private void apply(String tag) {

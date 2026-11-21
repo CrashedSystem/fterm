@@ -391,9 +391,16 @@ final class Chrome {
      * I tabbing into" - so it is drawn with a filled plate rather than a row ripple, and it
      * closes the menu without doing anything.
      */
-    /** A sentinel profile that opens the editor instead of a tab. */
+    /**
+     * A sentinel profile that opens the editor instead of a tab.
+     *
+     * <p>Its name is deliberately blank: this is a static field, so anything translated here
+     * would be captured when the class is first loaded, and the row would keep the language
+     * the app started in after the user changed it. The label is looked up at draw time in
+     * {@link #profileRow}.
+     */
     private static final Profiles.Profile MANAGE =
-            new Profiles.Profile(AppStrings.s(R.string.profiles_manage), "", "", "");
+            new Profiles.Profile("", "", "", "");
 
     private View profileRow(final android.app.Dialog dialog, final Profiles.Profile profile) {
         LinearLayout row = new LinearLayout(mActivity);
@@ -433,6 +440,7 @@ final class Chrome {
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView name = new TextView(mActivity);
         name.setText(profile == null ? Profiles.DEFAULT_NAME
+                : profile == MANAGE ? AppStrings.s(R.string.profiles_manage)
                 : profile.name.isEmpty() ? AppStrings.s(R.string.profile_unnamed) : profile.name);
         name.setTextColor(TEXT);
         name.setTextSize(13.5f);
