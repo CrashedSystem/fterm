@@ -154,6 +154,11 @@ final class DaemonBoot {
         return true;
     }
 
+    /** True while a poll is in flight, so the activity does not stack a second one on top. */
+    boolean busy() {
+        return mRunning;
+    }
+
     /**
      * True when this app may write outside its sandbox.
      *

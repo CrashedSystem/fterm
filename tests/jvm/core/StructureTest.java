@@ -270,6 +270,23 @@ public class StructureTest {
                 "setup.sh installs the prebuilt daemon, no clone and no cargo");
         check(setup.contains("fterm-keeper") && setup.contains("fterm-token"),
                 "with the keeper, and publishes the token the app reads");
+        // A fresh Termux has no WRITE_EXTERNAL_STORAGE, and without it /sdcard/Download - the
+        // only channel between the app and the keeper - is unwritable. The script used to check
+        // and give up, so the advertised one line needed two runs on exactly the machine it was
+        // written for. It has to ask for the permission itself.
+        check(setup.contains("termux-setup-storage"),
+                "setup.sh requests storage access instead of requiring a second run");
+        // A tty redirect breaks under `curl ... | bash` (stdin is the pipe) and in a background
+        // shell (no controlling terminal); termux-setup-storage's only prompt is its y/n.
+        // Comment lines are skipped: the fix is documented by naming the thing it avoids.
+        StringBuilder setupCode = new StringBuilder();
+        for (String line : setup.split("\n")) {
+            String t = line.trim();
+            if (t.startsWith("#")) continue;
+            setupCode.append(line).append('\n');
+        }
+        check(!setupCode.toString().contains("/dev/tty"),
+                "setup.sh does not rely on /dev/tty");
         check(launcher.contains("termux/setup.sh"),
                 "the dialog quotes that one line instead of a clone path");
 

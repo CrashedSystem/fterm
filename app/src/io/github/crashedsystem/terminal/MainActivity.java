@@ -86,6 +86,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
 
     private boolean mFn;
     private boolean mShowKeyboardOnce = true;
+    /** One shot: the deferred permissions are asked for once, not on every resume. */
+    private boolean mDeferredPermsAsked;
     /** Hardware keys, handled before the focused view sees them. */
     private Shortcuts mShortcuts;
     /** The density the dp-derived px were built at; a change means they have to be redone. */
@@ -115,18 +117,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         // the idle death: with fterm backgrounded, `dumpsys activity processes` reports
         // isFrozen=true, and a frozen process stops reading its socket.
         TerminalService.start(this);
-        if (android.os.Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission("android.permission.POST_NOTIFICATIONS")
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1002);
-        }
-        // Clipboard images (screenshots) live in the gallery; without this permission the
-        // content:// URI decodes to nothing and "paste my screenshot" silently fails.
-        if (android.os.Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission("android.permission.READ_MEDIA_IMAGES")
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{"android.permission.READ_MEDIA_IMAGES"}, 1003);
-        }
+        // Notification and photo permissions are deliberately not requested here: the system
+        // dialog drew over the storage explanation the user has to act on. See Permissions.
 
         // Nothing is attached yet, so the frame would sit as a blank black area until the
         // live query returns (up to the 2.5s timeout). Say so instead of showing a void -
@@ -293,6 +285,10 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                     activate(mTabs.get(0));
                     showKeyboardSoon();
                 }
+                // The terminal is on screen, so a shell exists or is about to: this is the
+                // first moment the notification and photo permissions mean anything.
+                mDeferredPermsAsked = Permissions.requestDeferred(MainActivity.this,
+                        mDeferredPermsAsked);
             });
         }, "fterm-start").start();
     }
@@ -307,6 +303,8 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                 mPrefs.setToken(token);
                 mBoot.restore();
                 newTab(true);
+                mDeferredPermsAsked = Permissions.requestDeferred(MainActivity.this,
+                        mDeferredPermsAsked);
             }
 
             @Override public void keeperMissing() {
@@ -975,7 +973,13 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         if (mBackdrop != null) mBackdrop.resume();
         // Back from the all-files screen or from Termux: try again by itself. DaemonBoot hands
         // out one retry per resume; a tab that already exists is the user's answer already.
-        if (mBoot.retryOnResume(mTabs.isEmpty())) startSessions();
+        if (mBoot.retryOnResume(mTabs.isEmpty())) {
+            startSessions();
+        } else if (mTabs.isEmpty() && !mBoot.busy() && DaemonBoot.hasAllFilesAccess()
+                && mPrefs.token().isEmpty()) {
+            // Switch just granted, mLeft never set: one attempt beats a black frame.
+            startSessions();
+        }
         if (mShowKeyboardOnce && mPrefs.showKeyboardOnStart() && !HardwareKeyboard.present(this)) {
             mShowKeyboardOnce = false;
             showKeyboardSoon();

@@ -44,13 +44,52 @@ if ! command -v curl >/dev/null 2>&1 || ! command -v python3 >/dev/null 2>&1; th
   pkg install -y python curl || die "패키지 설치 실패: pkg install -y python curl"
 fi
 
-# Both halves of the channel live in /sdcard/Download, and Termux reaches it through
-# `termux-setup-storage`. Checked here, before anything is installed, so the one thing the user
-# has to do is said while they are still looking at the terminal.
+# Both halves of the channel live in /sdcard/Download, and Termux reaches it only after
+# `termux-setup-storage` has been run once: that is what grants the app WRITE_EXTERNAL_STORAGE
+# and creates ~/storage. A fresh Termux install does not have it.
+#
+# This used to just check and give up, which meant the advertised "one line" needed two runs on
+# exactly the machine it was written for - a fresh install. The script now asks for the
+# permission itself and waits, because the request is a system dialog the user has to tap and
+# there is no way to proceed without them.
 SHARED_OK=0
-if mkdir -p "$SHARED" 2>/dev/null && : > "$SHARED/.fterm-write-test" 2>/dev/null; then
-  rm -f "$SHARED/.fterm-write-test"
+shared_usable() {
+  mkdir -p "$SHARED" 2>/dev/null || return 1
+  # stderr is dropped: when the permission is missing this fails on every probe below, and
+  # sixty "Operation not permitted" lines would bury the one message the user needs to read.
+  { : > "$SHARED/.fterm-write-test"; } 2>/dev/null || return 1
+  rm -f "$SHARED/.fterm-write-test" 2>/dev/null
+  return 0
+}
+
+if shared_usable; then
   SHARED_OK=1
+else
+  say "저장소 접근 권한이 필요합니다."
+  say "잠시 후 Termux에 뜨는 창에서 '허용'을 눌러 주세요 (한 번만 하면 됩니다)."
+  if command -v termux-setup-storage >/dev/null 2>&1; then
+    # termux-setup-storage does not request the permission itself: it broadcasts to the Termux
+    # app, which raises the runtime dialog and builds ~/storage. The app must be in front for
+    # that dialog to appear, which is why this waits below rather than assuming success.
+    #
+    # `printf 'y'` answers its "~/storage already exists, rebuild it?" prompt. A tty redirect
+    # cannot be used here: `curl ... | bash` has a pipe on stdin, and a plain `</dev/tty`
+    # fails outright in a background shell - both were measured.
+    printf 'y\n' | termux-setup-storage >/dev/null 2>&1 || true
+  else
+    warn "termux-setup-storage 가 없습니다. Termux 앱에서 직접 실행해 주세요."
+  fi
+  # The dialog is asynchronous: the user has to switch to the Termux app and tap it. Sixty
+  # seconds is generous for that and still finite, so a denied request fails here instead of
+  # hanging forever.
+  i=0
+  while [ $i -lt 60 ]; do
+    if shared_usable; then SHARED_OK=1; break; fi
+    i=$((i+1)); sleep 1
+  done
+  if [ "$SHARED_OK" = 1 ]; then
+    say "저장소 권한 확인됨."
+  fi
 fi
 
 mkdir -p "$DEST" || die "$DEST 를 만들 수 없습니다"
@@ -139,14 +178,23 @@ chmod 700 "$RESTART"
 
 setsid nohup /bin/sh "$RESTART" > /dev/null 2>&1 < /dev/null &
 
+# Wait for the token file, not for `status`. The restart script stops the old daemon, sleeps a
+# second, and only then starts the new one - and during that second the *old* daemon still
+# answers `status`, so polling it returned success while the daemon was about to be killed.
+# Measured: the install printed "데몬이 뜨지 않았습니다" and the daemon was up a moment later.
+# The token file is written at the very end of the restart script, after the daemon is up, so
+# its arrival is the honest signal.
 i=0
-while [ $i -lt 40 ] && ! "$DEST/ftermd" status >/dev/null 2>&1; do i=$((i+1)); sleep 0.25; done
-# The detached script publishes the token after it has the daemon up; wait for the file rather
-# than printing an answer from the race between the two.
-i=0
-while [ "$SHARED_OK" = 1 ] && [ $i -lt 40 ] && [ ! -s "$SHARED/fterm-token" ]; do
-  i=$((i+1)); sleep 0.25
-done
+if [ "$SHARED_OK" = 1 ]; then
+  while [ $i -lt 120 ] && [ ! -s "$SHARED/fterm-token" ]; do
+    i=$((i+1)); sleep 0.25
+  done
+else
+  # No shared storage, so there is no token file to wait on: poll the daemon itself.
+  while [ $i -lt 120 ] && ! "$DEST/ftermd" status >/dev/null 2>&1; do
+    i=$((i+1)); sleep 0.25
+  done
+fi
 
 if "$DEST/ftermd" status >/dev/null 2>&1; then
   say "데몬이 떴습니다."
@@ -189,8 +237,25 @@ elif [ "$SHARED_OK" = 1 ]; then
     exit 1
   fi
 else
-  warn "$SHARED 는 쓸 수 없습니다. Termux에서 termux-setup-storage 를 실행하고 이 스크립트를"
-  warn "다시 실행하세요. 앱과 keeper가 만나는 곳이 그 디렉터리뿐입니다."
-  warn "지금도 수동 입력은 됩니다 — Termux에서 ~/fterm/ftermd token 의 출력을 앱에 붙여넣으세요."
+  # The script asked for the permission above and waited a minute; this is the denied or
+  # broken case, not the "never asked" case the old text assumed.
+  warn "$SHARED 에 쓸 수 없습니다. 앱과 keeper가 만나는 곳이 그 디렉터리뿐이라, 이대로면"
+  warn "앱이 데몬을 스스로 띄우지 못합니다."
+  warn ""
+  warn "확인할 것:"
+  warn "  · Termux 알림의 저장소 권한을 거부했다면, Android 설정 > 앱 > Termux > 권한에서"
+  warn "    '파일 및 미디어'를 허용한 뒤 이 스크립트를 다시 실행하세요."
+  warn "  · 회사·학교 기기라 정책으로 막혔다면 이 방식은 쓸 수 없습니다."
+  warn ""
+  # The daemon and keeper are already installed and running by this point; only the channel
+  # back to the app is missing. Say so, with the token, rather than failing as if nothing
+  # worked - manual entry is a real way to use the app.
+  t=$("$DEST/ftermd" token 2>/dev/null | tr -d ' \r\n')
+  if [ -n "$t" ]; then
+    warn "데몬 자체는 떠 있습니다. 앱에서 '직접 토큰 입력'을 눌러 아래 값을 붙여넣으면 쓸 수 있습니다:"
+    say "  $t"
+    exit 0
+  fi
+  warn "데몬이 뜨지 않았습니다 — $DEST/daemon.log 를 보세요."
   exit 1
 fi

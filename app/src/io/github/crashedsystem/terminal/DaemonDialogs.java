@@ -113,13 +113,7 @@ final class DaemonDialogs {
         boolean allowed = DaemonBoot.hasAllFilesAccess();
         new AlertDialog.Builder(a)
                 .setTitle(AppStrings.s(allowed ? R.string.i18n_0080 : R.string.i18n_0405))
-                .setMessage(AppStrings.s(R.string.i18n_0081)
-                        + AppStrings.s(R.string.i18n_0082)
-                        + (allowed
-                                ? AppStrings.s(R.string.i18n_0406)
-                                : AppStrings.s(R.string.i18n_0407))
-                        + "\n\n" + AppStrings.s(R.string.i18n_0408)
-                        + "\n  ~/fterm/ftermd token")
+                .setMessage(AppStrings.s(allowed ? R.string.i18n_0406 : R.string.i18n_0407))
                 .setPositiveButton(AppStrings.s(R.string.i18n_0409), (d, w) -> openStorageSettings(a))
                 .setNeutralButton(AppStrings.s(R.string.i18n_0404), (d, w) -> onManualToken.run())
                 .setNegativeButton(AppStrings.s(R.string.i18n_0029), null)
