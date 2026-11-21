@@ -123,7 +123,7 @@ final class SettingsFontPicker {
         // the user scrolls, and a device with four hundred fonts does not become four hundred
         // rows of chrome.
         scroll.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(340)));
+                ViewGroup.LayoutParams.MATCH_PARENT, mUi.listHeight(340, 0.6f)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
                 .setTitle(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0124))
@@ -245,7 +245,7 @@ final class SettingsFontPicker {
         scroll.setFillViewport(true);
         scroll.addView(box);
         scroll.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, mUi.dp(340)));
+                ViewGroup.LayoutParams.MATCH_PARENT, mUi.listHeight(340, 0.6f)));
 
         holder[0] = new android.app.AlertDialog.Builder(mActivity)
                 .setTitle(AppStrings.s(script.title))

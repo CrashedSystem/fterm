@@ -297,4 +297,17 @@ final class SettingsUi {
         return Math.round(TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP, v, r.getDisplayMetrics()));
     }
+
+    /**
+     * A list height that fits the screen it is on.
+     *
+     * <p>A fixed 340dp is right on a phone held upright and wrong twice elsewhere: on a tablet
+     * it leaves two thirds of the dialog empty, and in landscape - where the window is often
+     * half the height - it runs past the bottom and the buttons are off screen. The cap is the
+     * smaller of the preferred height and most of what is actually available.
+     */
+    int listHeight(float preferredDp, float fraction) {
+        int available = mActivity.getResources().getDisplayMetrics().heightPixels;
+        return Math.min(dp(preferredDp), Math.round(available * fraction));
+    }
 }

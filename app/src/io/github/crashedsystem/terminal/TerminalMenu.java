@@ -88,7 +88,11 @@ final class TerminalMenu {
         WindowManager.LayoutParams lp = w.getAttributes();
         lp.gravity = Gravity.TOP | Gravity.START;
         lp.x = clamp((int) (at[0] + event.getX()), dp(8), dm.widthPixels - width - dp(8));
-        lp.y = clamp((int) (at[1] + event.getY()), dp(8), dm.heightPixels - dp(280));
+        // The lower bound is a guess at the menu height, so on a short window - a phone in
+        // landscape, or a split-screen tablet - it can exceed the screen. Clamping to a
+        // negative maximum would put the menu off the bottom, so the ceiling is floored.
+        lp.y = clamp((int) (at[1] + event.getY()), dp(8),
+                Math.max(dp(8), dm.heightPixels - dp(280)));
         w.setAttributes(lp);
     }
 
@@ -129,6 +133,9 @@ final class TerminalMenu {
     }
 
     private static int clamp(int value, int min, int max) {
+        // A caller that computed an inverted range (min > max) wants the minimum, not the
+        // maximum: Math.min would return max, which is the off-screen edge.
+        if (max < min) return min;
         return Math.max(min, Math.min(max, value));
     }
 

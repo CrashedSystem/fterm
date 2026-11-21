@@ -93,7 +93,7 @@ final class SettingsFontInstall {
         ScrollView scroll = new ScrollView(picker.mActivity);
         scroll.addView(box);
         scroll.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, picker.mUi.dp(360)));
+                ViewGroup.LayoutParams.MATCH_PARENT, picker.mUi.listHeight(360, 0.62f)));
 
         holder[0] = new android.app.AlertDialog.Builder(picker.mActivity)
                 .setTitle(io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0184))
