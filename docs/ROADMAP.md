@@ -29,7 +29,7 @@
 
 ## 1. CI — 지금 아무것도 자동으로 검사되지 않는다
 
-**증상**: `README.md`의 검증 표는 전부 손으로 돌린 결과입니다. Rust 데몬을 붙이는 순간 "무엇이
+**증상**: `README.md`(지금은 [`docs/ARCHITECTURE.md`](ARCHITECTURE.md))의 검증 표는 전부 손으로 돌린 결과입니다. Rust 데몬을 붙이는 순간 "무엇이
 여전히 맞는지"를 사람이 기억해야 합니다.
 
 **고치는 방법**: `.github/workflows/ci.yml`에 잡을 둡니다.
