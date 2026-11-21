@@ -2,8 +2,6 @@ package io.github.crashedsystem.terminal;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
@@ -885,11 +883,6 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         if (mKeyBar != null) mKeyBar.clear();
     }
 
-    private void copyToClipboard(String text) {
-        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("fterm", text));
-    }
-
     private int dp(float v) {
         return Math.round(TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics()));
@@ -1056,6 +1049,17 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         if (imm != null) imm.showSoftInput(mTermView, InputMethodManager.SHOW_IMPLICIT);
     }
 
+    /**
+     * Ctrl+tap on a link. The view asks because a tap inside a TUI belongs to the program,
+     * and opening a link counts as the one use the sticky CTRL was waiting for.
+     */
+    @Override
+    public boolean openUrlAt(int row, int column) {
+        boolean opened = UrlOpener.open(this, mTermView, row, column);
+        if (opened) clearSticky();
+        return opened;
+    }
+
     @Override
     public boolean shouldBackButtonBeMappedToEscape() {
         return mPrefs.backIsEscape();
@@ -1198,71 +1202,19 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
         }
     }
 
-    void copySelection() {
-        String sel = getSelectedText();
-        if (sel == null || sel.isEmpty()) {
-            Toast.makeText(this, AppStrings.s(R.string.copy_nothing_selected), Toast.LENGTH_SHORT).show();
-            return;
-        }
-        copyToClipboard(sel);
-        Toast.makeText(this, AppStrings.s(R.string.copy_done), Toast.LENGTH_SHORT).show();
+    // ---------------------------------------------------------------- clipboard
+
+    /** The tab on screen, or null; package-private for the helpers that work on it. */
+    Tab activeTab() {
+        return mActive;
     }
 
-    private String getSelectedText() {
-        if (mTermView.getCurrentSession() == null || mTermView.mEmulator == null) return null;
-        // The live selection first - that is what the highlight on screen is - and the text the
-        // selection toolbar stored before closing as the fallback (the old Ctrl+Shift+C path).
-        String live = mTermView.getSelectedText();
-        return live != null ? live : mTermView.getStoredSelectedText();
+    void copySelection() {
+        ClipboardOps.copySelection(this);
     }
 
     void pasteClipboard() {
-        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm == null || !cm.hasPrimaryClip()) return;
-        ClipData clip = cm.getPrimaryClip();
-        ClipData.Item item = clip.getItemAt(0);
-        if (item == null) return;
-
-        // An image clip has no text at all. Save it and paste the PATH: opencode resolves a
-        // local filepath into a data: URI attachment, which is how a screenshot gets in.
-        // Saving happens on the worker: decoding a screenshot on the UI thread freezes the
-        // terminal while it runs.
-        if (ClipboardImage.pasteIfImage(this, mUi, clip, new ClipboardImage.Paste() {
-            @Override public boolean ready() { return mActive != null && mActive.session != null; }
-            @Override public void insert(String path) {
-                pasteText(path);
-                Toast.makeText(MainActivity.this, AppStrings.s(R.string.paste_image_path) + path,
-                        Toast.LENGTH_LONG).show();
-            }
-        })) {
-            return;
-        }
-
-        CharSequence text = item.coerceToText(this);
-        if (text == null || text.length() == 0) {
-            // A clip that is neither text nor a detected image: tell the user instead of
-            // doing nothing, which read as "image paste is broken".
-            Toast.makeText(this, AppStrings.s(R.string.paste_nothing), Toast.LENGTH_SHORT).show();
-            return;
-        }
-        pasteText(text.toString());
-    }
-
-    /** Send text through the emulator as a paste (bracketed when the program asked). */
-    private void pasteText(String text) {
-        // Through the emulator, not the session: Emulator.paste() strips escapes, turns
-        // newlines into CR, and - the part that matters here - wraps the text in
-        // \e[200~ .. \e[201~ when the running program asked for bracketed paste
-        // (DECSET 2004). A multi-line paste sent raw looks like a series of Return presses,
-        // which is why "paste five lines" arrived as five separate submissions instead of
-        // one "[5 lines pasted]" block.
-        TerminalEmulator emulator = mActive == null || mActive.session == null
-                ? null : mActive.session.getEmulator();
-        if (emulator != null) {
-            emulator.paste(text);
-        } else if (mActive != null && mActive.session != null) {
-            mActive.session.write(text);
-        }
+        ClipboardOps.paste(this);
     }
 
     // logging, routed nowhere in release
@@ -1315,20 +1267,12 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
                               final Runnable afterRead) {
         // The IME's tap. The client is asked because the read needs the activity's content
         // resolver and the result belongs in the active tab's prompt, not in this view.
-        ClipboardImage.saveAsync(this, uri, mUi, new ClipboardImage.Paste() {
-            @Override public boolean ready() {
-                return mActive != null && mActive.session != null;
-            }
-            @Override public void insert(String path) {
-                pasteText(path);
-                Toast.makeText(MainActivity.this, AppStrings.s(R.string.paste_image_attached) + path, Toast.LENGTH_SHORT).show();
-            }
-        }, afterRead);
+        ClipboardOps.commitImage(this, uri, afterRead);
     }
 
     @Override
     public void onCopyTextToClipboard(TerminalSession session, String text) {
-        copyToClipboard(text);
+        ClipboardOps.copy(this, text);
     }
 
     @Override
@@ -1343,12 +1287,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
      */
     @Override
     public String getClipboardText(TerminalSession session) {
-        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm == null || !cm.hasPrimaryClip()) return null;
-        ClipData.Item item = cm.getPrimaryClip().getItemAt(0);
-        if (item == null) return null;
-        CharSequence text = item.coerceToText(this);
-        return text == null ? null : text.toString();
+        return ClipboardOps.clipboardText(this);
     }
 
     /**
@@ -1359,22 +1298,7 @@ public final class MainActivity extends Activity implements TerminalViewClient, 
      */
     @Override
     public byte[] getClipboardImage(TerminalSession session) {
-        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm == null || !cm.hasPrimaryClip()) return null;
-        ClipData clip = cm.getPrimaryClip();
-        if (clip.getItemAt(0) == null) return null;
-        if (!ClipboardImage.isImage(this, clip)) return null;
-        android.net.Uri uri = ClipboardImage.uriOf(clip);
-        try {
-            android.graphics.Bitmap bmp =
-                    android.graphics.BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));
-            if (bmp == null) return null;
-            java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
-            bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bo);
-            return bo.toByteArray();
-        } catch (Throwable t) {
-            return null;
-        }
+        return ClipboardOps.clipboardImage(this);
     }
 
     @Override

@@ -188,6 +188,7 @@
     <string name="i18n_0186">"На стороне Termux шрифтов нет. Получите по URL ниже или положите .ttf в "</string>
     <string name="i18n_0187">~/.fonts в Termux.</string>
     <string name="i18n_0188">"Шрифты, найденные в Termux: "</string>
+    <string name="i18n_0189">" шрифтов"</string>
     <string name="i18n_0190">" получение…"</string>
     <string name="i18n_0191">URL шрифта</string>
     <string name="i18n_0192">"Termux скачает его в ~/.fonts и передаст приложению. "</string>
@@ -433,4 +434,8 @@
     <string name="i18n_0408">Токен можно получить и напрямую, выполнив это один раз в Termux:</string>
     <string name="i18n_0409">Открыть настройки разрешений</string>
     <string name="i18n_0410">Разрешите «Доступ ко всем файлам» в Настройки &gt; Приложения &gt; Терминал</string>
+    <string name="link_no_browser">Нет браузера, чтобы открыть ссылку</string>
+    <string name="paste_large_title">Вставить большой текст?</string>
+    <string name="paste_large_message">Вставляемый текст — %1$s КБ (%2$d строк). Большая вставка может переполнить ввод в TUI. Всё равно вставить?</string>
+    <string name="paste_large_confirm">Вставить</string>
 </resources>

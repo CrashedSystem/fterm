@@ -13,3 +13,8 @@ termux/ftermd-rs/target/
 
 # Debug screenshots captured while verifying on-device behaviour.
 /*.png
+
+# Gradle's own cache and incremental-build state. It is machine state, not source: a
+# `gradle build` rewrites these binaries on every run, so tracking them meant every
+# local build showed up as a diff and CI checked out stale caches.
+.gradle/

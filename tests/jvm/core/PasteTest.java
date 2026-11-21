@@ -119,14 +119,17 @@ public byte[] getClipboardImage(com.termux.terminal.TerminalSession s) { return 
         String src = new String(java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(System.getProperty("main.src",
                         "app/src/io/github/crashedsystem/terminal/MainActivity.java"))), "UTF-8");
-        // The modifier is left out of the search: pasteClipboard() is also reached from the
-        // terminal's right-click menu now, so it is package-private rather than private.
-        int at = src.indexOf("void pasteClipboard()");
-        check(at > 0, "pasteClipboard() exists");
-        String body = src.substring(at, Math.min(src.length(), at + 1400));
-        check(body.contains("pasteText("), "pasteClipboard() routes through pasteText()");
-        // The why-comment moved with the paste path into pasteText().
-        int pt = src.indexOf("private void pasteText(");
+        // The paste path moved out of the activity into ClipboardOps when the activity needed
+        // the room; the question is the same, so both files are read as one.
+        src += "\n" + new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get(System.getProperty("clipboard.src",
+                        "app/src/io/github/crashedsystem/terminal/ClipboardOps.java"))), "UTF-8");
+        int at = src.indexOf("static void paste(MainActivity activity)");
+        int pt = src.indexOf("static void pasteText(MainActivity activity,");
+        check(at > 0 && pt > at, "the clipboard paste entry point and pasteText() exist");
+        String body = src.substring(at, pt);
+        check(body.contains("pasteText("), "the paste routes through pasteText()");
+        // The why-comment moved with the paste path into pasteNow().
         String ptBody = src.substring(pt, Math.min(src.length(), pt + 1400));
         check(ptBody.contains("DECSET 2004") || ptBody.contains("bracketed paste"),
                 "and says why");
@@ -141,7 +144,7 @@ public byte[] getClipboardImage(com.termux.terminal.TerminalSession s) { return 
         check(pi > 0, "ClipboardImage offers the asynchronous image paste");
         String piBody = clipSrc.substring(pi, Math.min(clipSrc.length(), pi + 600));
         check(piBody.contains("saveAsync("), "which goes through the worker thread");
-        check(body.contains("ClipboardImage.pasteIfImage("), "pasteClipboard() uses it");
+        check(body.contains("ClipboardImage.pasteIfImage("), "the paste uses it");
         check(!body.contains("ClipboardImage.save("), "and not the blocking save()");
 
         System.out.println("ok  " + pass + " paste assertions");

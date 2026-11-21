@@ -188,6 +188,7 @@
     <string name="i18n_0186">"Non ci sono font lato Termux. Scaricane uno dall\'URL sotto, o metti un .ttf in "</string>
     <string name="i18n_0187">~/.fonts in Termux.</string>
     <string name="i18n_0188">"Font trovati in Termux: "</string>
+    <string name="i18n_0189">" font"</string>
     <string name="i18n_0190">" recupero…"</string>
     <string name="i18n_0191">URL del font</string>
     <string name="i18n_0192">"Termux lo scarica in ~/.fonts e lo passa all\'app. "</string>
@@ -434,4 +435,8 @@
     <string name="i18n_0408">Puoi anche ottenere un token direttamente eseguendo questo una volta in Termux:</string>
     <string name="i18n_0409">Apri impostazioni permessi</string>
     <string name="i18n_0410">Consenti «Accesso a tutti i file» in Impostazioni &gt; App &gt; Terminale</string>
+    <string name="link_no_browser">Nessun browser per aprire il link</string>
+    <string name="paste_large_title">Incollare un testo grande?</string>
+    <string name="paste_large_message">Questo incolla è di %1$s KB (%2$d righe). Un incolla grande può traboccare nella casella di una TUI. Incollare comunque?</string>
+    <string name="paste_large_confirm">Incolla</string>
 </resources>

@@ -188,6 +188,7 @@
     <string name="i18n_0186">"Na strani Termux-a nema fontova. Preuzmite jedan sa URL-a ispod ili stavite .ttf u "</string>
     <string name="i18n_0187">~/.fonts u Termux-u.</string>
     <string name="i18n_0188">"Fontovi nađeni u Termux-u: "</string>
+    <string name="i18n_0189">" fontova"</string>
     <string name="i18n_0190">" preuzimanje…"</string>
     <string name="i18n_0191">URL fonta</string>
     <string name="i18n_0192">"Termux ga preuzima u ~/.fonts i predaje aplikaciji. "</string>
@@ -433,4 +434,8 @@
     <string name="i18n_0408">Token možete dobiti i direktno ako ovo jednom pokrenete u Termux-u:</string>
     <string name="i18n_0409">Otvori podešavanja dozvola</string>
     <string name="i18n_0410">Dozvolite „Pristup svim datotekama“ u Podešavanja &gt; Aplikacije &gt; Terminal</string>
+    <string name="link_no_browser">Nema pregledača za otvaranje veze</string>
+    <string name="paste_large_title">Nalepiti veliki tekst?</string>
+    <string name="paste_large_message">Ovaj nalepak ima %1$s KB (%2$d redova). Veliki nalepak može preliti unos u TUI-ju. Ipak nalepiti?</string>
+    <string name="paste_large_confirm">Nalepi</string>
 </resources>

@@ -16,6 +16,7 @@
     <string name="i18n_0008">字型回應錯誤</string>
     <string name="i18n_0009">字型下載失敗</string>
     <string name="i18n_0010">"常駐程式回應錯誤（type "</string>
+    <string name="i18n_0011">連線失敗：</string>
     <string name="i18n_0012">影格長度不正確</string>
     <string name="i18n_0013">常駐程式關閉了連線</string>
     <string name="i18n_0014">連線已中斷（無回應）</string>
@@ -435,4 +436,8 @@
     <string name="i18n_0408">在 Termux 中執行一次以下命令也可直接取得權杖：</string>
     <string name="i18n_0409">開啟權限設定</string>
     <string name="i18n_0410">在 設定 &gt; 應用程式 &gt; 終端機 中允許「所有檔案存取權」</string>
+    <string name="link_no_browser">沒有可開啟連結的瀏覽器</string>
+    <string name="paste_large_title">要貼上大量文字嗎？</string>
+    <string name="paste_large_message">將貼上 %1$s KB（%2$d 行）。大量文字可能超出 TUI 輸入框，仍要貼上嗎？</string>
+    <string name="paste_large_confirm">貼上</string>
 </resources>

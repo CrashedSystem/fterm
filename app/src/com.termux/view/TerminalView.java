@@ -81,6 +81,12 @@ public final class TerminalView extends View {
     /** Keep track of the time when a touch event leading to sending mouse scroll events started. */
     private long mMouseStartDownTime = -1;
 
+    /**
+     * True while the press that opened a link is still down, so the rest of that gesture is
+     * swallowed instead of also becoming a mouse report for the program.
+     */
+    private boolean mCtrlLinkGesture;
+
     final Scroller mScroller;
 
     /** What was left in from scrolling movement. */
@@ -944,6 +950,26 @@ public final class TerminalView extends View {
         if (mEmulator == null) return true;
         final int action = event.getAction();
 
+        // Ctrl+tap / Ctrl+click opens a link. This has to come before the mouse report below:
+        // a TUI that asked for mouse reporting (Claude Code, opencode, tmux) turns every press
+        // into its own event, so a link the program printed was otherwise unreachable. A tap
+        // that is not on a link falls through untouched - the program still gets its click.
+        if (mCtrlLinkGesture) {
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                mCtrlLinkGesture = false;
+            }
+            return true;
+        }
+        if (action == MotionEvent.ACTION_DOWN && !isSelectingText() && ctrlHeld(event)) {
+            int[] cell = getColumnAndRow(event, true);
+            if (mClient.openUrlAt(cell[1], cell[0])) {
+                // The rest of this gesture belongs to the link, not to the program: swallowing
+                // it is what keeps the TUI from also seeing a press on its prompt.
+                mCtrlLinkGesture = true;
+                return true;
+            }
+        }
+
         if (isSelectingText()) {
             updateFloatingToolbarVisibility(event);
             mGestureRecognizer.onTouchEvent(event);
@@ -977,6 +1003,14 @@ public final class TerminalView extends View {
 
         mGestureRecognizer.onTouchEvent(event);
         return true;
+    }
+
+    /**
+     * Whether Ctrl is held for this event - the hardware key's meta state, or the key bar's
+     * sticky CTRL latch, which is how a phone without one presses it.
+     */
+    private boolean ctrlHeld(MotionEvent event) {
+        return (event.getMetaState() & KeyEvent.META_CTRL_ON) != 0 || mClient.readControlKey();
     }
 
     @Override

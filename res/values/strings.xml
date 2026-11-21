@@ -116,7 +116,6 @@
     <string name="i18n_0108">Pretendard (default)</string>
     <string name="i18n_0109">" (custom)"</string>
     <string name="i18n_0110">Connecting to the shell…</string>
-    <string name="i18n_0111"></string>
     <string name="i18n_0112">OLED (true black)</string>
     <string name="i18n_0113">Sessions</string>
     <string name="i18n_0114">Daemon</string>
@@ -357,8 +356,6 @@
     <string name="i18n_0354">Phone</string>
     <string name="i18n_0355">Printer</string>
     <string name="i18n_0356">Ruler</string>
-    <string name="i18n_0357">the text sat on the top edge</string>
-    <string name="i18n_0358">Dim it if the text gets lost</string>
     <string name="i18n_0359">Select all</string>
     <string name="i18n_0360">The JSON is empty</string>
     <string name="i18n_0361">"Could not read the JSON: "</string>
@@ -440,4 +437,8 @@ Open the settings below, allow it, and come back to this app.</string>
     <string name="i18n_0408">You can also get a token directly by running this once in Termux:</string>
     <string name="i18n_0409">Open permission settings</string>
     <string name="i18n_0410">Allow "All files access" in Settings > Apps > Terminal</string>
+    <string name="link_no_browser">No browser to open the link</string>
+    <string name="paste_large_title">Paste a large text?</string>
+    <string name="paste_large_message">This paste is %1$s KB (%2$d lines). A large paste can overflow a TUI prompt. Send it anyway?</string>
+    <string name="paste_large_confirm">Paste</string>
 </resources>

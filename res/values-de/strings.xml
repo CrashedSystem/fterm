@@ -188,6 +188,7 @@
     <string name="i18n_0186">"Auf der Termux-Seite gibt es keine Schriften. Eine über die URL unten holen oder in Termux eine .ttf in "</string>
     <string name="i18n_0187">~/.fonts legen.</string>
     <string name="i18n_0188">"In Termux gefundene Schriften: "</string>
+    <string name="i18n_0189">" Schriftarten"</string>
     <string name="i18n_0190">" wird geladen…"</string>
     <string name="i18n_0191">Schrift-URL</string>
     <string name="i18n_0192">"Termux lädt sie nach ~/.fonts und übergibt sie der App. "</string>
@@ -433,4 +434,8 @@
     <string name="i18n_0408">Ein Token erhalten Sie auch direkt, wenn Sie dies einmal in Termux ausführen:</string>
     <string name="i18n_0409">Berechtigungseinstellungen öffnen</string>
     <string name="i18n_0410">Unter Einstellungen &gt; Apps &gt; Terminal „Zugriff auf alle Dateien“ erlauben</string>
+    <string name="link_no_browser">Kein Browser zum Öffnen des Links</string>
+    <string name="paste_large_title">Großen Text einfügen?</string>
+    <string name="paste_large_message">Dieser Einfügetext ist %1$s KB (%2$d Zeilen) groß. Ein großer Einfügetext kann eine TUI-Eingabe überlaufen. Trotzdem einfügen?</string>
+    <string name="paste_large_confirm">Einfügen</string>
 </resources>

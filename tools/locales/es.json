@@ -432,5 +432,10 @@
   "i18n_0407": "El botón de abajo abre la pantalla «Acceso a todos los archivos». Concédelo, vuelve a esta app y lo reintenta al instante.",
   "i18n_0408": "También puedes obtener un token directamente ejecutando esto una vez en Termux:",
   "i18n_0409": "Abrir ajustes de permisos",
-  "i18n_0410": "Permite «Acceso a todos los archivos» en Ajustes > Aplicaciones > Terminal"
+  "i18n_0410": "Permite «Acceso a todos los archivos» en Ajustes > Aplicaciones > Terminal",
+  "link_no_browser": "No hay navegador para abrir el enlace",
+  "paste_large_title": "¿Pegar un texto grande?",
+  "paste_large_message": "Este pegado ocupa %1$s KB (%2$d líneas). Un pegado grande puede desbordar la entrada de una TUI. ¿Pegar igualmente?",
+  "paste_large_confirm": "Pegar",
+  "i18n_0189": " fuentes"
 }

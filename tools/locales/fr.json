@@ -432,5 +432,10 @@
   "i18n_0407": "Le bouton ci-dessous ouvre l'écran « Accès à tous les fichiers ». Autorisez-le, revenez dans cette app et elle réessaie aussitôt.",
   "i18n_0408": "Vous pouvez aussi obtenir un jeton directement en exécutant ceci une fois dans Termux :",
   "i18n_0409": "Ouvrir les réglages d'autorisation",
-  "i18n_0410": "Autorisez « Accès à tous les fichiers » dans Réglages > Applications > Terminal"
+  "i18n_0410": "Autorisez « Accès à tous les fichiers » dans Réglages > Applications > Terminal",
+  "link_no_browser": "Aucun navigateur pour ouvrir le lien",
+  "paste_large_title": "Coller un texte volumineux ?",
+  "paste_large_message": "Ce collage fait %1$s Ko (%2$d lignes). Un collage volumineux peut déborder de la saisie d’une TUI. Coller quand même ?",
+  "paste_large_confirm": "Coller",
+  "i18n_0189": " polices"
 }

@@ -28,6 +28,19 @@ public interface TerminalViewClient {
      */
     void onSingleTapUp(MotionEvent e);
 
+    /**
+     * Ctrl+tap on the terminal: open the link under the pointer, if there is one.
+     *
+     * <p>Asked instead of the view opening the browser itself because the link's text and the
+     * app it opens are the host's business, and because the view cannot tell a URL from a
+     * word without the emulator's rows.
+     *
+     * @param row    the row under the pointer, in transcript coordinates (negative is history)
+     * @param column the display column under the pointer
+     * @return true when a link was found and opened; the view then swallows the gesture
+     */
+    boolean openUrlAt(int row, int column);
+
     boolean shouldBackButtonBeMappedToEscape();
 
     boolean shouldEnforceCharBasedInput();

@@ -16,6 +16,7 @@
     <string name="i18n_0008">字体响应错误</string>
     <string name="i18n_0009">字体下载失败</string>
     <string name="i18n_0010">"守护进程响应错误（type "</string>
+    <string name="i18n_0011">连接失败：</string>
     <string name="i18n_0012">帧长度不正确</string>
     <string name="i18n_0013">守护进程关闭了连接</string>
     <string name="i18n_0014">连接已断开（无响应）</string>
@@ -435,4 +436,8 @@
     <string name="i18n_0408">在 Termux 中执行一次以下命令也可直接获取令牌：</string>
     <string name="i18n_0409">打开权限设置</string>
     <string name="i18n_0410">在 设置 &gt; 应用 &gt; 终端 中允许「所有文件访问权限」</string>
+    <string name="link_no_browser">没有可打开链接的浏览器</string>
+    <string name="paste_large_title">要粘贴大量文本吗？</string>
+    <string name="paste_large_message">将粘贴 %1$s KB（%2$d 行）。大量文本可能超出 TUI 输入框，仍要粘贴吗？</string>
+    <string name="paste_large_confirm">粘贴</string>
 </resources>

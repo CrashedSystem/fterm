@@ -61,6 +61,8 @@ javac -nowarn -d "$OUT" \
   "$ROOT/tests/jvm/core/ProfileTabTest.java" \
   "$ROOT/app/src/io/github/crashedsystem/terminal/Search.java" \
   "$ROOT/tests/jvm/core/SearchTest.java" \
+  "$ROOT/app/src/io/github/crashedsystem/terminal/TextOps.java" \
+  "$ROOT/tests/jvm/core/TextOpsTest.java" \
   "$ROOT/app/src/io/github/crashedsystem/terminal/RetroShader.java" \
   "$ROOT/tests/jvm/core/RetroTest.java" \
   "$ROOT/app/src/io/github/crashedsystem/terminal/FontCoverage.java" \
@@ -82,7 +84,8 @@ java $SRC_ARGS -cp "$OUT" CustomSchemesTest
 java $SRC_ARGS -cp "$OUT" BackgroundTest
 java $SRC_ARGS -cp "$OUT" SchemeJsonTest
 java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/terminal/MainActivity.java" \
-  -Dclip.src="$ROOT/app/src/io/github/crashedsystem/terminal/ClipboardImage.java" -cp "$OUT" PasteTest
+  -Dclip.src="$ROOT/app/src/io/github/crashedsystem/terminal/ClipboardImage.java" \
+  -Dclipboard.src="$ROOT/app/src/io/github/crashedsystem/terminal/ClipboardOps.java" -cp "$OUT" PasteTest
 java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/terminal/MainActivity.java" -cp "$OUT" FontsTest
 java -Dmain.src="$ROOT/app/src/io/github/crashedsystem/terminal/MainActivity.java" \
   -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" TabCloseTest
@@ -98,6 +101,7 @@ java -Droot="$ROOT" -cp "$OUT" KeyBarPrefsTest
 java $SRC_ARGS -cp "$OUT" ProfilesTest
 java $SRC_ARGS -cp "$OUT" ProfileTabTest
 java $SRC_ARGS -cp "$OUT" SearchTest
+java -cp "$OUT" TextOpsTest
 java -Dview.src="$ROOT/app/src/com.termux/view/TerminalView.java" -cp "$OUT" RetroTest
 java -Dhangul.src="$ROOT/assets/fonts/PretendardHangul.ttf" \
      -Dlatin.src="$ROOT/assets/fonts/Iosevka.ttf" \

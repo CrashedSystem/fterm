@@ -116,7 +116,6 @@
     <string name="i18n_0108">Pretendard (기본)</string>
     <string name="i18n_0109">" (직접 지정)"</string>
     <string name="i18n_0110">셸에 연결하는 중…</string>
-    <string name="i18n_0111">[removed code snippet]</string>
     <string name="i18n_0112">OLED (순수 검정)</string>
     <string name="i18n_0113">세션</string>
     <string name="i18n_0114">데몬</string>
@@ -357,8 +356,6 @@
     <string name="i18n_0354">전화</string>
     <string name="i18n_0355">프린터</string>
     <string name="i18n_0356">자</string>
-    <string name="i18n_0357">글자가 위로 붙었다</string>
-    <string name="i18n_0358">글자가 묻히면 어둡게</string>
     <string name="i18n_0359">전체 선택</string>
     <string name="i18n_0360">JSON이 비어 있습니다</string>
     <string name="i18n_0361">"JSON을 읽지 못했습니다: "</string>
@@ -440,4 +437,8 @@
     <string name="i18n_0408">Termux에서 한 번 실행하면 토큰을 직접 받을 수도 있습니다:</string>
     <string name="i18n_0409">권한 설정 열기</string>
     <string name="i18n_0410">설정 > 앱 > 터미널 > 모든 파일 접근을 허용하세요</string>
+    <string name="link_no_browser">링크를 열 브라우저가 없습니다</string>
+    <string name="paste_large_title">큰 텍스트를 붙여넣을까요?</string>
+    <string name="paste_large_message">붙여넣을 내용이 %1$s KB(%2$d줄)입니다. 큰 붙여넣기는 TUI 입력창을 넘칠 수 있습니다. 그대로 붙여넣을까요?</string>
+    <string name="paste_large_confirm">붙여넣기</string>
 </resources>

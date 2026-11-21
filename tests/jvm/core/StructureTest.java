@@ -32,6 +32,26 @@ public class StructureTest {
         check(n < 1420, "MainActivity is a coordinator, not a drawer (" + n + " lines)");
         System.out.println("ok  MainActivity " + n + " lines");
 
+        // 1b. The clipboard, the link opener and the text rules behind them live in their own
+        //     files, which is what gave the activity its room back: it was living at 1,418 of
+        //     the 1,420 it was allowed. The assertions name the moves, not just the result, so
+        //     the code cannot drift home a method at a time.
+        check(n < 1350, "and has room to grow again (" + n + " lines)");
+        String clipboard = read(dir + "ClipboardOps.java");
+        check(main.contains("ClipboardOps.paste(this)"), "the clipboard lives in ClipboardOps");
+        check(!main.contains("ClipboardImage.pasteIfImage("), "and is not pasted here any more");
+        String text = read(dir + "TextOps.java");
+        check(text.contains("PASTE_WARN_BYTES = 5120"), "a 5 KB paste is asked about, not blocked");
+        check(clipboard.contains("TextOps.needsPasteWarning"), "and the paste asks TextOps");
+        check(text.contains("stripTrailingBlanks"), "a copy drops the TUI's padding");
+        check(clipboard.contains("TextOps.stripTrailingBlanks("), "on every copy path");
+        check(main.contains("UrlOpener.open("), "Ctrl+click hands a link to UrlOpener");
+        check(read(dir + "../../../../com.termux/view/TerminalViewClient.java").contains("openUrlAt"),
+                "the view asks its client for the link under the pointer");
+        check(read(dir + "../../../../com.termux/view/TerminalView.java")
+                        .contains("mCtrlLinkGesture"),
+                "and swallows the rest of that press instead of reporting it as a mouse event");
+
         // 2. The pieces that were extracted are actually used, not copied.
         check(main.contains("new KeyBar("), "the key bar lives in KeyBar");
         check(!main.contains("private TextView keyPill("), "and is not duplicated here");

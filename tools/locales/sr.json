@@ -432,5 +432,10 @@
   "i18n_0407": "Dugme ispod otvara ekran „Pristup svim datotekama“. Dozvolite ga, vratite se u aplikaciju i odmah će pokušati ponovo.",
   "i18n_0408": "Token možete dobiti i direktno ako ovo jednom pokrenete u Termux-u:",
   "i18n_0409": "Otvori podešavanja dozvola",
-  "i18n_0410": "Dozvolite „Pristup svim datotekama“ u Podešavanja > Aplikacije > Terminal"
+  "i18n_0410": "Dozvolite „Pristup svim datotekama“ u Podešavanja > Aplikacije > Terminal",
+  "link_no_browser": "Nema pregledača za otvaranje veze",
+  "paste_large_title": "Nalepiti veliki tekst?",
+  "paste_large_message": "Ovaj nalepak ima %1$s KB (%2$d redova). Veliki nalepak može preliti unos u TUI-ju. Ipak nalepiti?",
+  "paste_large_confirm": "Nalepi",
+  "i18n_0189": " fontova"
 }

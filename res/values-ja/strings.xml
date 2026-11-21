@@ -436,4 +436,8 @@
     <string name="i18n_0408">Termux で一度これを実行すると、トークンを直接受け取ることもできます:</string>
     <string name="i18n_0409">権限設定を開く</string>
     <string name="i18n_0410">設定 &gt; アプリ &gt; ターミナル で「すべてのファイルへのアクセス」を許可してください</string>
+    <string name="link_no_browser">リンクを開くブラウザがありません</string>
+    <string name="paste_large_title">大きなテキストを貼り付けますか？</string>
+    <string name="paste_large_message">貼り付ける内容は %1$s KB（%2$d 行）です。大きな貼り付けは TUI の入力欄をあふれることがあります。このまま貼り付けますか？</string>
+    <string name="paste_large_confirm">貼り付け</string>
 </resources>

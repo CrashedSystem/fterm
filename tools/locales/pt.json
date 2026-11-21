@@ -432,5 +432,10 @@
   "i18n_0407": "O botão abaixo abre a tela «Acesso a todos os arquivos». Permita, volte a este app e ele tenta de novo na hora.",
   "i18n_0408": "Você também pode obter um token direto executando isto uma vez no Termux:",
   "i18n_0409": "Abrir ajustes de permissão",
-  "i18n_0410": "Permita «Acesso a todos os arquivos» em Configurações > Apps > Terminal"
+  "i18n_0410": "Permita «Acesso a todos os arquivos» em Configurações > Apps > Terminal",
+  "link_no_browser": "Nenhum navegador para abrir o link",
+  "paste_large_title": "Colar um texto grande?",
+  "paste_large_message": "Esta colagem tem %1$s KB (%2$d linhas). Uma colagem grande pode transbordar a entrada de uma TUI. Colar mesmo assim?",
+  "paste_large_confirm": "Colar",
+  "i18n_0189": " fontes"
 }

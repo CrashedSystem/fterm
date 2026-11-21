@@ -188,6 +188,7 @@
     <string name="i18n_0186">"Aucune police côté Termux. Récupérez-en une via l\'URL ci-dessous, ou placez un .ttf dans "</string>
     <string name="i18n_0187">~/.fonts dans Termux.</string>
     <string name="i18n_0188">"Polices trouvées dans Termux : "</string>
+    <string name="i18n_0189">" polices"</string>
     <string name="i18n_0190">" récupération…"</string>
     <string name="i18n_0191">URL de la police</string>
     <string name="i18n_0192">"Termux la télécharge dans ~/.fonts et la transmet à l\'app. "</string>
@@ -433,4 +434,8 @@
     <string name="i18n_0408">Vous pouvez aussi obtenir un jeton directement en exécutant ceci une fois dans Termux :</string>
     <string name="i18n_0409">Ouvrir les réglages d\'autorisation</string>
     <string name="i18n_0410">Autorisez « Accès à tous les fichiers » dans Réglages &gt; Applications &gt; Terminal</string>
+    <string name="link_no_browser">Aucun navigateur pour ouvrir le lien</string>
+    <string name="paste_large_title">Coller un texte volumineux ?</string>
+    <string name="paste_large_message">Ce collage fait %1$s Ko (%2$d lignes). Un collage volumineux peut déborder de la saisie d’une TUI. Coller quand même ?</string>
+    <string name="paste_large_confirm">Coller</string>
 </resources>

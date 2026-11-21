@@ -432,5 +432,10 @@
   "i18n_0407": "Il pulsante qui sotto apre la schermata «Accesso a tutti i file». Consentilo, torna in questa app e riprova subito.",
   "i18n_0408": "Puoi anche ottenere un token direttamente eseguendo questo una volta in Termux:",
   "i18n_0409": "Apri impostazioni permessi",
-  "i18n_0410": "Consenti «Accesso a tutti i file» in Impostazioni > App > Terminale"
+  "i18n_0410": "Consenti «Accesso a tutti i file» in Impostazioni > App > Terminale",
+  "link_no_browser": "Nessun browser per aprire il link",
+  "paste_large_title": "Incollare un testo grande?",
+  "paste_large_message": "Questo incolla è di %1$s KB (%2$d righe). Un incolla grande può traboccare nella casella di una TUI. Incollare comunque?",
+  "paste_large_confirm": "Incolla",
+  "i18n_0189": " font"
 }
