@@ -42,7 +42,7 @@
     <string name="i18n_0034">Terminalsitzung</string>
     <string name="i18n_0035">Shell-Benachrichtigungen</string>
     <string name="i18n_0036">"error: dieser Pfad ist nicht lesbar: "</string>
-    <string name="i18n_0037">error: --es path &lt;file&gt; oder eine content:// URI ist erforderlich</string>
+    <string name="i18n_0037">error: --es path &amp;lt;file&amp;gt; oder eine content:// URI ist erforderlich</string>
     <string name="i18n_0038">error: Bild konnte nicht gelesen oder gespeichert werden</string>
     <string name="i18n_0039">ok: Hintergrundbild entfernt</string>
     <string name="i18n_0040">Füllen (cover)</string>
@@ -423,4 +423,14 @@
     <string name="json_unterminated">String ist nicht abgeschlossen</string>
     <string name="json_not_a_number">Keine Zahl</string>
     <string name="json_at_position">" (Position "</string>
+    <string name="i18n_0401">Das Token aus der Zwischenablage wurde eingetragen. Löschen Sie es und fügen Sie ein anderes ein, falls es abweicht.</string>
+    <string name="i18n_0402">Befehl kopieren &amp; Termux öffnen</string>
+    <string name="i18n_0403">Termux ist nicht installiert — aus F-Droid installieren und erneut versuchen</string>
+    <string name="i18n_0404">Token manuell eingeben</string>
+    <string name="i18n_0405">Speicherberechtigung erforderlich</string>
+    <string name="i18n_0406">Die Berechtigung ist erteilt, das Schreiben scheiterte dennoch. Prüfen Sie, ob /sdcard/Download existiert und beschreibbar ist.</string>
+    <string name="i18n_0407">Die Schaltfläche unten öffnet den Bildschirm „Zugriff auf alle Dateien“. Erlauben Sie ihn, kehren Sie zu dieser App zurück, und sie versucht es sofort erneut.</string>
+    <string name="i18n_0408">Ein Token erhalten Sie auch direkt, wenn Sie dies einmal in Termux ausführen:</string>
+    <string name="i18n_0409">Berechtigungseinstellungen öffnen</string>
+    <string name="i18n_0410">Unter Einstellungen &gt; Apps &gt; Terminal „Zugriff auf alle Dateien“ erlauben</string>
 </resources>

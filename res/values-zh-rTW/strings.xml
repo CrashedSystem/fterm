@@ -41,7 +41,7 @@
     <string name="i18n_0034">終端機工作階段</string>
     <string name="i18n_0035">Shell 通知</string>
     <string name="i18n_0036">error: 該路徑無法讀取：</string>
-    <string name="i18n_0037">error: 需要 --es path &lt;file&gt; 或 content:// URI</string>
+    <string name="i18n_0037">error: 需要 --es path &amp;lt;file&amp;gt; 或 content:// URI</string>
     <string name="i18n_0038">error: 無法讀取或儲存圖片</string>
     <string name="i18n_0039">ok: 已移除背景圖片</string>
     <string name="i18n_0040">填滿（cover）</string>
@@ -425,4 +425,14 @@
     <string name="json_unterminated">字串未結束</string>
     <string name="json_not_a_number">不是數字</string>
     <string name="json_at_position">"（位置 "</string>
+    <string name="i18n_0401">已填入剪貼簿中的權杖。若不一致，請清除後貼上另一個。</string>
+    <string name="i18n_0402">複製命令並開啟 Termux</string>
+    <string name="i18n_0403">未安裝 Termux — 請從 F-Droid 安裝後重試</string>
+    <string name="i18n_0404">手動輸入權杖</string>
+    <string name="i18n_0405">需要儲存權限</string>
+    <string name="i18n_0406">權限已授予但仍寫入失敗。請檢查 /sdcard/Download 是否存在且可寫入。</string>
+    <string name="i18n_0407">下方按鈕會開啟「所有檔案存取權」頁面。允許後返回本應用程式，它會立即重試。</string>
+    <string name="i18n_0408">在 Termux 中執行一次以下命令也可直接取得權杖：</string>
+    <string name="i18n_0409">開啟權限設定</string>
+    <string name="i18n_0410">在 設定 &gt; 應用程式 &gt; 終端機 中允許「所有檔案存取權」</string>
 </resources>

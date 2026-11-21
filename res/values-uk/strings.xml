@@ -42,7 +42,7 @@
     <string name="i18n_0034">Сесія термінала</string>
     <string name="i18n_0035">Сповіщення оболонки</string>
     <string name="i18n_0036">"error: цей шлях не читається: "</string>
-    <string name="i18n_0037">error: потрібен --es path &lt;file&gt; або URI content://</string>
+    <string name="i18n_0037">error: потрібен --es path &amp;lt;file&amp;gt; або URI content://</string>
     <string name="i18n_0038">error: не вдалося прочитати або зберегти зображення</string>
     <string name="i18n_0039">ok: фонове зображення прибрано</string>
     <string name="i18n_0040">Заповнити (cover)</string>
@@ -423,4 +423,14 @@
     <string name="json_unterminated">Рядок не закрито</string>
     <string name="json_not_a_number">Це не число</string>
     <string name="json_at_position">" (позиція "</string>
+    <string name="i18n_0401">Токен із буфера обміну підставлено. Видаліть його й вставте інший, якщо він відрізняється.</string>
+    <string name="i18n_0402">Копіювати команду й відкрити Termux</string>
+    <string name="i18n_0403">Termux не встановлено — встановіть його з F-Droid і повторіть</string>
+    <string name="i18n_0404">Ввести токен вручну</string>
+    <string name="i18n_0405">Потрібен дозвіл на сховище</string>
+    <string name="i18n_0406">Дозвіл надано, але запис усе одно не вдався. Перевірте, чи /sdcard/Download існує і доступний для запису.</string>
+    <string name="i18n_0407">Кнопка нижче відкриває екран «Доступ до всіх файлів». Дозвольте його, поверніться в застосунок, і він одразу повторить спробу.</string>
+    <string name="i18n_0408">Токен можна отримати й напряму, виконавши це один раз у Termux:</string>
+    <string name="i18n_0409">Відкрити налаштування дозволів</string>
+    <string name="i18n_0410">Дозвольте «Доступ до всіх файлів» у Налаштування &gt; Застосунки &gt; Термінал</string>
 </resources>

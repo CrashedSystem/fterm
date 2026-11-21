@@ -429,4 +429,14 @@
     <string name="json_unterminated">String is not terminated</string>
     <string name="json_not_a_number">Not a number</string>
     <string name="json_at_position"> (position </string>
+    <string name="i18n_0401">The token on the clipboard was filled in. Clear it and paste another if it differs.</string>
+    <string name="i18n_0402">Copy command &amp; open Termux</string>
+    <string name="i18n_0403">Termux is not installed — install it from F-Droid and try again</string>
+    <string name="i18n_0404">Enter a token manually</string>
+    <string name="i18n_0405">Storage permission required</string>
+    <string name="i18n_0406">The permission is granted but the write still failed. Check that /sdcard/Download exists and is writable.</string>
+    <string name="i18n_0407">The button below opens the "All files access" screen. Allow it, come back to this app, and it retries at once.</string>
+    <string name="i18n_0408">You can also get a token directly by running this once in Termux:</string>
+    <string name="i18n_0409">Open permission settings</string>
+    <string name="i18n_0410">Allow "All files access" in Settings > Apps > Terminal</string>
 </resources>

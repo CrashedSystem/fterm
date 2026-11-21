@@ -429,4 +429,14 @@
     <string name="json_unterminated">문자열이 닫히지 않았습니다</string>
     <string name="json_not_a_number">숫자가 아닙니다</string>
     <string name="json_at_position"> (위치 </string>
+    <string name="i18n_0401">클립보드에 있던 토큰을 채워 두었습니다. 다르면 지우고 붙여넣으세요.</string>
+    <string name="i18n_0402">명령 복사 &amp; 안내 열기</string>
+    <string name="i18n_0403">Termux가 설치되어 있지 않습니다 — F-Droid에서 설치한 뒤 다시 시도하세요</string>
+    <string name="i18n_0404">직접 토큰 입력</string>
+    <string name="i18n_0405">저장소 권한이 필요합니다</string>
+    <string name="i18n_0406">권한은 허용되어 있는데도 쓰지 못했습니다. /sdcard/Download 가 있는지, 쓰기 가능한지 확인하세요.</string>
+    <string name="i18n_0407">아래 버튼이 \'모든 파일 접근\' 설정 화면을 엽니다. 허용한 뒤 이 앱으로 돌아오면 바로 다시 시도합니다.</string>
+    <string name="i18n_0408">Termux에서 한 번 실행하면 토큰을 직접 받을 수도 있습니다:</string>
+    <string name="i18n_0409">권한 설정 열기</string>
+    <string name="i18n_0410">설정 > 앱 > 터미널 > 모든 파일 접근을 허용하세요</string>
 </resources>

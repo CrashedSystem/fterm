@@ -42,7 +42,7 @@
     <string name="i18n_0034">Sessão do terminal</string>
     <string name="i18n_0035">Notificações do shell</string>
     <string name="i18n_0036">"error: esse caminho não pode ser lido: "</string>
-    <string name="i18n_0037">error: é preciso --es path &lt;file&gt; ou uma URI content://</string>
+    <string name="i18n_0037">error: é preciso --es path &amp;lt;file&amp;gt; ou uma URI content://</string>
     <string name="i18n_0038">error: não foi possível ler nem salvar a imagem</string>
     <string name="i18n_0039">ok: imagem de fundo removida</string>
     <string name="i18n_0040">Preencher (cover)</string>
@@ -424,4 +424,14 @@
     <string name="json_unterminated">A string não está fechada</string>
     <string name="json_not_a_number">Não é um número</string>
     <string name="json_at_position">" (posição "</string>
+    <string name="i18n_0401">O token da área de transferência foi preenchido. Apague e cole outro se for diferente.</string>
+    <string name="i18n_0402">Copiar comando e abrir o Termux</string>
+    <string name="i18n_0403">O Termux não está instalado — instale pela F-Droid e tente de novo</string>
+    <string name="i18n_0404">Digitar um token manualmente</string>
+    <string name="i18n_0405">Permissão de armazenamento necessária</string>
+    <string name="i18n_0406">A permissão está concedida mas a gravação falhou mesmo assim. Verifique se /sdcard/Download existe e é gravável.</string>
+    <string name="i18n_0407">O botão abaixo abre a tela «Acesso a todos os arquivos». Permita, volte a este app e ele tenta de novo na hora.</string>
+    <string name="i18n_0408">Você também pode obter um token direto executando isto uma vez no Termux:</string>
+    <string name="i18n_0409">Abrir ajustes de permissão</string>
+    <string name="i18n_0410">Permita «Acesso a todos os arquivos» em Configurações &gt; Apps &gt; Terminal</string>
 </resources>

@@ -36,6 +36,16 @@ final class DaemonLauncher {
     /** The keeper rewrites the heartbeat every second, so two missed beats means it is gone. */
     private static final long KEEPER_STALE_SECONDS = 5;
 
+    /**
+     * The whole Termux-side install, in one line.
+     *
+     * <p>It has to be one line pasted into Termux by someone who downloaded an APK and nothing
+     * else: no clone, no cargo, no path to know. {@code termux/setup.sh} is what it fetches, and
+     * the dialog and the README both quote this exact string so they cannot drift apart.
+     */
+    static final String SETUP_COMMAND = "curl -fsSL "
+            + "https://raw.githubusercontent.com/CrashedSystem/fterm/master/termux/setup.sh | bash";
+
     private DaemonLauncher() {}
 
     /** True when the keeper wrote its heartbeat recently. */
@@ -91,14 +101,14 @@ final class DaemonLauncher {
     /**
      * The command, for the instructions shown when the keeper is not installed.
      *
-     * <p>The same one-liner the README gives, so a reader who finds either copy runs the same
-     * thing. It used to be two lines starting with {@code cd ~/projects/fterm}, which only
-     * worked on the machine the app was written on - a user who installed the APK has never
-     * had that directory, and the dialog sent them to a path that cannot exist.
+     * <p>The surrounding prose is translated; the command itself is not, because it is a shell
+     * line and the one string {@link #SETUP_COMMAND} quotes in the README too. It used to be
+     * two lines starting with {@code cd ~/projects/fterm}, which only worked on the machine the
+     * app was written on - a user who installed the APK has never had that directory.
      */
     static String keeperInstructions() {
         return io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0091)
-                + "  curl -fsSL https://raw.githubusercontent.com/CrashedSystem/fterm/master/termux/install.sh | bash\n\n"
+                + "  " + SETUP_COMMAND + "\n\n"
                 + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0092)
                 + io.github.crashedsystem.terminal.AppStrings.s(io.github.crashedsystem.terminal.R.string.i18n_0093);
     }

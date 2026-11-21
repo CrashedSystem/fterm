@@ -202,6 +202,7 @@ CI 러너는 리눅스이고 폰이 아닙니다. 아래는 **초록불이어도
 | 항목 | 왜 러너에서 안 되나 | 기기에서 확인할 명령 |
 |---|---|---|
 | `termux/install.sh` | Termux 경로·`pkg`·`setsid`·`.bashrc` 훅 | `bash termux/install.sh` 두 번 |
+| `termux/setup.sh` | 릴리즈 자산 내려받기·`termux-setup-storage`·`pkg` | `curl -fsSL .../termux/setup.sh \| bash` 두 번 |
 | 진짜 Android PTY·`SIGHUP` | 러너의 PTY는 리눅스 것 | 탭에서 `install.sh` 재실행 |
 | `termux-api`·`ART` 변수 | `am`·`app_process`가 없음 | `termux-battery-status` |
 | 폰트 목록·내려받기 | `/sdcard`, Termux 저장소 | 앱 `모양 → 글꼴` |

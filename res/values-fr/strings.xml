@@ -42,7 +42,7 @@
     <string name="i18n_0034">Session de terminal</string>
     <string name="i18n_0035">Notifications du shell</string>
     <string name="i18n_0036">"error: ce chemin est illisible : "</string>
-    <string name="i18n_0037">error: --es path &lt;file&gt; ou une URI content:// est requis</string>
+    <string name="i18n_0037">error: --es path &amp;lt;file&amp;gt; ou une URI content:// est requis</string>
     <string name="i18n_0038">error: impossible de lire ou d\'enregistrer l\'image</string>
     <string name="i18n_0039">ok: image de fond supprimée</string>
     <string name="i18n_0040">Remplir (cover)</string>
@@ -423,4 +423,14 @@
     <string name="json_unterminated">La chaîne n\'est pas terminée</string>
     <string name="json_not_a_number">Ce n\'est pas un nombre</string>
     <string name="json_at_position">" (position "</string>
+    <string name="i18n_0401">Le jeton du presse-papiers a été inséré. Effacez-le et collez-en un autre s\'il diffère.</string>
+    <string name="i18n_0402">Copier la commande et ouvrir Termux</string>
+    <string name="i18n_0403">Termux n\'est pas installé — installez-le depuis F-Droid et réessayez</string>
+    <string name="i18n_0404">Saisir un jeton manuellement</string>
+    <string name="i18n_0405">Autorisation de stockage requise</string>
+    <string name="i18n_0406">L\'autorisation est accordée mais l\'écriture a échoué. Vérifiez que /sdcard/Download existe et est accessible en écriture.</string>
+    <string name="i18n_0407">Le bouton ci-dessous ouvre l\'écran « Accès à tous les fichiers ». Autorisez-le, revenez dans cette app et elle réessaie aussitôt.</string>
+    <string name="i18n_0408">Vous pouvez aussi obtenir un jeton directement en exécutant ceci une fois dans Termux :</string>
+    <string name="i18n_0409">Ouvrir les réglages d\'autorisation</string>
+    <string name="i18n_0410">Autorisez « Accès à tous les fichiers » dans Réglages &gt; Applications &gt; Terminal</string>
 </resources>

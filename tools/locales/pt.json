@@ -422,5 +422,15 @@
   "json_unknown_escape": "Escape desconhecido \\",
   "json_unterminated": "A string não está fechada",
   "json_not_a_number": "Não é um número",
-  "json_at_position": " (posição "
+  "json_at_position": " (posição ",
+  "i18n_0401": "O token da área de transferência foi preenchido. Apague e cole outro se for diferente.",
+  "i18n_0402": "Copiar comando e abrir o Termux",
+  "i18n_0403": "O Termux não está instalado — instale pela F-Droid e tente de novo",
+  "i18n_0404": "Digitar um token manualmente",
+  "i18n_0405": "Permissão de armazenamento necessária",
+  "i18n_0406": "A permissão está concedida mas a gravação falhou mesmo assim. Verifique se /sdcard/Download existe e é gravável.",
+  "i18n_0407": "O botão abaixo abre a tela «Acesso a todos os arquivos». Permita, volte a este app e ele tenta de novo na hora.",
+  "i18n_0408": "Você também pode obter um token direto executando isto uma vez no Termux:",
+  "i18n_0409": "Abrir ajustes de permissão",
+  "i18n_0410": "Permita «Acesso a todos os arquivos» em Configurações > Apps > Terminal"
 }

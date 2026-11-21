@@ -445,6 +445,16 @@ public final class R {
         public static final int json_unterminated = 0x7f001ab;
         public static final int json_not_a_number = 0x7f001ac;
         public static final int json_at_position = 0x7f001ad;
+        public static final int i18n_0401 = 0x7f001ae;
+        public static final int i18n_0402 = 0x7f001af;
+        public static final int i18n_0403 = 0x7f001b0;
+        public static final int i18n_0404 = 0x7f001b1;
+        public static final int i18n_0405 = 0x7f001b2;
+        public static final int i18n_0406 = 0x7f001b3;
+        public static final int i18n_0407 = 0x7f001b4;
+        public static final int i18n_0408 = 0x7f001b5;
+        public static final int i18n_0409 = 0x7f001b6;
+        public static final int i18n_0410 = 0x7f001b7;
     }
 
     /** The key a generated id stands for, or null when it is not one of ours. */
@@ -879,6 +889,16 @@ public final class R {
             case 0x7f001ab: return "json_unterminated";
             case 0x7f001ac: return "json_not_a_number";
             case 0x7f001ad: return "json_at_position";
+            case 0x7f001ae: return "i18n_0401";
+            case 0x7f001af: return "i18n_0402";
+            case 0x7f001b0: return "i18n_0403";
+            case 0x7f001b1: return "i18n_0404";
+            case 0x7f001b2: return "i18n_0405";
+            case 0x7f001b3: return "i18n_0406";
+            case 0x7f001b4: return "i18n_0407";
+            case 0x7f001b5: return "i18n_0408";
+            case 0x7f001b6: return "i18n_0409";
+            case 0x7f001b7: return "i18n_0410";
             default: return null;
         }
     }

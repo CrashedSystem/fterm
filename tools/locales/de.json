@@ -422,5 +422,15 @@
   "json_unknown_escape": "Unbekannte Escape-Folge \\",
   "json_unterminated": "String ist nicht abgeschlossen",
   "json_not_a_number": "Keine Zahl",
-  "json_at_position": " (Position "
+  "json_at_position": " (Position ",
+  "i18n_0401": "Das Token aus der Zwischenablage wurde eingetragen. Löschen Sie es und fügen Sie ein anderes ein, falls es abweicht.",
+  "i18n_0402": "Befehl kopieren & Termux öffnen",
+  "i18n_0403": "Termux ist nicht installiert — aus F-Droid installieren und erneut versuchen",
+  "i18n_0404": "Token manuell eingeben",
+  "i18n_0405": "Speicherberechtigung erforderlich",
+  "i18n_0406": "Die Berechtigung ist erteilt, das Schreiben scheiterte dennoch. Prüfen Sie, ob /sdcard/Download existiert und beschreibbar ist.",
+  "i18n_0407": "Die Schaltfläche unten öffnet den Bildschirm „Zugriff auf alle Dateien“. Erlauben Sie ihn, kehren Sie zu dieser App zurück, und sie versucht es sofort erneut.",
+  "i18n_0408": "Ein Token erhalten Sie auch direkt, wenn Sie dies einmal in Termux ausführen:",
+  "i18n_0409": "Berechtigungseinstellungen öffnen",
+  "i18n_0410": "Unter Einstellungen > Apps > Terminal „Zugriff auf alle Dateien“ erlauben"
 }

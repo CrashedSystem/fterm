@@ -422,5 +422,15 @@
   "json_unknown_escape": "Escape desconocido \\",
   "json_unterminated": "La cadena no está cerrada",
   "json_not_a_number": "No es un número",
-  "json_at_position": " (posición "
+  "json_at_position": " (posición ",
+  "i18n_0401": "Se rellenó el token del portapapeles. Bórralo y pega otro si no coincide.",
+  "i18n_0402": "Copiar comando y abrir Termux",
+  "i18n_0403": "Termux no está instalado: instálalo desde F-Droid y vuelve a intentarlo",
+  "i18n_0404": "Introducir un token manualmente",
+  "i18n_0405": "Se requiere permiso de almacenamiento",
+  "i18n_0406": "El permiso está concedido pero la escritura falló igualmente. Comprueba que /sdcard/Download existe y es escribible.",
+  "i18n_0407": "El botón de abajo abre la pantalla «Acceso a todos los archivos». Concédelo, vuelve a esta app y lo reintenta al instante.",
+  "i18n_0408": "También puedes obtener un token directamente ejecutando esto una vez en Termux:",
+  "i18n_0409": "Abrir ajustes de permisos",
+  "i18n_0410": "Permite «Acceso a todos los archivos» en Ajustes > Aplicaciones > Terminal"
 }

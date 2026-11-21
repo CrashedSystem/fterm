@@ -41,7 +41,7 @@
     <string name="i18n_0034">终端会话</string>
     <string name="i18n_0035">Shell 通知</string>
     <string name="i18n_0036">error: 该路径无法读取：</string>
-    <string name="i18n_0037">error: 需要 --es path &lt;file&gt; 或 content:// URI</string>
+    <string name="i18n_0037">error: 需要 --es path &amp;lt;file&amp;gt; 或 content:// URI</string>
     <string name="i18n_0038">error: 无法读取或保存图片</string>
     <string name="i18n_0039">ok: 已移除背景图片</string>
     <string name="i18n_0040">填充（cover）</string>
@@ -425,4 +425,14 @@
     <string name="json_unterminated">字符串未结束</string>
     <string name="json_not_a_number">不是数字</string>
     <string name="json_at_position">"（位置 "</string>
+    <string name="i18n_0401">已填入剪贴板中的令牌。若不一致，请清除后粘贴另一个。</string>
+    <string name="i18n_0402">复制命令并打开 Termux</string>
+    <string name="i18n_0403">未安装 Termux — 请从 F-Droid 安装后重试</string>
+    <string name="i18n_0404">手动输入令牌</string>
+    <string name="i18n_0405">需要存储权限</string>
+    <string name="i18n_0406">权限已授予但仍写入失败。请检查 /sdcard/Download 是否存在且可写。</string>
+    <string name="i18n_0407">下方按钮会打开「所有文件访问权限」页面。允许后返回本应用，它会立即重试。</string>
+    <string name="i18n_0408">在 Termux 中执行一次以下命令也可直接获取令牌：</string>
+    <string name="i18n_0409">打开权限设置</string>
+    <string name="i18n_0410">在 设置 &gt; 应用 &gt; 终端 中允许「所有文件访问权限」</string>
 </resources>

@@ -422,5 +422,15 @@
   "json_unknown_escape": "Escape sconosciuto \\",
   "json_unterminated": "La stringa non è chiusa",
   "json_not_a_number": "Non è un numero",
-  "json_at_position": " (posizione "
+  "json_at_position": " (posizione ",
+  "i18n_0401": "Il token dagli appunti è stato inserito. Cancellalo e incollane un altro se è diverso.",
+  "i18n_0402": "Copia comando e apri Termux",
+  "i18n_0403": "Termux non è installato — installalo da F-Droid e riprova",
+  "i18n_0404": "Inserisci un token manualmente",
+  "i18n_0405": "Serve il permesso di archiviazione",
+  "i18n_0406": "Il permesso è concesso ma la scrittura è fallita lo stesso. Controlla che /sdcard/Download esista e sia scrivibile.",
+  "i18n_0407": "Il pulsante qui sotto apre la schermata «Accesso a tutti i file». Consentilo, torna in questa app e riprova subito.",
+  "i18n_0408": "Puoi anche ottenere un token direttamente eseguendo questo una volta in Termux:",
+  "i18n_0409": "Apri impostazioni permessi",
+  "i18n_0410": "Consenti «Accesso a tutti i file» in Impostazioni > App > Terminale"
 }

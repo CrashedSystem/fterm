@@ -93,9 +93,10 @@ jobs:
           # `curl ... | bash` with no checkout on the phone: install.sh fetches the daemon, the
           # checksum file and the keeper from the same release it is itself part of.
           cp termux/install.sh dist/install.sh
+          cp termux/setup.sh dist/setup.sh
           cp termux/fterm-keeper dist/fterm-keeper
-          chmod 755 dist/install.sh dist/fterm-keeper
-          (cd dist && sha256sum fterm.apk ftermd-aarch64-linux-android install.sh fterm-keeper > SHA256SUMS.txt)
+          chmod 755 dist/install.sh dist/setup.sh dist/fterm-keeper
+          (cd dist && sha256sum fterm.apk ftermd-aarch64-linux-android install.sh setup.sh fterm-keeper > SHA256SUMS.txt)
           cat dist/SHA256SUMS.txt
           apksigner verify --print-certs dist/fterm.apk | tee dist/apk-cert-fingerprint.txt || true
 
@@ -106,6 +107,7 @@ jobs:
             dist/fterm.apk
             dist/ftermd-aarch64-linux-android
             dist/install.sh
+            dist/setup.sh
             dist/fterm-keeper
             dist/SHA256SUMS.txt
 
@@ -129,6 +131,7 @@ jobs:
             dist/fterm.apk \
             dist/ftermd-aarch64-linux-android \
             dist/install.sh \
+            dist/setup.sh \
             dist/fterm-keeper \
             dist/SHA256SUMS.txt \
             --title "fterm $TAG" \
@@ -138,6 +141,7 @@ jobs:
             dist/fterm.apk \
             dist/ftermd-aarch64-linux-android \
             dist/install.sh \
+            dist/setup.sh \
             dist/fterm-keeper \
             dist/SHA256SUMS.txt \
             --clobber

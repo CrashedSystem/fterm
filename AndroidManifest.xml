@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.crashedsystem.terminal"
-    android:versionCode="7"
-    android:versionName="0.4.6">
+    android:versionCode="8"
+    android:versionName="0.5.0">
 
     <!-- Android 8.0 (API 26) is the floor: the vendored terminal view needs
          View#getTextSelectionActionMode-era behaviour and adaptive icons. -->
@@ -21,6 +21,13 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- Android 11+ scopes every app to its own directories and to MediaStore, and the keeper
+         channel is neither: two plain files in /sdcard/Download (fterm-up and fterm-token).
+         Without all-files access the request file cannot be written at all, so the app could
+         never start the daemon by itself - every first run ended in the manual-token dialog.
+         It is a runtime permission the user grants on the settings screen the app opens, and
+         the app needs nothing else outside its own sandbox. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <!-- The terminal bell's default is a short vibration; without this it is a silent no-op. -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />

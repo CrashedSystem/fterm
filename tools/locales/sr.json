@@ -422,5 +422,15 @@
   "json_unknown_escape": "Nepoznat escape \\",
   "json_unterminated": "String nije zatvoren",
   "json_not_a_number": "Nije broj",
-  "json_at_position": " (pozicija "
+  "json_at_position": " (pozicija ",
+  "i18n_0401": "Token iz klipborda je upisan. Obrišite ga i nalepite drugi ako se razlikuje.",
+  "i18n_0402": "Kopiraj komandu i otvori Termux",
+  "i18n_0403": "Termux nije instaliran — instalirajte ga sa F-Droid-a i pokušajte ponovo",
+  "i18n_0404": "Unesi token ručno",
+  "i18n_0405": "Potrebna je dozvola za skladište",
+  "i18n_0406": "Dozvola je data ali upis i dalje nije uspeo. Proverite da li /sdcard/Download postoji i da li je upisiv.",
+  "i18n_0407": "Dugme ispod otvara ekran „Pristup svim datotekama“. Dozvolite ga, vratite se u aplikaciju i odmah će pokušati ponovo.",
+  "i18n_0408": "Token možete dobiti i direktno ako ovo jednom pokrenete u Termux-u:",
+  "i18n_0409": "Otvori podešavanja dozvola",
+  "i18n_0410": "Dozvolite „Pristup svim datotekama“ u Podešavanja > Aplikacije > Terminal"
 }

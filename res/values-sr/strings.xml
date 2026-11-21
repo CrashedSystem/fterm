@@ -42,7 +42,7 @@
     <string name="i18n_0034">Sesija terminala</string>
     <string name="i18n_0035">Obaveštenja školjke</string>
     <string name="i18n_0036">"error: ta putanja se ne može pročitati: "</string>
-    <string name="i18n_0037">error: potreban je --es path &lt;file&gt; ili content:// URI</string>
+    <string name="i18n_0037">error: potreban je --es path &amp;lt;file&amp;gt; ili content:// URI</string>
     <string name="i18n_0038">error: slika nije pročitana ni sačuvana</string>
     <string name="i18n_0039">ok: pozadinska slika uklonjena</string>
     <string name="i18n_0040">Popuni (cover)</string>
@@ -423,4 +423,14 @@
     <string name="json_unterminated">String nije zatvoren</string>
     <string name="json_not_a_number">Nije broj</string>
     <string name="json_at_position">" (pozicija "</string>
+    <string name="i18n_0401">Token iz klipborda je upisan. Obrišite ga i nalepite drugi ako se razlikuje.</string>
+    <string name="i18n_0402">Kopiraj komandu i otvori Termux</string>
+    <string name="i18n_0403">Termux nije instaliran — instalirajte ga sa F-Droid-a i pokušajte ponovo</string>
+    <string name="i18n_0404">Unesi token ručno</string>
+    <string name="i18n_0405">Potrebna je dozvola za skladište</string>
+    <string name="i18n_0406">Dozvola je data ali upis i dalje nije uspeo. Proverite da li /sdcard/Download postoji i da li je upisiv.</string>
+    <string name="i18n_0407">Dugme ispod otvara ekran „Pristup svim datotekama“. Dozvolite ga, vratite se u aplikaciju i odmah će pokušati ponovo.</string>
+    <string name="i18n_0408">Token možete dobiti i direktno ako ovo jednom pokrenete u Termux-u:</string>
+    <string name="i18n_0409">Otvori podešavanja dozvola</string>
+    <string name="i18n_0410">Dozvolite „Pristup svim datotekama“ u Podešavanja &gt; Aplikacije &gt; Terminal</string>
 </resources>

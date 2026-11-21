@@ -42,7 +42,7 @@
     <string name="i18n_0034">ターミナルセッション</string>
     <string name="i18n_0035">シェル通知</string>
     <string name="i18n_0036">"error: そのパスは読み取れません: "</string>
-    <string name="i18n_0037">error: --es path &lt;file&gt; または content:// URI が必要です</string>
+    <string name="i18n_0037">error: --es path &amp;lt;file&amp;gt; または content:// URI が必要です</string>
     <string name="i18n_0038">error: 画像を読み取れず、保存もできませんでした</string>
     <string name="i18n_0039">ok: 背景画像を消去しました</string>
     <string name="i18n_0040">塗りつぶし (cover)</string>
@@ -426,4 +426,14 @@
     <string name="json_unterminated">文字列が閉じていません</string>
     <string name="json_not_a_number">数値ではありません</string>
     <string name="json_at_position">" (位置 "</string>
+    <string name="i18n_0401">クリップボードのトークンを入力欄に入れました。違う場合は消して貼り付け直してください。</string>
+    <string name="i18n_0402">コマンドをコピーして Termux を開く</string>
+    <string name="i18n_0403">Termux がインストールされていません — F-Droid から入れて再試行してください</string>
+    <string name="i18n_0404">トークンを手入力</string>
+    <string name="i18n_0405">ストレージの権限が必要です</string>
+    <string name="i18n_0406">権限は許可されていますが書き込めませんでした。/sdcard/Download があるか、書き込み可能か確認してください。</string>
+    <string name="i18n_0407">下のボタンで「すべてのファイルへのアクセス」画面が開きます。許可してこのアプリに戻ると、すぐに再試行します。</string>
+    <string name="i18n_0408">Termux で一度これを実行すると、トークンを直接受け取ることもできます:</string>
+    <string name="i18n_0409">権限設定を開く</string>
+    <string name="i18n_0410">設定 &gt; アプリ &gt; ターミナル で「すべてのファイルへのアクセス」を許可してください</string>
 </resources>

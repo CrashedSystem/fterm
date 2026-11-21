@@ -422,5 +422,15 @@
   "json_unknown_escape": "Échappement inconnu \\",
   "json_unterminated": "La chaîne n'est pas terminée",
   "json_not_a_number": "Ce n'est pas un nombre",
-  "json_at_position": " (position "
+  "json_at_position": " (position ",
+  "i18n_0401": "Le jeton du presse-papiers a été inséré. Effacez-le et collez-en un autre s'il diffère.",
+  "i18n_0402": "Copier la commande et ouvrir Termux",
+  "i18n_0403": "Termux n'est pas installé — installez-le depuis F-Droid et réessayez",
+  "i18n_0404": "Saisir un jeton manuellement",
+  "i18n_0405": "Autorisation de stockage requise",
+  "i18n_0406": "L'autorisation est accordée mais l'écriture a échoué. Vérifiez que /sdcard/Download existe et est accessible en écriture.",
+  "i18n_0407": "Le bouton ci-dessous ouvre l'écran « Accès à tous les fichiers ». Autorisez-le, revenez dans cette app et elle réessaie aussitôt.",
+  "i18n_0408": "Vous pouvez aussi obtenir un jeton directement en exécutant ceci une fois dans Termux :",
+  "i18n_0409": "Ouvrir les réglages d'autorisation",
+  "i18n_0410": "Autorisez « Accès à tous les fichiers » dans Réglages > Applications > Terminal"
 }

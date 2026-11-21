@@ -70,6 +70,10 @@ def escape(value: str) -> str:
     aapt2 rejects a bare apostrophe, treats a leading or trailing space as insignificant
     unless the value is quoted, and reads `\\n` as a newline. Getting this wrong fails the
     resource compile, so it is done in one place.
+
+    XML entities are the other half: `&` and `<` are markup even inside a string element, so a
+    translation that writes "Copy & open" produced a file aapt2 refused with "not well-formed".
+    The entity step runs last, after the quotes, so `\\'` is not re-escaped into `&apos;` text.
     """
     value = value.replace("\\", "\\\\") if "\\" in value else value
     # Unescape what the JSON author wrote as an escape, then re-escape for aapt2.
@@ -77,7 +81,10 @@ def escape(value: str) -> str:
     value = value.replace("'", "\\'")
     if value != value.strip():
         value = '"' + value + '"'
-    return saxutils.escape(value, {'"': "&quot;"}) if False else value
+    # `&` first, or the ampersands introduced by the other entities get doubled.
+    return (value.replace("&", "&amp;")
+                 .replace("<", "&lt;")
+                 .replace(">", "&gt;"))
 
 
 def write_locale(tag: str, table: dict) -> int:
